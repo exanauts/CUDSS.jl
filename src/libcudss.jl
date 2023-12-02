@@ -1,5 +1,7 @@
 using CEnum
 
+const cudaDataType_t = cudaDataType
+
 mutable struct cudssContext end
 
 const cudssHandle_t = Ptr{cudssContext}
