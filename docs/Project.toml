@@ -1,0 +1,6 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+CUDSS = "45b445bb-4962-46a0-9369-b4df9d0f772e"
+
+[compat]
+Documenter = "1.0"

@@ -1,8 +1,6 @@
 module CUDSS
 
 using CUDA, CUDA.CUSPARSE
-using LinearAlgebra
-using SparseArrays
 using CUDSS_jll
 
 import CUDA: @checked, libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream
