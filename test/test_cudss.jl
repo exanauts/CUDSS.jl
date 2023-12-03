@@ -34,15 +34,14 @@ function cudss_dense()
   end
 end
 
-
 function cudss_sparse()
   n = 20
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     A_cpu = sprand(T, n, n, 1.0)
     A_cpu = A_cpu + A_cpu'
     A_gpu = CuSparseMatrixCSR(A_cpu)
-    @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
-      @testset "view = $view" for view in ('L', 'U', 'F')
+    @testset "view = $view" for view in ('L', 'U', 'F')
+      @testset "structure = $structure" for structure in ('G', "G", 'S', "S", 'H', "H", "SPD", "HPD")
         matrix = CudssMatrix(A_gpu, structure, view) 
         format = Ref{CUDSS.cudssMatrixFormat_t}()
         CUDSS.cudssMatrixGetFormat(matrix, format)
@@ -59,19 +58,16 @@ end
 
 function cudss_data()
   data = CudssData()
-  @testset "parameter = $parameter" for parameter in ("info", "lu_nnz", "npivots", "inertia", "perm_reorder",
-                                                      "perm_row", "perm_col", "diag", "user_perm")
+  @testset "parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
     val = cudss_get(data, parameter)
   end
 end
 
 function cudss_config()
   config = CudssConfig()
-  @testset "parameter = $parameter" for parameter in ("reordering_alg", "factorization_alg", "solve_alg",
-                                                      "matching_type", "solve_mode", "ir_n_steps", "ir_tol",
-                                                      "pivot_type", "pivot_threshold", "pivot_epsilon", "max_lu_nnz")
+  @testset "parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
     val = cudss_get(config, parameter)
-    for val in (CUDSS.CUDSS_ALG_DEFAULT, CUDSS.CUDSS_ALG_1, CUDSS.CUDSS_ALG_2, CUDSS.CUDSS_ALG_3)
+    for val in (CUDSS_ALG_DEFAULT, CUDSS_ALG_1, CUDSS_ALG_2, CUDSS_ALG_3)
       (parameter == "reordering_alg") && cudss_set(config, parameter, val)
       (parameter == "factorization_alg") && cudss_set(config, parameter, val)
       (parameter == "solve_alg") && cudss_set(config, parameter, val)
@@ -95,7 +91,7 @@ function cudss_solver()
     A_cpu = sprand(T, n, n, 1.0)
     A_cpu = A_cpu + A_cpu'
     A_gpu = CuSparseMatrixCSR(A_cpu)
-    @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
+    @testset "structure = $structure" for structure in ('G', "G", 'S', "S", 'H', "H", "SPD", "HPD")
       @testset "view = $view" for view in ('L', 'U', 'F')
         solver = CudssSolver(A_gpu, structure, view)
 
@@ -104,6 +100,25 @@ function cudss_solver()
         b_cpu = rand(T, n)
         b_gpu = CuVector(b_cpu)
         cudss("analysis", solver, x_gpu, b_gpu)
+
+        @testset "parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS ∪ CUDSS_DATA_PARAMETERS
+          val = cudss_get(config, parameter)
+          for val in (CUDSS_ALG_DEFAULT, CUDSS_ALG_1, CUDSS_ALG_2, CUDSS_ALG_3)
+            (parameter == "reordering_alg") && cudss_set(solver, parameter, val)
+            (parameter == "factorization_alg") && cudss_set(solver, parameter, val)
+            (parameter == "solve_alg") && cudss_set(solver, parameter, val)
+          end
+          (parameter == "matching_type") && cudss_set(solver, parameter, 0)
+          (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
+          (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
+          (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
+          for val in ('C', 'R', 'N')
+            (parameter == "pivot_type") && cudss_set(solver, parameter, val)
+          end
+          (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
+          (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
+          (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
+        end
       end
     end
   end

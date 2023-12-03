@@ -21,8 +21,9 @@ end
     cudss_set(matrix::CudssMatrix, A::CuVector)
     cudss_set(matrix::CudssMatrix, A::CuMatrix)
     cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
-
+    cudss_set(data::CudssSolver, param::String, value)
     cudss_set(config::CudssConfig, param::String, value)
+    cudss_set(data::CudssData, param::String, value)
 
 The available config parameters are:
 "reordering_alg"
@@ -36,8 +37,6 @@ The available config parameters are:
 "pivot_threshold"
 "pivot_epsilon"
 "max_lu_nnz"
-
-    cudss_set(data::CudssData, param::String, value)
 
 The available data parameters are:
 "info"
@@ -64,22 +63,29 @@ function cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
 end
 
+function cudss_set(data::CudssSolver, param::String, value)
+  (param ∈ cudss_config_parameters) && cudss_set(solver.config, param, value)
+  (param ∈ cudss_data_parameters) && cudss_set(solver.data, param, value)
+end
+
 function cudss_set(data::CudssData, param::String, value)
-  type = cudss_types[param]
+  type = CUDSS_TYPES[param]
   val = Ref{type}(value)
   nbytes = sizeof(val)
   cudssDataSet(handle(), data, param, val, nbytes)
 end
 
 function cudss_set(config::CudssConfig, param::String, value)
-  type = cudss_types[param]
+  type = CUDSS_TYPES[param]
   val = Ref{type}(value)
   nbytes = sizeof(val)
   cudssConfigSet(config, param, val, nbytes)
 end
 
 """
+    value = cudss_get(data::CudssSolver, param::String)
     value = cudss_get(config::CudssConfig, param::String)
+    value = cudss_get(data::CudssData, param::String)
 
 The available config parameters are:
 "reordering_alg"
@@ -94,8 +100,6 @@ The available config parameters are:
 "pivot_epsilon"
 "max_lu_nnz"
 
-    value = cudss_get(data::CudssData, param::String)
-
 The available data parameters are:
 "info"
 "lu_nnz"
@@ -109,8 +113,13 @@ The available data parameters are:
 """
 function cudss_get end
 
+function cudss_get(solver::CudssSolver, param::String)
+  (param ∈ cudss_config_parameters) && cudss_get(solver.config, param)
+  (param ∈ cudss_data_parameters) && cudss_get(solver.data, param)
+end
+
 function cudss_get(data::CudssData, param::String)
-  type = cudss_types[param]
+  type = CUDSS_TYPES[param]
   val = Ref{type}()
   nbytes = sizeof(val)
   nbytes_written = Ref{Cint}()
@@ -119,7 +128,7 @@ function cudss_get(data::CudssData, param::String)
 end
 
 function cudss_get(config::CudssConfig, param::String)
-  type = cudss_types[param]
+  type = CUDSS_TYPES[param]
   val = Ref{type}()
   nbytes = sizeof(val)
   nbytes_written = Ref{Cint}()

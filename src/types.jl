@@ -1,11 +1,18 @@
 # cuDSS types
 
-const cudss_types = Dict{String, DataType}(
+const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reorder",
+                               "perm_row", "perm_col", "diag", "user_perm")
+
+const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "matching_type",
+                                 "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
+                                 "pivot_epsilon", "max_lu_nnz")
+
+const CUDSS_TYPES = Dict{String, DataType}(
     # data type
     "info" => Cint,
     "lu_nnz" => Int64,
     "npivots" => Int64,
-    "inertia" => Cint,
+    "inertia" => (Cint, Cint),
     "perm_reorder" => Vector{Cint},
     "perm_row" => Vector{Cint},
     "perm_col" => Vector{Cint},
