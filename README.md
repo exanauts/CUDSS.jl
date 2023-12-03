@@ -1,10 +1,17 @@
 # CUDSS.jl
 
+## Installation
+
+CUDSS.jl can be installed and tested through the Julia package manager:
+
 ```julia
 julia> ]
 pkg> add https://github.com/exanauts/CUDSS.jl.git
 pkg> test CUDSS
 ```
+
+## Examples
+
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS

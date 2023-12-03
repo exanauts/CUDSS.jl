@@ -130,15 +130,10 @@ end
 """
   cudss(phase::String, solver::CudssSolver, x::CuVector, b::CuVector)
   cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
+  cudss(phase::String, solver::CudssSolver, X::CudssMatrix, B::CudssMatrix)
 
-The available phases are:
-"analysis"
-"factorization"
-"refactorization"
-"solve"
-"solve_fwd"
-"solve_diag"
-"solve_bwd"
+The available phases are "analysis", "factorization", "refactorization" and "solve".
+The phases "solve_fwd", "solve_diag" and "solve_bwd" are available but not yet functional.
 """
 function cudss end
 
@@ -152,4 +147,8 @@ function cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
   cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, solution, rhs)
+end
+
+function cudss(phase::String, solver::CudssSolver, X::CudssMatrix, B::CudssMatrix)
+  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, X, B)
 end
