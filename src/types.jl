@@ -11,7 +11,7 @@ const CUDSS_TYPES = Dict{String, DataType}(
     # data type
     "info" => Cint,
     "lu_nnz" => Int64,
-    "npivots" => Int64,
+    "npivots" => Cint,
     "inertia" => Tuple{Cint, Cint},
     "perm_reorder" => Vector{Cint},
     "perm_row" => Vector{Cint},
