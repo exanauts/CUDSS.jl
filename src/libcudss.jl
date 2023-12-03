@@ -1,5 +1,8 @@
 using CEnum
 
+# CUDSS uses CUDA runtime objects, which are compatible with our driver usage
+const cudaStream_t = CUstream
+
 const cudaDataType_t = cudaDataType
 
 mutable struct cudssContext end
@@ -146,7 +149,7 @@ end
 
 @checked function cudssSetStream(handle, stream)
     initialize_context()
-    @ccall libcudss.cudssSetStream(handle::cudssHandle_t, stream::Cint)::cudssStatus_t
+    @ccall libcudss.cudssSetStream(handle::cudssHandle_t, stream::cudaStream_t)::cudssStatus_t
 end
 
 @checked function cudssConfigCreate(solverConfig)

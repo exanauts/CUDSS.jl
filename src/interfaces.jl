@@ -1,4 +1,21 @@
-export cudss, cudss_set, cudss_get
+export CudssSolver, cudss, cudss_set, cudss_get
+
+mutable struct CudssSolver
+  matrix::CudssMatrix
+  config::CudssConfig
+  data::CudssData
+
+  function CudssSolver(matrix::CudssMatrix, config::CudssConfig, data::CudssData)
+    return new(matrix, config, data)
+  end
+
+  function CudssSolver(A::CuSparseMatrixCSR, structure::Union{Char, String}, view::Char; index::Char='O')
+    matrix = CudssMatrix(A, structure, view; index)
+    config = CudssConfig()
+    data = CudssData()
+    return new(matrix, config, data)
+  end
+end
 
 """
   cudss_set(matrix::CudssMatrix, A::CuVector)
@@ -44,8 +61,7 @@ function cudss_set(matrix::CudssMatrix, A::CuMatrix)
 end
 
 function cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
-  cudssMatrixSetCsrPointers(matrix, A.rowPtr[1:end-1],
-                            A.rowPtr[2:end], A.colVal, A.nzVal)
+  cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
 end
 
 function cudss_set(data::CudssData, param::String, value)
@@ -112,7 +128,8 @@ function cudss_get(config::CudssConfig, param::String)
 end
 
 """
-  cudss(phase::String, config::CudssConfig, data::CudssData, matrix::CudssMatrix, solution::CudssMatrix, rhs::CudssMatrix)
+  cudss(phase::String, solver::CudssSolver, x::CuVector, b::CuVector)
+  cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
 
 The available phases are:
 "analysis"
@@ -123,6 +140,16 @@ The available phases are:
 "solve_diag"
 "solve_bwd"
 """
-function cudss(phase::String, config::CudssConfig, data::CudssData, matrix::CudssMatrix, solution::CudssMatrix, rhs::CudssMatrix)
-  cudssExecute(handle(), phase, config, data, matrix, solution, rhs)
+function cudss end
+
+function cudss(phase::String, solver::CudssSolver, x::CuVector, b::CuVector)
+  solution = CudssMatrix(x)
+  rhs = CudssMatrix(b)
+  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, solution, rhs)
+end
+
+function cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
+  solution = CudssMatrix(X)
+  rhs = CudssMatrix(B)
+  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, solution, rhs)
 end

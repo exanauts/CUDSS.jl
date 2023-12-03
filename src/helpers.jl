@@ -19,7 +19,7 @@ mutable struct CudssMatrix
         m,n = size(A)
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
-            cudssMatrixCreateDn(matrix_ref, m, n, m, A, eltype(A), 'R')
+            cudssMatrixCreateDn(matrix_ref, n, m, m, A, eltype(A), 'R')
         else
             cudssMatrixCreateDn(matrix_ref, m, n, m, A, eltype(A), 'C')
         end
@@ -31,7 +31,7 @@ mutable struct CudssMatrix
     function CudssMatrix(A::CuSparseMatrixCSR, structure::Union{Char, String}, view::Char; index::Char='O')
         m,n = size(A)
         matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateCsr(matrix_ref, m, n, nnz(A), A.rowPtr[1:end-1], A.rowPtr[2:end],
+        cudssMatrixCreateCsr(matrix_ref, m, n, nnz(A), A.rowPtr, CU_NULL,
                              A.colVal, A.nzVal, eltype(A.rowPtr), eltype(A.nzVal), structure,
                              view, index)
         obj = new(matrix_ref[])
@@ -52,14 +52,14 @@ mutable struct CudssData
         data_ref = Ref{cudssData_t}()
         cudssDataCreate(handle(), data_ref)
         obj = new(data_ref[])
-        finalizer(CudssDataDestroy, obj)
+        finalizer(cudssDataDestroy, obj)
         obj
     end
 end
 
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
 
-function CudssDataDestroy(data::CudssData)
+function cudssDataDestroy(data::CudssData)
     cudssDataDestroy(handle(), data)
 end
 
