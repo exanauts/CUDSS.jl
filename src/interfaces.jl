@@ -63,9 +63,9 @@ function cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
 end
 
-function cudss_set(data::CudssSolver, param::String, value)
-  (param ∈ cudss_config_parameters) && cudss_set(solver.config, param, value)
-  (param ∈ cudss_data_parameters) && cudss_set(solver.data, param, value)
+function cudss_set(solver::CudssSolver, param::String, value)
+  (param ∈ CUDSS_CONFIG_PARAMETERS) && cudss_set(solver.config, param, value)
+  (param ∈ CUDSS_DATA_PARAMETERS) && cudss_set(solver.data, param, value)
 end
 
 function cudss_set(data::CudssData, param::String, value)
@@ -114,8 +114,8 @@ The available data parameters are:
 function cudss_get end
 
 function cudss_get(solver::CudssSolver, param::String)
-  (param ∈ cudss_config_parameters) && cudss_get(solver.config, param)
-  (param ∈ cudss_data_parameters) && cudss_get(solver.data, param)
+  (param ∈ CUDSS_CONFIG_PARAMETERS) && cudss_get(solver.config, param)
+  (param ∈ CUDSS_DATA_PARAMETERS) && cudss_get(solver.data, param)
 end
 
 function cudss_get(data::CudssData, param::String)
