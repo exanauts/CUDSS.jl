@@ -102,7 +102,7 @@ function cudss_solver()
         cudss("analysis", solver, x_gpu, b_gpu)
 
         @testset "parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS ∪ CUDSS_DATA_PARAMETERS
-          val = cudss_get(config, parameter)
+          val = cudss_get(solver, parameter)
           for val in (CUDSS_ALG_DEFAULT, CUDSS_ALG_1, CUDSS_ALG_2, CUDSS_ALG_3)
             (parameter == "reordering_alg") && cudss_set(solver, parameter, val)
             (parameter == "factorization_alg") && cudss_set(solver, parameter, val)
