@@ -134,7 +134,7 @@ The data parameters `"perm_row"` and `"perm_col"` are available but not yet func
 function cudss_get end
 
 function cudss_get(solver::CudssSolver, param::String)
-  (param ∈ CUDSS_CONFIG_PARAMETERS) && cdiagudss_get(solver.config, param)
+  (param ∈ CUDSS_CONFIG_PARAMETERS) && cudss_get(solver.config, param)
   (param ∈ CUDSS_DATA_PARAMETERS) && cudss_get(solver.data, param)
 end
 
