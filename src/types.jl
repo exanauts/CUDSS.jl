@@ -7,7 +7,7 @@ const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_a
                                  "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
                                  "pivot_epsilon", "max_lu_nnz")
 
-const CUDSS_TYPES = Dict{String, DataType}(
+const CUDSS_TYPES = Dict(
     # data type
     "info" => Cint,
     "lu_nnz" => Int64,
