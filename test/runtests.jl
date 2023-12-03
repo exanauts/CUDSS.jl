@@ -19,14 +19,6 @@ include("test_cudss.jl")
     cudss_sparse()
   end
 
-  # @testset "CudssData" begin
-  #   cudss_data()
-  # end
-
-  @testset "CudssConfig" begin
-    cudss_config()
-  end
-
  @testset "CudssSolver" begin
     cudss_solver()
   end

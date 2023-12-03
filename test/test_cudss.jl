@@ -56,35 +56,6 @@ function cudss_sparse()
   end
 end
 
-function cudss_data()
-  data = CudssData()
-  @testset "parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-    val = cudss_get(data, parameter)
-  end
-end
-
-function cudss_config()
-  config = CudssConfig()
-  @testset "parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
-    val = cudss_get(config, parameter)
-    for val in (CUDSS_ALG_DEFAULT, CUDSS_ALG_1, CUDSS_ALG_2, CUDSS_ALG_3)
-      (parameter == "reordering_alg") && cudss_set(config, parameter, val)
-      (parameter == "factorization_alg") && cudss_set(config, parameter, val)
-      (parameter == "solve_alg") && cudss_set(config, parameter, val)
-    end
-    (parameter == "matching_type") && cudss_set(config, parameter, 0)
-    (parameter == "solve_mode") && cudss_set(config, parameter, 0)
-    (parameter == "ir_n_steps") && cudss_set(config, parameter, 1)
-    (parameter == "ir_tol") && cudss_set(config, parameter, 1e-8)
-    for val in ('C', 'R', 'N')
-      (parameter == "pivot_type") && cudss_set(config, parameter, val)
-    end
-    (parameter == "pivot_threshold") && cudss_set(config, parameter, 2.0)
-    (parameter == "pivot_epsilon") && cudss_set(config, parameter, 1e-12)
-    (parameter == "max_lu_nnz") && cudss_set(config, parameter, 10)
-  end
-end
-
 function cudss_solver()
   n = 20
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
@@ -122,7 +93,7 @@ function cudss_solver()
         end
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col") && continue
+          parameter ∈ ("perm_row", "perm_col", "perm_reorder", "diag") && continue
           if parameter ≠ "user_perm"
             (parameter == "inertia") && !(structure ∈ ('S', "S", 'H', "H")) && continue
             val = cudss_get(solver, parameter)

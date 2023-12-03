@@ -127,8 +127,8 @@ The available data parameters are:
 - `"perm_col"`: Final column permutation (which includes effects of both reordering and pivoting);
 - `"diag"`: Diagonal of the factorized matrix.
 
-The data parameters `"lu_nnz"` and `"perm_reorder"` requires the phase `"analyse"` performed by [`cudss`](@ref).
-The data parameters `"npivots"`, `"inertia"` and `"diag"` requires the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
+The data parameters `"info"`, `"lu_nnz"` and `"perm_reorder"` require the phase `"analyse"` performed by [`cudss`](@ref).
+The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
 The data parameters `"perm_row"` and `"perm_col"` are available but not yet functional.
 """
 function cudss_get end
