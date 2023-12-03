@@ -100,6 +100,7 @@ function cudss_solver()
         b_cpu = rand(T, n)
         b_gpu = CuVector(b_cpu)
         cudss("analysis", solver, x_gpu, b_gpu)
+        cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
           val = cudss_get(solver, parameter)
@@ -121,9 +122,9 @@ function cudss_solver()
         end
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ (CUDSS.CUDSS_DATA_PERM_ROW, CUDSS.CUDSS_DATA_PERM_COL) && continue
-          if parameter != CUDSS.CUDSS_DATA_USER_PERM
-            (parameter == CUDSS.CUDSS_DATA_INERTIA) && !(structure ∈ ('S', "S", 'H', "H")) && continue
+          parameter ∈ ("perm_row", "perm_col") && continue
+          if parameter ≠ "user_perm"
+            (parameter == "inertia") && !(structure ∈ ('S', "S", 'H', "H")) && continue
             val = cudss_get(solver, parameter)
           else
             perm = Cint[i for i=n:-1:1]
