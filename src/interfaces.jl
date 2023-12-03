@@ -18,11 +18,11 @@ mutable struct CudssSolver
 end
 
 """
-  cudss_set(matrix::CudssMatrix, A::CuVector)
-  cudss_set(matrix::CudssMatrix, A::CuMatrix)
-  cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
+    cudss_set(matrix::CudssMatrix, A::CuVector)
+    cudss_set(matrix::CudssMatrix, A::CuMatrix)
+    cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
 
-  cudss_set(config::CudssConfig, param::String, value)
+    cudss_set(config::CudssConfig, param::String, value)
 
 The available config parameters are:
 "reordering_alg"
@@ -37,7 +37,7 @@ The available config parameters are:
 "pivot_epsilon"
 "max_lu_nnz"
 
-  cudss_set(data::CudssData, param::String, value)
+    cudss_set(data::CudssData, param::String, value)
 
 The available data parameters are:
 "info"
@@ -79,7 +79,7 @@ function cudss_set(config::CudssConfig, param::String, value)
 end
 
 """
-  value = cudss_get(config::CudssConfig, param::String)
+    value = cudss_get(config::CudssConfig, param::String)
 
 The available config parameters are:
 "reordering_alg"
@@ -94,7 +94,7 @@ The available config parameters are:
 "pivot_epsilon"
 "max_lu_nnz"
 
-  value = cudss_get(data::CudssData, param::String)
+    value = cudss_get(data::CudssData, param::String)
 
 The available data parameters are:
 "info"
@@ -128,9 +128,9 @@ function cudss_get(config::CudssConfig, param::String)
 end
 
 """
-  cudss(phase::String, solver::CudssSolver, x::CuVector, b::CuVector)
-  cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
-  cudss(phase::String, solver::CudssSolver, X::CudssMatrix, B::CudssMatrix)
+    cudss(phase::String, solver::CudssSolver, x::CuVector, b::CuVector)
+    cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
+    cudss(phase::String, solver::CudssSolver, X::CudssMatrix, B::CudssMatrix)
 
 The available phases are "analysis", "factorization", "refactorization" and "solve".
 The phases "solve_fwd", "solve_diag" and "solve_bwd" are available but not yet functional.
