@@ -1,6 +1,11 @@
 # CUDSS.jl
 
 ```julia
+julia> ]
+pkg> add https://github.com/exanauts/CUDSS.jl.git
+pkg> test CUDSS
+```
+```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
 using SparseArrays
