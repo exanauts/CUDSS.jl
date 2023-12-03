@@ -8,7 +8,16 @@ pkg> add https://github.com/exanauts/CUDSS.jl.git
 pkg> test CUDSS
 ```
 
-## CUDSS
+## Types
+
+```@docs
+CudssMatrix
+CudssConfig
+CudssData
+CudssSolver
+```
+
+## Functions
 
 ```@docs
 cudss_set

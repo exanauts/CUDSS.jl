@@ -3,6 +3,30 @@ export CudssMatrix, CudssData, CudssConfig
 
 ## Matrix
 
+"""
+    matrix = CudssMatrix(v::CuVector)
+    matrix = CudssMatrix(A::CuMatrix)
+    matrix = CudssMatrix(A::CuSparseMatrixCSR, struture::Union{Char, String}, view::Char; index::Char='O')
+
+`CudssMatrix` is a wrapper for `CuVector`, `CuMatrix` and `CuSparseMatrixCSR`.
+`CudssMatrix` is used to pass matrix of the linear system, as well as solution and right-hand side.
+
+`structure` specifies the stucture for sparse matrices:
+- `'G'` or `"G"`: General matrix -- LDU factorization;
+- `'S'` or `"S"`: Real symmetric matrix -- LDLᵀ factorization;
+- `'H'` or `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
+- `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
+- `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
+
+`view` specifies matrix view for sparse matrices:
+- `'L'`: Lower-triangular matrix and all values above the main diagonal are ignored;
+- `'U'`: Upper-triangular matrix and all values below the main diagonal are ignored;
+- `'F'`: Full matrix.
+
+`index` specifies indexing base for sparse matrix indices:
+- `'Z'`: 0-based indexing;
+- `'O'`: 1-based indexing.
+"""
 mutable struct CudssMatrix
     matrix::cudssMatrix_t
 
@@ -45,6 +69,11 @@ Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssMatrix) = matrix.matrix
 
 ## Data
 
+"""
+    data = CudssData()
+
+`CudssData` holds internal data (e.g., LU factors arrays).
+"""
 mutable struct CudssData
     data::cudssData_t
 
@@ -65,6 +94,11 @@ end
 
 ## Configuration
 
+"""
+    config = CudssConfig()
+
+`CudssConfig` stores configuration settings for the solver.
+"""
 mutable struct CudssConfig
     config::cudssConfig_t
 

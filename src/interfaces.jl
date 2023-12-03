@@ -1,5 +1,30 @@
 export CudssSolver, cudss, cudss_set, cudss_get
 
+"""
+    solver = CudssSolver(A::CuSparseMatrixCSR, structure::Union{Char, String}, view::Char; index::Char='O')
+    solver = CudssSolver(matrix::CudssMatrix, config::CudssConfig, data::CudssData)
+
+`CudssSolver` contains all structures required to solve linear systems with cuDSS.
+One constructor of `CudssSolver` takes as input the same parameters as [`CudssMatrix`](@ref).
+
+`structure` specifies the stucture for sparse matrices:
+- `'G'` or `"G"`: General matrix -- LDU factorization;
+- `'S'` or `"S"`: Real symmetric matrix -- LDLᵀ factorization;
+- `'H'` or `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
+- `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
+- `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
+
+`view` specifies matrix view for sparse matrices:
+- `'L'`: Lower-triangular matrix and all values above the main diagonal are ignored;
+- `'U'`: Upper-triangular matrix and all values below the main diagonal are ignored;
+- `'F'`: Full matrix.
+
+`index` specifies indexing base for sparse matrix indices:
+- `'Z'`: 0-based indexing;
+- `'O'`: 1-based indexing.
+
+`CudssSolver` can be also constructed from the three structures `CudssMatrix`, `CudssConfig` and `CudssData` if needed.
+"""
 mutable struct CudssSolver
   matrix::CudssMatrix
   config::CudssConfig
@@ -18,36 +43,28 @@ mutable struct CudssSolver
 end
 
 """
-    cudss_set(matrix::CudssMatrix, A::CuVector)
+    cudss_set(matrix::CudssMatrix, v::CuVector)
     cudss_set(matrix::CudssMatrix, A::CuMatrix)
     cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
     cudss_set(data::CudssSolver, param::String, value)
     cudss_set(config::CudssConfig, param::String, value)
     cudss_set(data::CudssData, param::String, value)
 
-The available config parameters are:
-"reordering_alg"
-"factorization_alg"
-"solve_alg"
-"matching_type"
-"solve_mode"
-"ir_n_steps"
-"ir_tol"
-"pivot_type"
-"pivot_threshold"
-"pivot_epsilon"
-"max_lu_nnz"
+The available configuration parameters are:
+- `"reordering_alg"`: Algorithm for the reordering phase;
+- `"factorization_alg"`: Algorithm for the factorization phase;
+- `"solve_alg"`: Algorithm for the solving phase;
+- `"matching_type"`: Type of matching;
+- `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
+- `"ir_n_steps"`: Number of steps during the iterative refinement;
+- `"ir_tol"`: Iterative refinement tolerance;
+- `"pivot_type"`: Type of pivoting ('C', 'R' or 'N');
+- `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
+- `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
+- `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices.
 
-The available data parameters are:
-"info"
-"lu_nnz"
-"npivots"
-"inertia"
-"perm_reorder"
-"perm_row"
-"perm_col"
-"diag"
-"user_perm"
+The available data parameter is:
+- `"user_perm"`: User permutation to be used instead of running the reordering algorithms.
 """
 function cudss_set end
 
@@ -87,34 +104,37 @@ end
     value = cudss_get(config::CudssConfig, param::String)
     value = cudss_get(data::CudssData, param::String)
 
-The available config parameters are:
-"reordering_alg"
-"factorization_alg"
-"solve_alg"
-"matching_type"
-"solve_mode"
-"ir_n_steps"
-"ir_tol"
-"pivot_type"
-"pivot_threshold"
-"pivot_epsilon"
-"max_lu_nnz"
+The available configuration parameters are:
+- `"reordering_alg"`: Algorithm for the reordering phase;
+- `"factorization_alg"`: Algorithm for the factorization phase;
+- `"solve_alg"`: Algorithm for the solving phase;
+- `"matching_type"`: Type of matching;
+- `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
+- `"ir_n_steps"`: Number of steps during the iterative refinement;
+- `"ir_tol"`: Iterative refinement tolerance;
+- `"pivot_type"`: Type of pivoting (`'C'`, `'R'` or `'N'`);
+- `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
+- `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
+- `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices.
 
 The available data parameters are:
-"info"
-"lu_nnz"
-"npivots"
-"inertia"
-"perm_reorder"
-"perm_row"
-"perm_col"
-"diag"
-"user_perm"
+- `"info"`: Device-side error information;
+- `"lu_nnz"`: Number of non-zero entries in LU factors;
+- `"npivots"`: Number of pivots encountered during factorization;
+- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric and hermitian non positive-definite matrix types;
+- `"perm_reorder"`: Reordering permutation;
+- `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
+- `"perm_col"`: Final column permutation (which includes effects of both reordering and pivoting);
+- `"diag"`: Diagonal of the factorized matrix.
+
+The data parameters `"lu_nnz"` and `"perm_reorder"` requires the phase `"analyse"` performed by [`cudss`](@ref).
+The data parameters `"npivots"`, `"inertia"` and `"diag"` requires the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
+The data parameters `"perm_row"` and `"perm_col"` are available but not yet functional.
 """
 function cudss_get end
 
 function cudss_get(solver::CudssSolver, param::String)
-  (param ∈ CUDSS_CONFIG_PARAMETERS) && cudss_get(solver.config, param)
+  (param ∈ CUDSS_CONFIG_PARAMETERS) && cdiagudss_get(solver.config, param)
   (param ∈ CUDSS_DATA_PARAMETERS) && cudss_get(solver.data, param)
 end
 
@@ -141,8 +161,8 @@ end
     cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
     cudss(phase::String, solver::CudssSolver, X::CudssMatrix, B::CudssMatrix)
 
-The available phases are "analysis", "factorization", "refactorization" and "solve".
-The phases "solve_fwd", "solve_diag" and "solve_bwd" are available but not yet functional.
+The available phases are `"analysis"`, `"factorization"`, `"refactorization"` and `"solve"`.
+The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not yet functional.
 """
 function cudss end
 

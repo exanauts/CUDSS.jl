@@ -35,13 +35,7 @@ A_gpu = CuSparseMatrixCSR(A_cpu)
 x_gpu = CuVector(x_cpu)
 b_gpu = CuVector(b_cpu)
 
-matrix = CudssMatrix(A_gpu, 'G', 'F')
-config = CudssConfig()
-data = CudssData()
-solver = CudssSolver(matrix, config, data)
-
-# Note that you can replace the four previous lines by
-# solver = CudssSolver(A_gpu, 'G', 'F')
+solver = CudssSolver(A_gpu, 'G', 'F')
 
 cudss("analysis", solver, x_gpu, b_gpu)
 cudss("factorization", solver, x_gpu, b_gpu)
