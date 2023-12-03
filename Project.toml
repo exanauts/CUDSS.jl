@@ -11,6 +11,7 @@ CUDSS_jll = "4889d778-9329-5762-9fec-0578a5d30366"
 [compat]
 CEnum = "0.4"
 CUDA = "5"
+CUDSS_jll = "0.1.0"
 julia = "1.6"
 LinearAlgebra = "1.6"
 SparseArrays = "1.6"
