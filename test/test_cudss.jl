@@ -101,7 +101,7 @@ function cudss_solver()
         b_gpu = CuVector(b_cpu)
         cudss("analysis", solver, x_gpu, b_gpu)
 
-        @testset "parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS ∪ CUDSS_DATA_PARAMETERS
+        @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
           val = cudss_get(solver, parameter)
           for val in (CUDSS_ALG_DEFAULT, CUDSS_ALG_1, CUDSS_ALG_2, CUDSS_ALG_3)
             (parameter == "reordering_alg") && cudss_set(solver, parameter, val)
@@ -118,6 +118,17 @@ function cudss_solver()
           (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
           (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
           (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
+        end
+
+        @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
+          parameter ∈ (CUDSS.CUDSS_DATA_PERM_ROW, CUDSS.CUDSS_DATA_PERM_COL) && continue
+          if parameter != CUDSS.CUDSS_DATA_USER_PERM
+            (parameter == CUDSS.CUDSS_DATA_INERTIA) && !(structure ∈ ('S', "S", 'H', "H")) && continue
+            val = cudss_get(solver, parameter)
+          else
+            perm = Cint[i for i=n:-1:1]
+            cudss_set(solver, parameter, perm)
+          end
         end
       end
     end

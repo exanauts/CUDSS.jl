@@ -7,16 +7,16 @@ const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_a
                                  "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
                                  "pivot_epsilon", "max_lu_nnz")
 
-const CUDSS_TYPES = Dict(
+const CUDSS_TYPES = Dict{String, DataType}(
     # data type
     "info" => Cint,
     "lu_nnz" => Int64,
     "npivots" => Int64,
-    "inertia" => (Cint, Cint),
+    "inertia" => Tuple{Cint, Cint},
     "perm_reorder" => Vector{Cint},
     "perm_row" => Vector{Cint},
     "perm_col" => Vector{Cint},
-    "diag" => Vector{Cint},
+    "diag" => Vector{Float64},
     "user_perm" => Vector{Cint},
     # config type
     "reordering_alg" => cudssAlgType_t,
