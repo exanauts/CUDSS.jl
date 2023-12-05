@@ -1,4 +1,4 @@
-# CUDSS.jl
+# CUDSS.jl: Julia interface for NVIDIA cuDSS
 
 [![docs-stable][docs-stable-img]][docs-stable-url] [![docs-dev][docs-dev-img]][docs-dev-url]
 
@@ -6,6 +6,16 @@
 [docs-stable-url]: https://exanauts.github.io/CUDSS.jl/stable/
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-purple.svg
 [docs-dev-url]: https://exanauts.github.io/CUDSS.jl/dev
+
+## Overview
+
+[CUDSS.jl](https://github.com/exanauts/CUDSS.jl) is a Julia interface to the NVIDIA [cuDSS](https://developer.nvidia.com/cudss) library.
+NVIDIA cuDSS provides three factorizations (LU, LDLᵀ, LLᵀ) for solving sparse linear systems on GPUs.
+
+### Why CUDSS.jl?
+
+Unlike other CUDA libraries that are commonly bundled together, cuDSS is currently in preview. For this reason, it is not included in [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).
+To maintain consistency with the naming conventions used for other CUDA libraries (such as CUBLAS, CUSOLVER, CUSPARSE, etc.), we have named this interface CUDSS.jl.
 
 ## Installation
 
@@ -19,12 +29,13 @@ pkg> test CUDSS
 
 ## Examples
 
+### Example 1: Sparse unsymmetric linear system with one right-hand side
+
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
 using SparseArrays
 
-# Solve an unsymmetric linear system with one right-hand side
 T = Float64
 n = 100
 A_cpu = sprand(T, n, n, 0.05) + I
@@ -44,19 +55,21 @@ cudss("solve", solver, x_gpu, b_gpu)
 r_gpu = b_gpu - A_gpu * x_gpu
 norm(r_gpu)
 ```
+
+### Example 2: Sparse symmetric linear system with multiple right-hand sides
+
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
 using SparseArrays
 
-# Solve a symmetric linear system with multiple right-hand sides
 T = Float64
 n = 100
 p = 5
-A_cpu = sprand(n, n, 0.05) + I
+A_cpu = sprand(T, n, n, 0.05) + I
 A_cpu = A_cpu + A_cpu'
-X_cpu = zeros(n, p)
-B_cpu = rand(n, p)
+X_cpu = zeros(T, n, p)
+B_cpu = rand(T, n, p)
 
 A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
 X_gpu = CuMatrix(X_cpu)
@@ -72,6 +85,9 @@ cudss("solve", solver, X_gpu, B_gpu)
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)
 ```
+
+### Example 3: Sparse hermitian positive definite linear system with multiple right-hand sides
+
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
@@ -82,10 +98,10 @@ using SparseArrays
 T = ComplexF64
 n = 100
 p = 5
-A_cpu = sprand(n, n, 0.01)
+A_cpu = sprand(T, n, n, 0.01)
 A_cpu = A_cpu * A_cpu' + I
-X_cpu = zeros(n, p)
-B_cpu = rand(n, p)
+X_cpu = zeros(T, n, p)
+B_cpu = rand(T, n, p)
 
 A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
 X_gpu = CuMatrix(X_cpu)
