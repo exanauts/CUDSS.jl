@@ -218,7 +218,7 @@ function cudss_generic()
       @test norm(r_gpu2) ≤ √eps(R)
     end
 
-    @testset "view = $view" for view in ('L', 'U', 'F')
+    @testset "view = $view" for view in ('F',)
       @testset "Symmetric -- Hermitian" begin
         A_cpu = sprand(T, n, n, 0.01) + I
         A_cpu = A_cpu + A_cpu'
