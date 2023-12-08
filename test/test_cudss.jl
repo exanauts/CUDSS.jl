@@ -152,6 +152,7 @@ function cudss_execution()
         config = CudssConfig()
         data = CudssData()
         solver = CudssSolver(matrix, config, data)
+        (structure == 'H') && cudss_set(solver, "pivot_type", 'N')
 
         cudss("analysis", solver, X_gpu, B_gpu)
         cudss("factorization", solver, X_gpu, B_gpu)

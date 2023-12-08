@@ -10,7 +10,7 @@
 ## Overview
 
 [CUDSS.jl](https://github.com/exanauts/CUDSS.jl) is a Julia interface to the NVIDIA [cuDSS](https://developer.nvidia.com/cudss) library.
-NVIDIA cuDSS provides three factorizations (LU, LDLᵀ, LLᵀ) for solving sparse linear systems on GPUs.
+NVIDIA cuDSS provides three factorizations (LDU, LDLᵀ, LLᵀ) for solving sparse linear systems on GPUs.
 
 ### Why CUDSS.jl?
 
@@ -93,8 +93,6 @@ using CUDA, CUDA.CUSPARSE
 using CUDSS
 using SparseArrays
 
-# Sparse an hermitian positive define linear system
-# with multiple right-hand sides
 T = ComplexF64
 n = 100
 p = 5
