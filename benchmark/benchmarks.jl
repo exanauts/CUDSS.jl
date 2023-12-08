@@ -1,5 +1,5 @@
 using CUDA, CUDA.CUSPARSE
-using CUDSS
+using CUDSS, CUSOLVERRF
 using SparseArrays
 using LinearAlgebra
 
@@ -13,6 +13,12 @@ names = ["case9", "case57", "case118", "case300", "case1354pegase",
 const DATA_UNSYMMETRIC = joinpath(@__DIR__, "data", "unsymmetric")
 
 global first_run = true
+
+function cusolverrf(A_gpu, b_gpu)
+    n, p = size(b_gpu)
+    rf = CUSOLVERRF.RFLU(A_gpu; nrhs=p, symbolic=:RF)
+    ldiv!(rf, b_gpu)
+end
 
 for name in names
     A_cpu = mmread(joinpath(DATA_UNSYMMETRIC, "Gx_$(name).mtx"))
@@ -47,6 +53,10 @@ for name in names
     println("timer_factorization : ", timer_factorization, " seconds")
     println("timer_solve : ", timer_solve, " seconds")
     println("‖B - AX‖ : ", RNorm)
+    println()
+    println("timer CUDSS : ", timer_analyis + timer_factorization + timer_solve, " seconds")
+    (problem != "case_ACTIVSg70k") && (timer_cusolverrf = CUDA.@elapsed CUDA.@sync cusolverrf(A_gpu, B_gpu))
+    println("timer CUSOLVERRF : ", timer_cusolverrf, " seconds")
     println()
 end
 
