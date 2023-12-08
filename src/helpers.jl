@@ -33,7 +33,7 @@ mutable struct CudssMatrix{T}
     type::Type{T}
     matrix::cudssMatrix_t
 
-    function CudssMatrix(::Type{T}, n::Integer) where where T <: BlasFloat
+    function CudssMatrix(::Type{T}, n::Integer) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, n, 1, n, CU_NULL, T, 'C')
         obj = new{T}(T, matrix_ref[])
