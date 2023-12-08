@@ -20,8 +20,8 @@ function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T}; view::Char='F') where T <: 
   return solver
 end
 
-LinearAlgebra.ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T}) where T <: BlasReal = LinearAlgebra.ldlt(A.data, view=A.uplo)
-LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T}) where T <: BlasFloat = LinearAlgebra.ldlt(A.data, view=A.uplo)
+LinearAlgebra.ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T}}) where T <: BlasReal = LinearAlgebra.ldlt(A.data, view=A.uplo)
+LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T}}) where T <: BlasFloat = LinearAlgebra.ldlt(A.data, view=A.uplo)
 
 function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T}; view::Char='F') where T <: BlasFloat
   n = LinearAlgebra.checksquare(A)
@@ -34,8 +34,8 @@ function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T}; view::Char='F') where T
   return solver
 end
 
-LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T}) where T <: BlasReal = LinearAlgebra.cholesky(A.data, view=A.uplo)
-LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T}) where T <: BlasFloat = LinearAlgebra.cholesky(A.data, view=A.uplo)
+LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T}}) where T <: BlasReal = LinearAlgebra.cholesky(A.data, view=A.uplo)
+LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T}}) where T <: BlasFloat = LinearAlgebra.cholesky(A.data, view=A.uplo)
 
 for fun in (:lu!, :ldlt!, :cholesky!)
   @eval begin
