@@ -33,6 +33,26 @@ mutable struct CudssMatrix{T}
     type::Type{T}
     matrix::cudssMatrix_t
 
+    function CudssMatrix(::Type{T}, n::Integer) where T <: BlasFloat
+        matrix_ref = Ref{cudssMatrix_t}()
+        cudssMatrixCreateDn(matrix_ref, n, 1, n, CU_NULL, T, 'C')
+        obj = new{T}(T, matrix_ref[])
+        finalizer(cudssMatrixDestroy, obj)
+        obj
+    end
+
+    function CudssMatrix(::Type{T}, m::Integer, n::Integer; transposed::Bool=false) where T <: BlasFloat
+        matrix_ref = Ref{cudssMatrix_t}()
+        if transposed
+            cudssMatrixCreateDn(matrix_ref, n, m, m, CU_NULL, T, 'R')
+        else
+            cudssMatrixCreateDn(matrix_ref, m, n, m, CU_NULL, T, 'C')
+        end
+        obj = new{T}(T, matrix_ref[])
+        finalizer(cudssMatrixDestroy, obj)
+        obj
+    end
+
     function CudssMatrix(v::CuVector{T}) where T <: BlasFloat
         m = length(v)
         matrix_ref = Ref{cudssMatrix_t}()
