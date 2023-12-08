@@ -26,4 +26,8 @@ include("test_cudss.jl")
   @testset "CudssExecution" begin
     cudss_execution()
   end
+
+  @testset "Generic API" begin
+    cudss_generic()
+  end
 end
