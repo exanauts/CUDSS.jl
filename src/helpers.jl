@@ -6,15 +6,15 @@ export CudssMatrix, CudssData, CudssConfig
 """
     matrix = CudssMatrix(v::CuVector)
     matrix = CudssMatrix(A::CuMatrix)
-    matrix = CudssMatrix(A::CuSparseMatrixCSR, struture::Union{Char, String}, view::Char; index::Char='O')
+    matrix = CudssMatrix(A::CuSparseMatrixCSR, struture::String, view::Char; index::Char='O')
 
 `CudssMatrix` is a wrapper for `CuVector`, `CuMatrix` and `CuSparseMatrixCSR`.
 `CudssMatrix` is used to pass matrix of the linear system, as well as solution and right-hand side.
 
 `structure` specifies the stucture for sparse matrices:
-- `'G'` or `"G"`: General matrix -- LDU factorization;
-- `'S'` or `"S"`: Real symmetric matrix -- LDLᵀ factorization;
-- `'H'` or `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
+- `"G"`: General matrix -- LDU factorization;
+- `"S"`: Real symmetric matrix -- LDLᵀ factorization;
+- `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
 - `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
 - `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
 
@@ -52,7 +52,7 @@ mutable struct CudssMatrix
         obj
     end
 
-    function CudssMatrix(A::CuSparseMatrixCSR, structure::Union{Char, String}, view::Char; index::Char='O')
+    function CudssMatrix(A::CuSparseMatrixCSR, structure::String, view::Char; index::Char='O')
         m,n = size(A)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateCsr(matrix_ref, m, n, nnz(A), A.rowPtr, CU_NULL,

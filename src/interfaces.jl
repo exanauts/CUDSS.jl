@@ -1,16 +1,16 @@
 export CudssSolver, cudss, cudss_set, cudss_get
 
 """
-    solver = CudssSolver(A::CuSparseMatrixCSR, structure::Union{Char, String}, view::Char; index::Char='O')
+    solver = CudssSolver(A::CuSparseMatrixCSR, structure::String, view::Char; index::Char='O')
     solver = CudssSolver(matrix::CudssMatrix, config::CudssConfig, data::CudssData)
 
 `CudssSolver` contains all structures required to solve linear systems with cuDSS.
 One constructor of `CudssSolver` takes as input the same parameters as [`CudssMatrix`](@ref).
 
 `structure` specifies the stucture for sparse matrices:
-- `'G'` or `"G"`: General matrix -- LDU factorization;
-- `'S'` or `"S"`: Real symmetric matrix -- LDLᵀ factorization;
-- `'H'` or `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
+- `"G"`: General matrix -- LDU factorization;
+- `"S"`: Real symmetric matrix -- LDLᵀ factorization;
+- `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
 - `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
 - `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
 
@@ -34,7 +34,7 @@ mutable struct CudssSolver
     return new(matrix, config, data)
   end
 
-  function CudssSolver(A::CuSparseMatrixCSR, structure::Union{Char, String}, view::Char; index::Char='O')
+  function CudssSolver(A::CuSparseMatrixCSR, structure::String, view::Char; index::Char='O')
     matrix = CudssMatrix(A, structure, view; index)
     config = CudssConfig()
     data = CudssData()
