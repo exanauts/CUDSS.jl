@@ -25,10 +25,10 @@ One constructor of `CudssSolver` takes as input the same parameters as [`CudssMa
 
 `CudssSolver` can be also constructed from the three structures `CudssMatrix`, `CudssConfig` and `CudssData` if needed.
 """
-mutable struct CudssSolver
+mutable struct CudssSolver{T}
   matrix::CudssMatrix
   config::CudssConfig
-  data::CudssData
+  data::CudssData{T}
 
   function CudssSolver(matrix::CudssMatrix, config::CudssConfig, data::CudssData)
     return new(matrix, config, data)
@@ -68,15 +68,15 @@ The available data parameter is:
 """
 function cudss_set end
 
-function cudss_set(matrix::CudssMatrix, v::CuVector)
+function cudss_set(matrix::CudssMatrix{T}, v::CuVector{T}) where T <: BlasFloat
   cudssMatrixSetValues(matrix, v)
 end
 
-function cudss_set(matrix::CudssMatrix, A::CuMatrix)
+function cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T}) where T <: BlasFloat
   cudssMatrixSetValues(matrix, A)
 end
 
-function cudss_set(matrix::CudssMatrix, A::CuSparseMatrixCSR)
+function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T}) where T <: BlasFloat
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
 end
 
@@ -166,18 +166,18 @@ The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not
 """
 function cudss end
 
-function cudss(phase::String, solver::CudssSolver, x::CuVector, b::CuVector)
+function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}) where T <: BlasFloat
+  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, X, B)
+end
+
+function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}) where T <: BlasFloat
   solution = CudssMatrix(x)
   rhs = CudssMatrix(b)
-  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, solution, rhs)
+  cudss(phase, solver, solution, rhs)
 end
 
-function cudss(phase::String, solver::CudssSolver, X::CuMatrix, B::CuMatrix)
+function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
-  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, solution, rhs)
-end
-
-function cudss(phase::String, solver::CudssSolver, X::CudssMatrix, B::CudssMatrix)
-  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, X, B)
+  cudss(phase, solver, solution, rhs)
 end

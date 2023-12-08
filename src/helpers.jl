@@ -27,38 +27,39 @@ export CudssMatrix, CudssData, CudssConfig
 - `'Z'`: 0-based indexing;
 - `'O'`: 1-based indexing.
 """
-mutable struct CudssMatrix
+mutable struct CudssMatrix{T}
+    type::Type{T}
     matrix::cudssMatrix_t
 
-    function CudssMatrix(v::CuVector) 
+    function CudssMatrix(v::CuVector{T}) where T <: BlasFloat
         m = length(v)
         matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateDn(matrix_ref, m, 1, m, v, eltype(v), 'C')
-        obj = new(matrix_ref[])
+        cudssMatrixCreateDn(matrix_ref, m, 1, m, v, T, 'C')
+        obj = new(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
 
-    function CudssMatrix(A::CuMatrix; transposed::Bool=false) 
+    function CudssMatrix(A::CuMatrix{T}; transposed::Bool=false) where T <: BlasFloat
         m,n = size(A)
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
-            cudssMatrixCreateDn(matrix_ref, n, m, m, A, eltype(A), 'R')
+            cudssMatrixCreateDn(matrix_ref, n, m, m, A, T, 'R')
         else
-            cudssMatrixCreateDn(matrix_ref, m, n, m, A, eltype(A), 'C')
+            cudssMatrixCreateDn(matrix_ref, m, n, m, A, T, 'C')
         end
-        obj = new(matrix_ref[])
+        obj = new(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
 
-    function CudssMatrix(A::CuSparseMatrixCSR, structure::String, view::Char; index::Char='O')
+    function CudssMatrix(A::CuSparseMatrixCSR{T}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
         m,n = size(A)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateCsr(matrix_ref, m, n, nnz(A), A.rowPtr, CU_NULL,
-                             A.colVal, A.nzVal, eltype(A.rowPtr), eltype(A.nzVal), structure,
+                             A.colVal, A.nzVal, eltype(A.rowPtr), T, structure,
                              view, index)
-        obj = new(matrix_ref[])
+        obj = new(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
