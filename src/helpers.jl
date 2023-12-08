@@ -4,9 +4,11 @@ export CudssMatrix, CudssData, CudssConfig
 ## Matrix
 
 """
-    matrix = CudssMatrix(v::CuVector)
-    matrix = CudssMatrix(A::CuMatrix)
-    matrix = CudssMatrix(A::CuSparseMatrixCSR, struture::String, view::Char; index::Char='O')
+    matrix = CudssMatrix(v::CuVector{T})
+    matrix = CudssMatrix(A::CuMatrix{T})
+    matrix = CudssMatrix(A::CuSparseMatrixCSR{T}, struture::String, view::Char; index::Char='O')
+
+The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 `CudssMatrix` is a wrapper for `CuVector`, `CuMatrix` and `CuSparseMatrixCSR`.
 `CudssMatrix` is used to pass matrix of the linear system, as well as solution and right-hand side.
@@ -35,7 +37,7 @@ mutable struct CudssMatrix{T}
         m = length(v)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, m, 1, m, v, T, 'C')
-        obj = new(T, matrix_ref[])
+        obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -48,7 +50,7 @@ mutable struct CudssMatrix{T}
         else
             cudssMatrixCreateDn(matrix_ref, m, n, m, A, T, 'C')
         end
-        obj = new(T, matrix_ref[])
+        obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -59,7 +61,7 @@ mutable struct CudssMatrix{T}
         cudssMatrixCreateCsr(matrix_ref, m, n, nnz(A), A.rowPtr, CU_NULL,
                              A.colVal, A.nzVal, eltype(A.rowPtr), T, structure,
                              view, index)
-        obj = new(T, matrix_ref[])
+        obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
