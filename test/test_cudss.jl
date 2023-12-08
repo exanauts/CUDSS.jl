@@ -41,7 +41,7 @@ function cudss_sparse()
     A_cpu = A_cpu + A_cpu'
     A_gpu = CuSparseMatrixCSR(A_cpu)
     @testset "view = $view" for view in ('L', 'U', 'F')
-      @testset "structure = $structure" for structure in ('G', "G", 'S', "S", 'H', "H", "SPD", "HPD")
+      @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
         matrix = CudssMatrix(A_gpu, structure, view) 
         format = Ref{CUDSS.cudssMatrixFormat_t}()
         CUDSS.cudssMatrixGetFormat(matrix, format)
@@ -62,7 +62,7 @@ function cudss_solver()
     A_cpu = sprand(T, n, n, 1.0)
     A_cpu = A_cpu + A_cpu'
     A_gpu = CuSparseMatrixCSR(A_cpu)
-    @testset "structure = $structure" for structure in ('G', "G", 'S', "S", 'H', "H", "SPD", "HPD")
+    @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
       @testset "view = $view" for view in ('L', 'U', 'F')
         solver = CudssSolver(A_gpu, structure, view)
 
@@ -95,7 +95,7 @@ function cudss_solver()
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
           parameter ∈ ("perm_row", "perm_col", "perm_reorder", "diag") && continue
           if parameter ≠ "user_perm"
-            (parameter == "inertia") && !(structure ∈ ('S', "S", 'H', "H")) && continue
+            (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
           else
             perm = Cint[i for i=n:-1:1]
@@ -121,7 +121,7 @@ function cudss_execution()
       x_gpu = CuVector(x_cpu)
       b_gpu = CuVector(b_cpu)
 
-      matrix = CudssMatrix(A_gpu, 'G', 'F')
+      matrix = CudssMatrix(A_gpu, "G", 'F')
       config = CudssConfig()
       data = CudssData()
       solver = CudssSolver(matrix, config, data)
@@ -147,12 +147,12 @@ function cudss_execution()
         X_gpu = CuMatrix(X_cpu)
         B_gpu = CuMatrix(B_cpu)
 
-        structure = T <: Real ? 'S' : 'H'
+        structure = T <: Real ? "S" : "H"
         matrix = CudssMatrix(A_gpu, structure, view)
         config = CudssConfig()
         data = CudssData()
         solver = CudssSolver(matrix, config, data)
-        (structure == 'H') && cudss_set(solver, "pivot_type", 'N')
+        (structure == "H") && cudss_set(solver, "pivot_type", 'N')
 
         cudss("analysis", solver, X_gpu, B_gpu)
         cudss("factorization", solver, X_gpu, B_gpu)

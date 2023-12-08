@@ -46,7 +46,7 @@ A_gpu = CuSparseMatrixCSR(A_cpu)
 x_gpu = CuVector(x_cpu)
 b_gpu = CuVector(b_cpu)
 
-solver = CudssSolver(A_gpu, 'G', 'F')
+solver = CudssSolver(A_gpu, "G", 'F')
 
 cudss("analysis", solver, x_gpu, b_gpu)
 cudss("factorization", solver, x_gpu, b_gpu)
@@ -75,7 +75,7 @@ A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
 X_gpu = CuMatrix(X_cpu)
 B_gpu = CuMatrix(B_cpu)
 
-structure = T <: Real ? 'S' : 'H'
+structure = T <: Real ? "S" : "H"
 solver = CudssSolver(A_gpu, structure, 'L')
 
 cudss("analysis", solver, X_gpu, B_gpu)

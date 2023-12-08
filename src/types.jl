@@ -58,18 +58,6 @@ end
 
 ## matrix structure type
 
-function Base.convert(::Type{cudssMatrixType_t}, structure::Char)
-    if structure == 'G'
-        return CUDSS_MTYPE_GENERAL
-    elseif structure == 'S'
-        return CUDSS_MTYPE_SYMMETRIC
-    elseif structure == 'H'
-        return CUDSS_MTYPE_HERMITIAN
-    else
-        throw(ArgumentError("Unknown structure $structure"))
-    end
-end
-
 function Base.convert(::Type{cudssMatrixType_t}, structure::String)
     if structure == "G"
         return CUDSS_MTYPE_GENERAL
