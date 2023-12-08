@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: >-
+  CUDSS.jl: Julia interface for NVIDIA cuDSS
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Alexis
+    family-names: Montoison
+    email: alexis.montoison@polymtl.ca
+    affiliation: >-
+      Argonne National Laboratory, GERAD and Polytechnique Montréal
+    orcid: 'https://orcid.org/0000-0002-3403-5450'
+keywords:
+  - Julia
+  - cuDSS
+  - direct methods
+  - sparse linear systems
+  - GPU computing
+license: MIT
+repository-code: >-
+  https://github.com/exanauts/CUDSS.jl
