@@ -8,10 +8,10 @@ function LinearAlgebra.lu(A::CuSparseMatrixCSR{T}) where T <: BlasFloat
   return solver
 end
 
-function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T}) where T <: BlasFloat
+function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T}; view::Char='F') where T <: BlasFloat
   n = LinearAlgebra.checksquare(A)
   structure = T <: Real ? "S" : "H"
-  solver = CudssSolver(A, structure, 'F')
+  solver = CudssSolver(A, structure, view)
   (T <: Complex) && cudss_set(solver, "pivot_type", 'N')
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
@@ -20,16 +20,22 @@ function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T}) where T <: BlasFloat
   return solver
 end
 
-function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T}) where T <: BlasFloat
+LinearAlgebra.ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T}) where T <: BlasReal = LinearAlgebra.ldlt(A.data, view=A.uplo)
+LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T}) where T <: BlasFloat = LinearAlgebra.ldlt(A.data, view=A.uplo)
+
+function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T}; view::Char='F') where T <: BlasFloat
   n = LinearAlgebra.checksquare(A)
   structure = T <: Real ? "SPD" : "HPD"
-  solver = CudssSolver(A, structure, 'F')
+  solver = CudssSolver(A, structure, view)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
   cudss("analysis", solver, x, b)
   cudss("factorization", solver, x, b)
   return solver
 end
+
+LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T}) where T <: BlasReal = LinearAlgebra.cholesky(A.data, view=A.uplo)
+LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T}) where T <: BlasFloat = LinearAlgebra.cholesky(A.data, view=A.uplo)
 
 for fun in (:lu!, :ldlt!, :cholesky!)
   @eval begin

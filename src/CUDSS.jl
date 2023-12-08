@@ -6,7 +6,7 @@ using LinearAlgebra
 using SparseArrays
 
 import CUDA: @checked, libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream
-import LinearAlgebra: lu, lu!, ldlt, ldlt!, cholesky, cholesky!, ldiv!, BlasFloat
+import LinearAlgebra: lu, lu!, ldlt, ldlt!, cholesky, cholesky!, ldiv!, BlasFloat, BlasReal
 
 include("libcudss.jl")
 include("error.jl")

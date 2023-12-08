@@ -218,27 +218,32 @@ function cudss_generic()
       @test norm(r_gpu2) ≤ √eps(R)
     end
 
-    @testset "view = $view" for view in ('F',)
+    @testset "view = $view" for view in ('L', 'U', 'F')
       @testset "Symmetric -- Hermitian" begin
         A_cpu = sprand(T, n, n, 0.01) + I
         A_cpu = A_cpu + A_cpu'
         X_cpu = zeros(T, n, p)
         B_cpu = rand(T, n, p)
 
-        A_gpu = CuSparseMatrixCSR(A_cpu)
+        (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
+        (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
+        (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
         X_gpu = CuMatrix(X_cpu)
         B_gpu = CuMatrix(B_cpu)
 
-        solver = ldlt(A_gpu)
+        solver = ldlt(A_gpu; view)
         ldiv!(X_gpu, solver, B_gpu)
         R_gpu = B_gpu - A_gpu * X_gpu
         @test norm(R_gpu) ≤ √eps(R)
 
-        A_gpu2 = rand(R) * A_gpu
+        c = rand(R)
+        A_cpu2 = c * A_cpu
+        A_gpu2 = c * A_gpu
+
         ldlt!(solver, A_gpu2)
         X_gpu .= B_gpu
         ldiv!(solver, X_gpu)
-        R_gpu2 = B_gpu - A_gpu2 * X_gpu
+        R_gpu2 = B_gpu - CuSparseMatrixCSR(A_cpu2) * X_gpu
         @test norm(R_gpu2) ≤ √eps(R)
       end
 
@@ -248,20 +253,25 @@ function cudss_generic()
         X_cpu = zeros(T, n, p)
         B_cpu = rand(T, n, p)
 
-        A_gpu = CuSparseMatrixCSR(A_cpu)
+        (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
+        (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
+        (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
         X_gpu = CuMatrix(X_cpu)
         B_gpu = CuMatrix(B_cpu)
 
-        solver = cholesky(A_gpu)
+        solver = cholesky(A_gpu; view)
         ldiv!(X_gpu, solver, B_gpu)
         R_gpu = B_gpu - A_gpu * X_gpu
         @test norm(R_gpu) ≤ √eps(R)
 
-        A_gpu2 = rand(R) * A_gpu
+        c = rand(R)
+        A_cpu2 = c * A_cpu
+        A_gpu2 = c * A_gpu
+
         cholesky!(solver, A_gpu2)
         X_gpu .= B_gpu
         ldiv!(solver, X_gpu)
-        R_gpu2 = B_gpu - A_gpu2 * X_gpu
+        R_gpu2 = B_gpu - CuSparseMatrixCSR(A_cpu2) * X_gpu
         @test norm(R_gpu2) ≤ √eps(R)
       end
     end
