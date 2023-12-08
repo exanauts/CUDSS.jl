@@ -6,6 +6,7 @@ using LinearAlgebra
 using SparseArrays
 
 import CUDA: @checked, libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream
+import LinearAlgebra: BlasFloat
 
 include("libcudss.jl")
 include("error.jl")
