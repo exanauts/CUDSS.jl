@@ -5,6 +5,7 @@
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
+using LinearAlgebra
 using SparseArrays
 
 T = Float64
@@ -29,6 +30,7 @@ norm(r_gpu)
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
+using LinearAlgebra
 using SparseArrays
 
 T = Float64
@@ -63,6 +65,7 @@ F = ldlt(S_gpu)
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
+using LinearAlgebra
 using SparseArrays
 
 T = ComplexF64
@@ -77,7 +80,7 @@ A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
 X_gpu = CuMatrix(X_cpu)
 B_gpu = CuMatrix(B_cpu)
 
-F = cholesky(A, view='U')
+F = cholesky(A_gpu, view='U')
 ldiv!(X_gpu, F, B_gpu)
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
