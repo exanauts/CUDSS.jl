@@ -8,7 +8,8 @@ makedocs(
                            prettyurls = get(ENV, "CI", nothing) == "true",
                            collapselevel = 1),
   sitename = "CUDSS.jl",
-  pages = ["Home" => "index.md"]
+  pages = ["Home"        => "index.md",
+           "Generic API" => "generic.md"]
 )
 
 deploydocs(
