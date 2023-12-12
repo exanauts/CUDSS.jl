@@ -7,15 +7,13 @@ using SparseArrays
 T = Float64
 n = 100
 A_cpu = sprand(T, n, n, 0.05) + I
-x_cpu = zeros(T, n)
 b_cpu = rand(T, n)
 
 A_gpu = CuSparseMatrixCSR(A_cpu)
-x_gpu = CuVector(x_cpu)
 b_gpu = CuVector(b_cpu)
 
 F = lu(A_gpu)
-ldiv!(x_gpu, F, b_gpu)
+x_gpu = F \ b_gpu
 
 r_gpu = b_gpu - A_gpu * x_gpu
 norm(r_gpu)</code></pre><h2 id="Example-2:-Sparse-symmetric-linear-system-with-multiple-right-hand-sides"><a class="docs-heading-anchor" href="#Example-2:-Sparse-symmetric-linear-system-with-multiple-right-hand-sides">Example 2: Sparse symmetric linear system with multiple right-hand sides</a><a id="Example-2:-Sparse-symmetric-linear-system-with-multiple-right-hand-sides-1"></a><a class="docs-heading-anchor-permalink" href="#Example-2:-Sparse-symmetric-linear-system-with-multiple-right-hand-sides" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
@@ -28,12 +26,11 @@ n = 100
 p = 5
 A_cpu = sprand(T, n, n, 0.05) + I
 A_cpu = A_cpu + A_cpu&#39;
-X_cpu = zeros(T, n, p)
 B_cpu = rand(T, n, p)
 
 A_gpu = CuSparseMatrixCSR(A_cpu |&gt; tril)
-X_gpu = CuMatrix(X_cpu)
 B_gpu = CuMatrix(B_cpu)
+X_gpu = similar(B_gpu)
 
 F = ldlt(A_gpu, view=&#39;L&#39;)
 ldiv!(X_gpu, F, B_gpu)
@@ -50,16 +47,15 @@ n = 100
 p = 5
 A_cpu = sprand(T, n, n, 0.01)
 A_cpu = A_cpu * A_cpu&#39; + I
-X_cpu = zeros(T, n, p)
 B_cpu = rand(T, n, p)
 
 A_gpu = CuSparseMatrixCSR(A_cpu |&gt; triu)
-X_gpu = CuMatrix(X_cpu)
 B_gpu = CuMatrix(B_cpu)
+X_gpu = similar(B_gpu)
 
 F = cholesky(A_gpu, view=&#39;U&#39;)
 ldiv!(X_gpu, F, B_gpu)
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>If we only store one triangle of <code>A_gpu</code>, we can also use the wrappers <code>Symmetric</code> and <code>Hermitian</code>. For real matrices, both wrappers are allowed but only <code>Hermitian</code> can be used for complex matrices.</p></div></div><pre><code class="language-julia hljs">H_gpu = Hermitian(A_gpu, :U)
-F = cholesky(H_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Monday 11 December 2023 04:30">Monday 11 December 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+F = cholesky(H_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 12 December 2023 07:08">Tuesday 12 December 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
