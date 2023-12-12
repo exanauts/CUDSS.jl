@@ -54,10 +54,18 @@ for type in (:CuVector, :CuMatrix)
   @eval begin
     function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
       cudss("solve", solver, b, b)
+      return b
     end
 
     function LinearAlgebra.ldiv!(x::$type{T}, solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
       cudss("solve", solver, x, b)
+      return x
+    end
+
+    function Base.:\(solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
+      x = similar(b)
+      ldiv!(x, solver, b)
+      return x
     end
   end
 end
