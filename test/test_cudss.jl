@@ -312,7 +312,7 @@ function cudss_generic()
           @test norm(R_gpu2) ≤ √eps(R)
         end
 
-        @testset "ldiv!" begin
+        @testset "\\" begin
           solver = cholesky(A_gpu; view)
           X_gpu = solver \ B_gpu
           R_gpu = B_gpu - A_gpu * X_gpu
