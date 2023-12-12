@@ -11,15 +11,13 @@ using SparseArrays
 T = Float64
 n = 100
 A_cpu = sprand(T, n, n, 0.05) + I
-x_cpu = zeros(T, n)
 b_cpu = rand(T, n)
 
 A_gpu = CuSparseMatrixCSR(A_cpu)
-x_gpu = CuVector(x_cpu)
 b_gpu = CuVector(b_cpu)
 
 F = lu(A_gpu)
-ldiv!(x_gpu, F, b_gpu)
+x_gpu = F \ b_gpu
 
 r_gpu = b_gpu - A_gpu * x_gpu
 norm(r_gpu)
@@ -38,12 +36,11 @@ n = 100
 p = 5
 A_cpu = sprand(T, n, n, 0.05) + I
 A_cpu = A_cpu + A_cpu'
-X_cpu = zeros(T, n, p)
 B_cpu = rand(T, n, p)
 
 A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
-X_gpu = CuMatrix(X_cpu)
 B_gpu = CuMatrix(B_cpu)
+X_gpu = similar(B_gpu)
 
 F = ldlt(A_gpu, view='L')
 ldiv!(X_gpu, F, B_gpu)
@@ -73,12 +70,11 @@ n = 100
 p = 5
 A_cpu = sprand(T, n, n, 0.01)
 A_cpu = A_cpu * A_cpu' + I
-X_cpu = zeros(T, n, p)
 B_cpu = rand(T, n, p)
 
 A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
-X_gpu = CuMatrix(X_cpu)
 B_gpu = CuMatrix(B_cpu)
+X_gpu = similar(B_gpu)
 
 F = cholesky(A_gpu, view='U')
 ldiv!(X_gpu, F, B_gpu)
