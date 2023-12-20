@@ -10,7 +10,7 @@ For more details on using cuDSS, refer to the official [cuDSS documentation](htt
 
 ```julia
 julia> ]
-pkg> add https://github.com/exanauts/CUDSS.jl.git
+pkg> add CUDSS
 pkg> test CUDSS
 ```
 
