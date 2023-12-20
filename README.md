@@ -23,7 +23,7 @@ CUDSS.jl can be installed and tested through the Julia package manager:
 
 ```julia
 julia> ]
-pkg> add https://github.com/exanauts/CUDSS.jl.git
+pkg> add CUDSS
 pkg> test CUDSS
 ```
 
