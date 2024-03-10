@@ -113,79 +113,90 @@ function cudss_execution()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     R = real(T)
     @testset "Unsymmetric -- Non-Hermitian" begin
-      A_cpu = sprand(T, n, n, 0.02) + I
-      x_cpu = zeros(T, n)
-      b_cpu = rand(T, n)
+      @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
+        A_cpu = sprand(T, n, n, 0.02) + I
+        x_cpu = zeros(T, n)
+        b_cpu = rand(T, n)
 
-      A_gpu = CuSparseMatrixCSR(A_cpu)
-      x_gpu = CuVector(x_cpu)
-      b_gpu = CuVector(b_cpu)
+        A_gpu = CuSparseMatrixCSR(A_cpu)
+        x_gpu = CuVector(x_cpu)
+        b_gpu = CuVector(b_cpu)
 
-      matrix = CudssMatrix(A_gpu, "G", 'F')
-      config = CudssConfig()
-      data = CudssData()
-      solver = CudssSolver(matrix, config, data)
+        matrix = CudssMatrix(A_gpu, "G", 'F')
+        config = CudssConfig()
+        data = CudssData()
+        solver = CudssSolver(matrix, config, data)
+        cudss_set(solver, "pivot_type", pivot)
 
-      cudss("analysis", solver, x_gpu, b_gpu)
-      cudss("factorization", solver, x_gpu, b_gpu)
-      cudss("solve", solver, x_gpu, b_gpu)
+        cudss("analysis", solver, x_gpu, b_gpu)
+        cudss("factorization", solver, x_gpu, b_gpu)
+        cudss("solve", solver, x_gpu, b_gpu)
 
-      r_gpu = b_gpu - A_gpu * x_gpu
-      @test norm(r_gpu) ≤ √eps(R)
+        r_gpu = b_gpu - A_gpu * x_gpu
+        @test norm(r_gpu) ≤ √eps(R)
+      end
     end
 
-    @testset "view = $view" for view in ('L', 'U', 'F')
-      @testset "Symmetric -- Hermitian" begin
-        A_cpu = sprand(T, n, n, 0.01) + I
-        A_cpu = A_cpu + A_cpu'
-        X_cpu = zeros(T, n, p)
-        B_cpu = rand(T, n, p)
+    symmetric_hermitian_pivots = T <: Real ? ('C', 'R', 'N') : ('N',)
+    @testset "Symmetric -- Hermitian" begin
+      @testset "view = $view" for view in ('F',)
+        @testset "Pivoting = $pivot" for pivot in symmetric_hermitian_pivots
+          A_cpu = sprand(T, n, n, 0.01) + I
+          A_cpu = A_cpu + A_cpu'
+          X_cpu = zeros(T, n, p)
+          B_cpu = rand(T, n, p)
 
-        (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
-        (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
-        (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
-        X_gpu = CuMatrix(X_cpu)
-        B_gpu = CuMatrix(B_cpu)
+          (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
+          (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
+          (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
+          X_gpu = CuMatrix(X_cpu)
+          B_gpu = CuMatrix(B_cpu)
 
-        structure = T <: Real ? "S" : "H"
-        matrix = CudssMatrix(A_gpu, structure, view)
-        config = CudssConfig()
-        data = CudssData()
-        solver = CudssSolver(matrix, config, data)
-        (structure == "H") && cudss_set(solver, "pivot_type", 'N')
+          structure = T <: Real ? "S" : "H"
+          matrix = CudssMatrix(A_gpu, structure, view)
+          config = CudssConfig()
+          data = CudssData()
+          solver = CudssSolver(matrix, config, data)
+          cudss_set(solver, "pivot_type", pivot)
 
-        cudss("analysis", solver, X_gpu, B_gpu)
-        cudss("factorization", solver, X_gpu, B_gpu)
-        cudss("solve", solver, X_gpu, B_gpu)
+          cudss("analysis", solver, X_gpu, B_gpu)
+          cudss("factorization", solver, X_gpu, B_gpu)
+          cudss("solve", solver, X_gpu, B_gpu)
 
-        R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
-        @test norm(R_gpu) ≤ √eps(R)
+          R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+          @test norm(R_gpu) ≤ √eps(R)
+        end
       end
+    end
 
-      @testset "SPD -- HPD" begin
-        A_cpu = sprand(T, n, n, 0.01)
-        A_cpu = A_cpu * A_cpu' + I
-        X_cpu = zeros(T, n, p)
-        B_cpu = rand(T, n, p)
+    @testset "SPD -- HPD" begin
+      @testset "view = $view" for view in ('F',)
+        @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
+          A_cpu = sprand(T, n, n, 0.01)
+          A_cpu = A_cpu * A_cpu' + I
+          X_cpu = zeros(T, n, p)
+          B_cpu = rand(T, n, p)
 
-        (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
-        (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
-        (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
-        X_gpu = CuMatrix(X_cpu)
-        B_gpu = CuMatrix(B_cpu)
+          (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
+          (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
+          (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
+          X_gpu = CuMatrix(X_cpu)
+          B_gpu = CuMatrix(B_cpu)
 
-        structure = T <: Real ? "SPD" : "HPD"
-        matrix = CudssMatrix(A_gpu, structure, view)
-        config = CudssConfig()
-        data = CudssData()
-        solver = CudssSolver(matrix, config, data)
+          structure = T <: Real ? "SPD" : "HPD"
+          matrix = CudssMatrix(A_gpu, structure, view)
+          config = CudssConfig()
+          data = CudssData()
+          solver = CudssSolver(matrix, config, data)
+          cudss_set(solver, "pivot_type", pivot)
 
-        cudss("analysis", solver, X_gpu, B_gpu)
-        cudss("factorization", solver, X_gpu, B_gpu)
-        cudss("solve", solver, X_gpu, B_gpu)
+          cudss("analysis", solver, X_gpu, B_gpu)
+          cudss("factorization", solver, X_gpu, B_gpu)
+          cudss("solve", solver, X_gpu, B_gpu)
 
-        R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
-        @test norm(R_gpu) ≤ √eps(R)
+          R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+          @test norm(R_gpu) ≤ √eps(R)
+        end
       end
     end
   end
@@ -234,8 +245,8 @@ function cudss_generic()
       end
     end
 
-    @testset "view = $view" for view in ('F',)
-      @testset "Symmetric -- Hermitian" begin
+    @testset "Symmetric -- Hermitian" begin
+      @testset "view = $view" for view in ('F',)
         A_cpu = sprand(T, n, n, 0.01) + I
         A_cpu = A_cpu + A_cpu'
         B_cpu = rand(T, n, p)
@@ -281,8 +292,10 @@ function cudss_generic()
           @test norm(R_gpu2) ≤ √eps(R)
         end
       end
+    end
 
-      @testset "SPD -- HPD" begin
+    @testset "SPD -- HPD" begin
+      @testset "view = $view" for view in ('F',)
         A_cpu = sprand(T, n, n, 0.01)
         A_cpu = A_cpu * A_cpu' + I
         B_cpu = rand(T, n, p)
