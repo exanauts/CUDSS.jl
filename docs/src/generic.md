@@ -21,6 +21,18 @@ x_gpu = F \ b_gpu
 
 r_gpu = b_gpu - A_gpu * x_gpu
 norm(r_gpu)
+
+# In-place LU
+d_gpu = rand(T, n) |> CuVector
+B_gpu = A_gpu + Diagonal(d_gpu)
+lu!(F, B_gpu)
+
+c_cpu = rand(T, n)
+c_gpu = CuVector(c_cpu)
+ldiv!(x_gpu, F, c_gpu)
+
+r_gpu = c_gpu - B_gpu * x_gpu
+norm(r_gpu)
 ```
 
 ## Example 2: Sparse symmetric linear system with multiple right-hand sides
@@ -32,6 +44,7 @@ using LinearAlgebra
 using SparseArrays
 
 T = Float64
+R = real(T)
 n = 100
 p = 5
 A_cpu = sprand(T, n, n, 0.05) + I
@@ -43,14 +56,26 @@ B_gpu = CuMatrix(B_cpu)
 X_gpu = similar(B_gpu)
 
 F = ldlt(A_gpu, view='L')
-ldiv!(X_gpu, F, B_gpu)
+X_gpu = F \ B_gpu
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+norm(R_gpu)
+
+# In-place LDLᵀ
+d_gpu = rand(R, n) |> CuVector
+B_gpu = A_gpu + Diagonal(d_gpu)
+ldlt!(F, B_gpu)
+
+C_cpu = rand(T, n, p)
+C_gpu = CuMatrix(C_cpu)
+ldiv!(X_gpu, F, C_gpu)
+
+R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
 norm(R_gpu)
 ```
 
 !!! note
-    If we only store one triangle of `A_gpu`, we can also use the wrappers `Symmetric` and `Hermitian`. For real matrices, both wrappers are allowed but only `Hermitian` can be used for complex matrices.
+    If we only store one triangle of `A_gpu`, we can also use the wrappers `Symmetric` and `Hermitian` instead of using the keyword argument `view` in `ldlt`. For real matrices, both wrappers are allowed but only `Hermitian` can be used for complex matrices.
 
 ```julia
 S_gpu = Symmetric(A_gpu, :L)
@@ -66,6 +91,7 @@ using LinearAlgebra
 using SparseArrays
 
 T = ComplexF64
+R = real(T)
 n = 100
 p = 5
 A_cpu = sprand(T, n, n, 0.01)
@@ -77,14 +103,26 @@ B_gpu = CuMatrix(B_cpu)
 X_gpu = similar(B_gpu)
 
 F = cholesky(A_gpu, view='U')
-ldiv!(X_gpu, F, B_gpu)
+X_gpu = F \ B_gpu
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+norm(R_gpu)
+
+# In-place LLᴴ
+d_gpu = rand(R, n) |> CuVector
+B_gpu = A_gpu + Diagonal(d_gpu)
+cholesky!(F, B_gpu)
+
+C_cpu = rand(T, n, p)
+C_gpu = CuMatrix(C_cpu)
+ldiv!(X_gpu, F, C_gpu)
+
+R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
 norm(R_gpu)
 ```
 
 !!! note
-    If we only store one triangle of `A_gpu`, we can also use the wrappers `Symmetric` and `Hermitian`. For real matrices, both wrappers are allowed but only `Hermitian` can be used for complex matrices.
+    If we only store one triangle of `A_gpu`, we can also use the wrappers `Symmetric` and `Hermitian` instead of using the keyword argument `view` in `cholesky`. For real matrices, both wrappers are allowed but only `Hermitian` can be used for complex matrices.
 
 ```julia
 H_gpu = Hermitian(A_gpu, :U)

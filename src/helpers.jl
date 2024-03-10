@@ -6,7 +6,7 @@ export CudssMatrix, CudssData, CudssConfig
 """
     matrix = CudssMatrix(v::CuVector{T})
     matrix = CudssMatrix(A::CuMatrix{T})
-    matrix = CudssMatrix(A::CuSparseMatrixCSR{T}, struture::String, view::Char; index::Char='O')
+    matrix = CudssMatrix(A::CuSparseMatrixCSR{T,Cint}, struture::String, view::Char; index::Char='O')
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
@@ -75,7 +75,7 @@ mutable struct CudssMatrix{T}
         obj
     end
 
-    function CudssMatrix(A::CuSparseMatrixCSR{T}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+    function CudssMatrix(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
         m,n = size(A)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateCsr(matrix_ref, m, n, nnz(A), A.rowPtr, CU_NULL,

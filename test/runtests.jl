@@ -1,4 +1,4 @@
-using Test
+using Test, Random
 using CUDA, CUDA.CUSPARSE
 using CUDSS
 using SparseArrays
@@ -8,6 +8,8 @@ import CUDSS: CUDSS_DATA_PARAMETERS, CUDSS_CONFIG_PARAMETERS
 import CUDSS: CUDSS_ALG_DEFAULT, CUDSS_ALG_1, CUDSS_ALG_2, CUDSS_ALG_3
 
 @info("CUDSS_INSTALLATION : $(CUDSS.CUDSS_INSTALLATION)")
+
+Random.seed!(666)  # Random tests are diabolical
 
 include("test_cudss.jl")
 

@@ -1,7 +1,7 @@
 export CudssSolver, cudss, cudss_set, cudss_get
 
 """
-    solver = CudssSolver(A::CuSparseMatrixCSR{T}, structure::String, view::Char; index::Char='O')
+    solver = CudssSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O')
     solver = CudssSolver(matrix::CudssMatrix{T}, config::CudssConfig, data::CudssData)
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -36,7 +36,7 @@ mutable struct CudssSolver{T}
     return new{T}(matrix, config, data)
   end
 
-  function CudssSolver(A::CuSparseMatrixCSR{T}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+  function CudssSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
     matrix = CudssMatrix(A, structure, view; index)
     config = CudssConfig()
     data = CudssData()
@@ -47,7 +47,7 @@ end
 """
     cudss_set(matrix::CudssMatrix{T}, v::CuVector{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T})
-    cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T})
+    cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
     cudss_set(data::CudssSolver, param::String, value)
     cudss_set(config::CudssConfig, param::String, value)
     cudss_set(data::CudssData, param::String, value)
@@ -80,7 +80,7 @@ function cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T}) where T <: BlasFloat
   cudssMatrixSetValues(matrix, A)
 end
 
-function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T}) where T <: BlasFloat
+function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: BlasFloat
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
 end
 
