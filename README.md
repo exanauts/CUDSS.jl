@@ -34,7 +34,7 @@ pkg> test CUDSS
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
-using SparseArrays
+using SparseArrays, LinearAlgebra
 
 T = Float64
 n = 100
@@ -61,7 +61,7 @@ norm(r_gpu)
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
-using SparseArrays
+using SparseArrays, LinearAlgebra
 
 T = Float64
 n = 100
@@ -91,7 +91,7 @@ norm(R_gpu)
 ```julia
 using CUDA, CUDA.CUSPARSE
 using CUDSS
-using SparseArrays
+using SparseArrays, LinearAlgebra
 
 T = ComplexF64
 n = 100
