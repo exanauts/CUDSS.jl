@@ -139,7 +139,7 @@ function cudss_execution()
 
     symmetric_hermitian_pivots = T <: Real ? ('C', 'R', 'N') : ('N',)
     @testset "Symmetric -- Hermitian" begin
-      @testset "view = $view" for view in ('F',)
+      @testset "view = $view" for view in ('F', 'L', 'U')
         @testset "Pivoting = $pivot" for pivot in symmetric_hermitian_pivots
           A_cpu = sprand(T, n, n, 0.01) + I
           A_cpu = A_cpu + A_cpu'
@@ -170,7 +170,7 @@ function cudss_execution()
     end
 
     @testset "SPD -- HPD" begin
-      @testset "view = $view" for view in ('F',)
+      @testset "view = $view" for view in ('F', 'L', 'U')
         @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
           A_cpu = sprand(T, n, n, 0.01)
           A_cpu = A_cpu * A_cpu' + I
