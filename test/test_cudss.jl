@@ -246,7 +246,7 @@ function cudss_generic()
     end
 
     @testset "Symmetric -- Hermitian" begin
-      @testset "view = $view" for view in ('F',)
+      @testset "view = $view" for view in ('F', 'L', 'U')
         A_cpu = sprand(T, n, n, 0.01) + I
         A_cpu = A_cpu + A_cpu'
         B_cpu = rand(T, n, p)
@@ -262,7 +262,7 @@ function cudss_generic()
 
           solver = ldlt(A_gpu; view)
           ldiv!(X_gpu, solver, B_gpu)
-          R_gpu = B_gpu - A_gpu * X_gpu
+          R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)
 
           c = rand(R)
@@ -279,7 +279,7 @@ function cudss_generic()
         @testset "\\" begin
           solver = ldlt(A_gpu; view)
           X_gpu = solver \ B_gpu
-          R_gpu = B_gpu - A_gpu * X_gpu
+          R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)
 
           c = rand(R)
@@ -295,7 +295,7 @@ function cudss_generic()
     end
 
     @testset "SPD -- HPD" begin
-      @testset "view = $view" for view in ('F',)
+      @testset "view = $view" for view in ('F', 'L', 'U')
         A_cpu = sprand(T, n, n, 0.01)
         A_cpu = A_cpu * A_cpu' + I
         B_cpu = rand(T, n, p)
@@ -311,7 +311,7 @@ function cudss_generic()
 
           solver = cholesky(A_gpu; view)
           ldiv!(X_gpu, solver, B_gpu)
-          R_gpu = B_gpu - A_gpu * X_gpu
+          R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)
 
           c = rand(R)
@@ -328,7 +328,7 @@ function cudss_generic()
         @testset "\\" begin
           solver = cholesky(A_gpu; view)
           X_gpu = solver \ B_gpu
-          R_gpu = B_gpu - A_gpu * X_gpu
+          R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)
 
           c = rand(R)
