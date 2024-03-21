@@ -48,7 +48,7 @@ end
     cudss_set(matrix::CudssMatrix{T}, v::CuVector{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
-    cudss_set(data::CudssSolver, param::String, value)
+    cudss_set(solver::CudssSolver, param::String, value)
     cudss_set(config::CudssConfig, param::String, value)
     cudss_set(data::CudssData, param::String, value)
 
@@ -104,7 +104,7 @@ function cudss_set(config::CudssConfig, param::String, value)
 end
 
 """
-    value = cudss_get(data::CudssSolver, param::String)
+    value = cudss_get(solver::CudssSolver, param::String)
     value = cudss_get(config::CudssConfig, param::String)
     value = cudss_get(data::CudssData, param::String)
 
