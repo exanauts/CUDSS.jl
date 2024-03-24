@@ -9,8 +9,7 @@ Base.showerror(io::IO, err::CUDSSError) =
 
 name(err::CUDSSError) = string(err.code)
 
-## COV_EXCL_START
-function description(err)
+function description(err::CUDSSError)
     if err.code == CUDSS_STATUS_SUCCESS
         return "the operation completed successfully"
     elseif err.code == CUDSS_STATUS_NOT_INITIALIZED
@@ -43,14 +42,13 @@ end
     end
 end
 
-function check(f, errs...)
-    res = retry_reclaim(in((CUDSS_STATUS_ALLOC_FAILED, errs...))) do
-        return f()
-    end
+@inline function check(f)
+    retry_if(res) = res in (CUDSS_STATUS_NOT_INITIALIZED,
+                            CUDSS_STATUS_ALLOC_FAILED,
+                            CUDSS_STATUS_INTERNAL_ERROR)
+    res = retry_reclaim(f, retry_if)
 
     if res != CUDSS_STATUS_SUCCESS
         throw_api_error(res)
     end
-
-    return
 end

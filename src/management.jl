@@ -2,9 +2,7 @@
 
 function cudssCreate()
     handle = Ref{cudssHandle_t}()
-    check(CUDSS_STATUS_NOT_INITIALIZED) do
-        unsafe_cudssCreate(handle)
-    end
+    cudssCreate(handle)
     handle[]
 end
 
