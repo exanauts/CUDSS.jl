@@ -34,4 +34,8 @@ include("test_cudss.jl")
   @testset "Generic API" begin
     cudss_generic()
   end
+
+  @testset "User permutation" begin
+    user_permutation()
+  end
 end

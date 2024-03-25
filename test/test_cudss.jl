@@ -344,3 +344,106 @@ function cudss_generic()
     end
   end
 end
+
+function user_permutation()
+  function permutation_lu(A_cpu, x_cpu, b_cpu, permutation)
+    A_gpu = CuSparseMatrixCSR(A_cpu)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    solver = CudssSolver(A_gpu, "G", 'F')
+
+    cudss_set(solver, "user_perm", permutation)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    nz = cudss_get(solver, "lu_nnz")
+    return nz
+  end
+
+  function permutation_ldlt(A_cpu, x_cpu, b_cpu, permutation)
+    A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "S" : "H"
+    solver = CudssSolver(A_gpu, structure, 'L')
+    cudss_set(solver, "user_perm", permutation)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    nz = cudss_get(solver, "lu_nnz")
+    return nz
+  end
+
+  function permutation_llt(A_cpu, x_cpu, b_cpu, permutation)
+    A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "SPD" : "HPD"
+    solver = CudssSolver(A_gpu, structure, 'U')
+    cudss_set(solver, "user_perm", permutation)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    nz = cudss_get(solver, "lu_nnz")
+    return nz
+  end
+
+  n = 1000
+  perm1_cpu = Vector{Cint}(undef, n)
+  perm2_cpu = Vector{Cint}(undef, n)
+  for i = 1:n
+    perm1_cpu[i] = i
+    perm2_cpu[i] = n-i+1
+  end
+  perm1_gpu = CuVector{Cint}(perm1_cpu)
+  perm2_gpu = CuVector{Cint}(perm2_cpu)
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    @testset "LU" begin
+      A_cpu = sprand(T, n, n, 0.05) + I
+      x_cpu = zeros(T, n)
+      b_cpu = rand(T, n)
+      nz1_cpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm1_cpu)
+      nz2_cpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm2_cpu)
+      nz1_gpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm1_gpu)
+      nz2_gpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm2_gpu)
+      @test nz1_cpu == nz1_gpu
+      @test nz2_cpu == nz2_gpu
+      @test nz1_cpu != nz2_cpu
+    end
+    @testset "LDLᵀ / LDLᴴ" begin
+      A_cpu = sprand(T, n, n, 0.05) + I
+      A_cpu = A_cpu + A_cpu'
+      x_cpu = zeros(T, n)
+      b_cpu = rand(T, n)
+      nz1_cpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm1_cpu)
+      nz2_cpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm2_cpu)
+      nz1_gpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm1_gpu)
+      nz2_gpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm2_gpu)
+      @test nz1_cpu == nz1_gpu
+      @test nz2_cpu == nz2_gpu
+      @test nz1_cpu != nz2_cpu
+    end
+    @testset "LLᵀ / LLᴴ" begin
+      A_cpu = sprand(T, n, n, 0.01)
+      A_cpu = A_cpu * A_cpu' + I
+      x_cpu = zeros(T, n)
+      b_cpu = rand(T, n)
+      nz1_cpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm1_cpu)
+      nz2_cpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm2_cpu)
+      nz1_gpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm1_gpu)
+      nz2_gpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm2_gpu)
+      @test nz1_cpu == nz1_gpu
+      @test nz2_cpu == nz2_gpu
+      @test nz1_cpu != nz2_cpu
+    end
+  end
+end

@@ -97,10 +97,9 @@ end
 function cudss_set(data::CudssData, param::String, value)
   (param ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $param."))
   (param == "user_perm") || throw(ArgumentError("Only the data parameter \"user_perm\" can be set."))
-  type = CUDSS_TYPES[param]
-  val = Ref{type}(value)
-  nbytes = sizeof(val)
-  cudssDataSet(handle(), data, param, val, nbytes)
+  (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
+  nbytes = sizeof(value)
+  cudssDataSet(handle(), data, param, value, nbytes)
 end
 
 function cudss_set(config::CudssConfig, param::String, value)
