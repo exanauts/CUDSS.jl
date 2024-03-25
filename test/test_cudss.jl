@@ -346,7 +346,7 @@ function cudss_generic()
 end
 
 function user_permutation()
-  function permutation_lu(A_cpu, x_cpu, b_cpu, permutation)
+  function permutation_lu(T, A_cpu, x_cpu, b_cpu, permutation)
     A_gpu = CuSparseMatrixCSR(A_cpu)
     x_gpu = CuVector(x_cpu)
     b_gpu = CuVector(b_cpu)
@@ -363,7 +363,7 @@ function user_permutation()
     return nz
   end
 
-  function permutation_ldlt(A_cpu, x_cpu, b_cpu, permutation)
+  function permutation_ldlt(T, A_cpu, x_cpu, b_cpu, permutation)
     A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
     x_gpu = CuVector(x_cpu)
     b_gpu = CuVector(b_cpu)
@@ -380,7 +380,7 @@ function user_permutation()
     return nz
   end
 
-  function permutation_llt(A_cpu, x_cpu, b_cpu, permutation)
+  function permutation_llt(T, A_cpu, x_cpu, b_cpu, permutation)
     A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
     x_gpu = CuVector(x_cpu)
     b_gpu = CuVector(b_cpu)
@@ -411,10 +411,10 @@ function user_permutation()
       A_cpu = sprand(T, n, n, 0.05) + I
       x_cpu = zeros(T, n)
       b_cpu = rand(T, n)
-      nz1_cpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm1_cpu)
-      nz2_cpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm2_cpu)
-      nz1_gpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm1_gpu)
-      nz2_gpu = permutation_lu(A_cpu, x_cpu, b_cpu, perm2_gpu)
+      nz1_cpu = permutation_lu(T, A_cpu, x_cpu, b_cpu, perm1_cpu)
+      nz2_cpu = permutation_lu(T, A_cpu, x_cpu, b_cpu, perm2_cpu)
+      nz1_gpu = permutation_lu(T, A_cpu, x_cpu, b_cpu, perm1_gpu)
+      nz2_gpu = permutation_lu(T, A_cpu, x_cpu, b_cpu, perm2_gpu)
       @test nz1_cpu == nz1_gpu
       @test nz2_cpu == nz2_gpu
       @test nz1_cpu != nz2_cpu
@@ -424,10 +424,10 @@ function user_permutation()
       A_cpu = A_cpu + A_cpu'
       x_cpu = zeros(T, n)
       b_cpu = rand(T, n)
-      nz1_cpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm1_cpu)
-      nz2_cpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm2_cpu)
-      nz1_gpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm1_gpu)
-      nz2_gpu = permutation_ldlt(A_cpu, x_cpu, b_cpu, perm2_gpu)
+      nz1_cpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm1_cpu)
+      nz2_cpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm2_cpu)
+      nz1_gpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm1_gpu)
+      nz2_gpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm2_gpu)
       @test nz1_cpu == nz1_gpu
       @test nz2_cpu == nz2_gpu
       @test nz1_cpu != nz2_cpu
@@ -437,10 +437,10 @@ function user_permutation()
       A_cpu = A_cpu * A_cpu' + I
       x_cpu = zeros(T, n)
       b_cpu = rand(T, n)
-      nz1_cpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm1_cpu)
-      nz2_cpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm2_cpu)
-      nz1_gpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm1_gpu)
-      nz2_gpu = permutation_llt(A_cpu, x_cpu, b_cpu, perm2_gpu)
+      nz1_cpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm1_cpu)
+      nz2_cpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm2_cpu)
+      nz1_gpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm1_gpu)
+      nz2_gpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm2_gpu)
       @test nz1_cpu == nz1_gpu
       @test nz2_cpu == nz2_gpu
       @test nz1_cpu != nz2_cpu
