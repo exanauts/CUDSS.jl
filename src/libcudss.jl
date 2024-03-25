@@ -127,14 +127,14 @@ end
 @checked function cudssDataSet(handle, data, param, value, sizeInBytes)
     initialize_context()
     @ccall libcudss.cudssDataSet(handle::cudssHandle_t, data::cudssData_t,
-                                 param::cudssDataParam_t, value::Ptr{Cvoid},
+                                 param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
                                  sizeInBytes::Cint)::cudssStatus_t
 end
 
 @checked function cudssDataGet(handle, data, param, value, sizeInBytes, sizeWritten)
     initialize_context()
     @ccall libcudss.cudssDataGet(handle::cudssHandle_t, data::cudssData_t,
-                                 param::cudssDataParam_t, value::Ptr{Cvoid},
+                                 param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
                                  sizeInBytes::Cint, sizeWritten::Ptr{Cint})::cudssStatus_t
 end
 
