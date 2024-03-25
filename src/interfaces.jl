@@ -85,11 +85,18 @@ function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T
 end
 
 function cudss_set(solver::CudssSolver, param::String, value)
-  (param ∈ CUDSS_CONFIG_PARAMETERS) && cudss_set(solver.config, param, value)
-  (param ∈ CUDSS_DATA_PARAMETERS) && cudss_set(solver.data, param, value)
+  if param ∈ CUDSS_CONFIG_PARAMETERS
+    cudss_set(solver.config, param, value)
+  elseif param ∈ CUDSS_DATA_PARAMETERS
+    cudss_set(solver.data, param, value)
+  else
+    throw(ArgumentError("Unknown data or config parameter $param."))
+  end
 end
 
 function cudss_set(data::CudssData, param::String, value)
+  (param ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $param."))
+  (param == "user_perm") || throw(ArgumentError("Only the data parameter \"user_perm\" can be set."))
   type = CUDSS_TYPES[param]
   val = Ref{type}(value)
   nbytes = sizeof(val)
@@ -97,6 +104,7 @@ function cudss_set(data::CudssData, param::String, value)
 end
 
 function cudss_set(config::CudssConfig, param::String, value)
+  (param ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $config."))
   type = CUDSS_TYPES[param]
   val = Ref{type}(value)
   nbytes = sizeof(val)
@@ -138,11 +146,18 @@ The data parameters `"perm_row"` and `"perm_col"` are available but not yet func
 function cudss_get end
 
 function cudss_get(solver::CudssSolver, param::String)
-  (param ∈ CUDSS_CONFIG_PARAMETERS) && cudss_get(solver.config, param)
-  (param ∈ CUDSS_DATA_PARAMETERS) && cudss_get(solver.data, param)
+  if param ∈ CUDSS_CONFIG_PARAMETERS
+    cudss_get(solver.config, param)
+  elseif param ∈ CUDSS_DATA_PARAMETERS
+    cudss_get(solver.data, param)
+  else
+    throw(ArgumentError("Unknown data or config parameter $param."))
+  end
 end
 
 function cudss_get(data::CudssData, param::String)
+  (param ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $param."))
+  (param == "user_perm") && throw(ArgumentError("The data parameter \"user_perm\" cannot be retrieved."))
   type = CUDSS_TYPES[param]
   val = Ref{type}()
   nbytes = sizeof(val)
@@ -152,6 +167,7 @@ function cudss_get(data::CudssData, param::String)
 end
 
 function cudss_get(config::CudssConfig, param::String)
+  (param ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $config."))
   type = CUDSS_TYPES[param]
   val = Ref{type}()
   nbytes = sizeof(val)

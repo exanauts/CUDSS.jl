@@ -140,7 +140,7 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
     elseif config == "max_lu_nnz"
         return CUDSS_CONFIG_MAX_LU_NNZ
     else
-        throw(ArgumentError("Unknown config $config"))
+        throw(ArgumentError("Unknown config parameter $config"))
     end
 end
 
@@ -166,7 +166,7 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
     elseif data == "user_perm"
         return CUDSS_DATA_USER_PERM
     else
-        throw(ArgumentError("Unknown data $data"))
+        throw(ArgumentError("Unknown data parameter $data"))
     end
 end
 
