@@ -74,22 +74,26 @@ function cudss_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
-          val = cudss_get(solver, parameter)
-          for val in (CUDSS_ALG_DEFAULT, CUDSS_ALG_1, CUDSS_ALG_2, CUDSS_ALG_3)
-            (parameter == "reordering_alg") && cudss_set(solver, parameter, val)
-            (parameter == "factorization_alg") && cudss_set(solver, parameter, val)
-            (parameter == "solve_alg") && cudss_set(solver, parameter, val)
+          @testset "cudss_get" begin
+            val = cudss_get(solver, parameter)
           end
-          (parameter == "matching_type") && cudss_set(solver, parameter, 0)
-          (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
-          (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
-          (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
-          for val in ('C', 'R', 'N')
-            (parameter == "pivot_type") && cudss_set(solver, parameter, val)
+          @testset "cudss_set" begin
+            (parameter == "matching_type") && cudss_set(solver, parameter, 0)
+            (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
+            (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
+            (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
+            (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
+            (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
+            (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
+            for algo in ("default", "algo1", "algo2", "algo3")
+              (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
+              (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
+              (parameter == "solve_alg") && cudss_set(solver, parameter, algo)
+            end
+            for pivoting in ('C', 'R', 'N')
+              (parameter == "pivot_type") && cudss_set(solver, parameter, pivoting)
+            end
           end
-          (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
-          (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
-          (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
         end
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
@@ -98,8 +102,10 @@ function cudss_solver()
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
           else
-            perm = Cint[i for i=n:-1:1]
-            cudss_set(solver, parameter, perm)
+            perm_cpu = Cint[i for i=n:-1:1]
+            cudss_set(solver, parameter, perm_cpu)
+            perm_gpu = CuVector{Cint}(perm_cpu)
+            cudss_set(solver, parameter, perm_gpu)
           end
         end
       end
