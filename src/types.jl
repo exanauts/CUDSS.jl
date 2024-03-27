@@ -32,27 +32,81 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "max_lu_nnz" => Int64
 )
 
-## layout type
+## config type
 
-function Base.convert(::Type{cudssLayout_t}, layout::Char)
-    if layout == 'R'
-        CUDSS_LAYOUT_ROW_MAJOR
-    elseif layout == 'C'
-        CUDSS_LAYOUT_COL_MAJOR
+function Base.convert(::Type{cudssConfigParam_t}, config::String)
+    if config == "reordering_alg"
+        return CUDSS_CONFIG_REORDERING_ALG
+    elseif config == "factorization_alg"
+        return CUDSS_CONFIG_FACTORIZATION_ALG
+    elseif config == "solve_alg"
+        return CUDSS_CONFIG_SOLVE_ALG
+    elseif config == "matching_type"
+        return CUDSS_CONFIG_MATCHING_TYPE
+    elseif config == "solve_mode"
+        return CUDSS_CONFIG_SOLVE_MODE
+    elseif config == "ir_n_steps"
+        return CUDSS_CONFIG_IR_N_STEPS
+    elseif config == "ir_tol"
+        return CUDSS_CONFIG_IR_TOL
+    elseif config == "pivot_type"
+        return CUDSS_CONFIG_PIVOT_TYPE
+    elseif config == "pivot_threshold"
+        return CUDSS_CONFIG_PIVOT_THRESHOLD
+    elseif config == "pivot_epsilon"
+        return CUDSS_CONFIG_PIVOT_EPSILON
+    elseif config == "max_lu_nnz"
+        return CUDSS_CONFIG_MAX_LU_NNZ
     else
-        throw(ArgumentError("Unknown layout $layout"))
+        throw(ArgumentError("Unknown config parameter $config"))
     end
 end
 
-## index base
+## data type
 
-function Base.convert(::Type{cudssIndexBase_t}, index::Char)
-    if index == 'Z'
-        return CUDSS_BASE_ZERO
-    elseif index == 'O'
-        return CUDSS_BASE_ONE
+function Base.convert(::Type{cudssDataParam_t}, data::String)
+    if data == "info"
+        return CUDSS_DATA_INFO
+    elseif data == "lu_nnz"
+        return CUDSS_DATA_LU_NNZ
+    elseif data == "npivots"
+        return CUDSS_DATA_NPIVOTS
+    elseif data == "inertia"
+        return CUDSS_DATA_INERTIA
+    elseif data == "perm_reorder"
+        return CUDSS_DATA_PERM_REORDER
+    elseif data == "perm_row"
+        return CUDSS_DATA_PERM_ROW
+    elseif data == "perm_col"
+        return CUDSS_DATA_PERM_COL
+    elseif data == "diag"
+        return CUDSS_DATA_DIAG
+    elseif data == "user_perm"
+        return CUDSS_DATA_USER_PERM
     else
-        throw(ArgumentError("Unknown index $index"))
+        throw(ArgumentError("Unknown data parameter $data"))
+    end
+end
+
+## phase type
+
+function Base.convert(::Type{cudssPhase_t}, phase::String)
+    if phase == "analysis"
+        return CUDSS_PHASE_ANALYSIS
+    elseif phase == "factorization"
+        return CUDSS_PHASE_FACTORIZATION
+    elseif phase == "refactorization"
+        return CUDSS_PHASE_REFACTORIZATION
+    elseif phase == "solve"
+        return CUDSS_PHASE_SOLVE
+    elseif phase == "solve_fwd"
+        return CUDSS_PHASE_SOLVE_FWD
+    elseif phase == "solve_diag"
+        return CUDSS_PHASE_SOLVE_DIAG
+    elseif phase == "solve_bwd"
+        return CUDSS_PHASE_SOLVE_BWD
+    else
+        throw(ArgumentError("Unknown phase $phase"))
     end
 end
 
@@ -88,6 +142,46 @@ function Base.convert(::Type{cudssMatrixViewType_t}, view::Char)
     end
 end
 
+## index base
+
+function Base.convert(::Type{cudssIndexBase_t}, index::Char)
+    if index == 'Z'
+        return CUDSS_BASE_ZERO
+    elseif index == 'O'
+        return CUDSS_BASE_ONE
+    else
+        throw(ArgumentError("Unknown index $index"))
+    end
+end
+
+## layout type
+
+function Base.convert(::Type{cudssLayout_t}, layout::Char)
+    if layout == 'R'
+        CUDSS_LAYOUT_ROW_MAJOR
+    elseif layout == 'C'
+        CUDSS_LAYOUT_COL_MAJOR
+    else
+        throw(ArgumentError("Unknown layout $layout"))
+    end
+end
+
+## algorithm type
+
+function Base.convert(::Type{cudssAlgType_t}, algorithm::String)
+    if algorithm == "default"
+        CUDSS_ALG_DEFAULT
+    elseif algorithm == "algo1"
+        CUDSS_ALG_1
+    elseif algorithm == "algo2"
+        CUDSS_ALG_2
+    elseif algorithm == "algo3"
+        CUDSS_ALG_3
+    else
+        throw(ArgumentError("Unknown algorithm $algorithm"))
+    end
+end
+
 ## pivot type
 
 function Base.convert(::Type{cudssPivotType_t}, pivoting::Char)
@@ -111,83 +205,5 @@ function Base.convert(::Type{cudssMatrixFormat_t}, format::Char)
         return CUDSS_MFORMAT_CSR
     else
         throw(ArgumentError("Unknown format $format"))
-    end
-end
-
-# config type
-
-function Base.convert(::Type{cudssConfigParam_t}, config::String)
-    if config == "reordering_alg"
-        return CUDSS_CONFIG_REORDERING_ALG
-    elseif config == "factorization_alg"
-        return CUDSS_CONFIG_FACTORIZATION_ALG
-    elseif config == "solve_alg"
-        return CUDSS_CONFIG_SOLVE_ALG
-    elseif config == "matching_type"
-        return CUDSS_CONFIG_MATCHING_TYPE
-    elseif config == "solve_mode"
-        return CUDSS_CONFIG_SOLVE_MODE
-    elseif config == "ir_n_steps"
-        return CUDSS_CONFIG_IR_N_STEPS
-    elseif config == "ir_tol"
-        return CUDSS_CONFIG_IR_TOL
-    elseif config == "pivot_type"
-        return CUDSS_CONFIG_PIVOT_TYPE
-    elseif config == "pivot_threshold"
-        return CUDSS_CONFIG_PIVOT_THRESHOLD
-    elseif config == "pivot_epsilon"
-        return CUDSS_CONFIG_PIVOT_EPSILON
-    elseif config == "max_lu_nnz"
-        return CUDSS_CONFIG_MAX_LU_NNZ
-    else
-        throw(ArgumentError("Unknown config parameter $config"))
-    end
-end
-
-# data type
-
-function Base.convert(::Type{cudssDataParam_t}, data::String)
-    if data == "info"
-        return CUDSS_DATA_INFO
-    elseif data == "lu_nnz"
-        return CUDSS_DATA_LU_NNZ
-    elseif data == "npivots"
-        return CUDSS_DATA_NPIVOTS
-    elseif data == "inertia"
-        return CUDSS_DATA_INERTIA
-    elseif data == "perm_reorder"
-        return CUDSS_DATA_PERM_REORDER
-    elseif data == "perm_row"
-        return CUDSS_DATA_PERM_ROW
-    elseif data == "perm_col"
-        return CUDSS_DATA_PERM_COL
-    elseif data == "diag"
-        return CUDSS_DATA_DIAG
-    elseif data == "user_perm"
-        return CUDSS_DATA_USER_PERM
-    else
-        throw(ArgumentError("Unknown data parameter $data"))
-    end
-end
-
-# phase type
-
-function Base.convert(::Type{cudssPhase_t}, phase::String)
-    if phase == "analysis"
-        return CUDSS_PHASE_ANALYSIS
-    elseif phase == "factorization"
-        return CUDSS_PHASE_FACTORIZATION
-    elseif phase == "refactorization"
-        return CUDSS_PHASE_REFACTORIZATION
-    elseif phase == "solve"
-        return CUDSS_PHASE_SOLVE
-    elseif phase == "solve_fwd"
-        return CUDSS_PHASE_SOLVE_FWD
-    elseif phase == "solve_diag"
-        return CUDSS_PHASE_SOLVE_DIAG
-    elseif phase == "solve_bwd"
-        return CUDSS_PHASE_SOLVE_BWD
-    else
-        throw(ArgumentError("Unknown phase $phase"))
     end
 end

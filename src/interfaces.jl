@@ -55,9 +55,9 @@ end
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 The available configuration parameters are:
-- `"reordering_alg"`: Algorithm for the reordering phase;
-- `"factorization_alg"`: Algorithm for the factorization phase;
-- `"solve_alg"`: Algorithm for the solving phase;
+- `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
+- `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
+- `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
 - `"matching_type"`: Type of matching;
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
@@ -123,7 +123,7 @@ The available configuration parameters are:
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
-- `"pivot_type"`: Type of pivoting (`'C'`, `'R'` or `'N'`);
+- `"pivot_type"`: Type of pivoting;
 - `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
 - `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices.
