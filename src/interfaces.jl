@@ -48,6 +48,7 @@ end
     cudss_set(matrix::CudssMatrix{T}, v::CuVector{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
+    cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
     cudss_set(solver::CudssSolver, parameter::String, value)
     cudss_set(config::CudssConfig, parameter::String, value)
     cudss_set(data::CudssData, parameter::String, value)
@@ -82,6 +83,10 @@ end
 
 function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: BlasFloat
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
+end
+
+function cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: BlasFloat
+  cudss_set(solver.matrix, A)
 end
 
 function cudss_set(solver::CudssSolver, parameter::String, value)
