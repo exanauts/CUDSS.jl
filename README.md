@@ -27,6 +27,15 @@ pkg> add CUDSS
 pkg> test CUDSS
 ```
 
+## Content
+
+CUDSS.jl provides a structured approach for leveraging NVIDIA cuDSS functionalities.
+It introduces the `CudssSolver` type along with three core routines: `cudss`, `cudss_set`, and `cudss_get`.
+Additionally, specialized methods for the `CuSparseMatrixCSR` type have been incorporated for `cholesky`, `ldlt`, `lu` and `\`.
+To further enhance performance, in-place variants including `cholesky!`, `ldlt!`, `lu!` and `ldiv!` have been implemented.
+These variants optimize performance by reusing the symbolic factorization as well as storage.
+This ensures efficient solving of sparse linear systems on GPUs.
+
 ## Examples
 
 ### Example 1: Sparse unsymmetric linear system with one right-hand side

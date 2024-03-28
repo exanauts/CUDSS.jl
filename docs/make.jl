@@ -1,4 +1,6 @@
 using Documenter, CUDSS
+using LinearAlgebra
+using CUDA, CUDA.CUSPARSE
 
 makedocs(
   modules = [CUDSS],
