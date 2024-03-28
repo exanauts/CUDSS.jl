@@ -140,6 +140,20 @@ function cudss_execution()
 
         r_gpu = b_gpu - A_gpu * x_gpu
         @test norm(r_gpu) ≤ √eps(R)
+
+        # In-place LU
+        d_gpu = rand(T, n) |> CuVector
+        A_gpu = A_gpu + Diagonal(d_gpu)
+        cudss_set(solver, A_gpu)
+
+        c_cpu = rand(T, n)
+        c_gpu = CuVector(c_cpu)
+
+        cudss("factorization", solver, x_gpu, c_gpu)
+        cudss("solve", solver, x_gpu, c_gpu)
+
+        r_gpu = c_gpu - A_gpu * x_gpu
+        @test norm(r_gpu) ≤ √eps(R)
       end
     end
 
@@ -171,6 +185,20 @@ function cudss_execution()
 
           R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)
+
+          # In-place LDLᵀ / LDLᴴ
+          d_gpu = rand(R, n) |> CuVector
+          A_gpu = A_gpu + Diagonal(d_gpu)
+          cudss_set(solver, A_gpu)
+
+          C_cpu = rand(T, n, p)
+          C_gpu = CuMatrix(C_cpu)
+
+          cudss("factorization", solver, X_gpu, C_gpu)
+          cudss("solve", solver, X_gpu, C_gpu)
+
+          R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
+          @test norm(R_gpu) ≤ √eps(R)
         end
       end
     end
@@ -201,6 +229,20 @@ function cudss_execution()
           cudss("solve", solver, X_gpu, B_gpu)
 
           R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+          @test norm(R_gpu) ≤ √eps(R)
+
+          # In-place LLᵀ / LLᴴ
+          d_gpu = rand(R, n) |> CuVector
+          A_gpu = A_gpu + Diagonal(d_gpu)
+          cudss_set(solver, A_gpu)
+
+          C_cpu = rand(T, n, p)
+          C_gpu = CuMatrix(C_cpu)
+
+          cudss("factorization", solver, X_gpu, C_gpu)
+          cudss("solve", solver, X_gpu, C_gpu)
+
+          R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)
         end
       end
