@@ -48,9 +48,9 @@ end
     cudss_set(matrix::CudssMatrix{T}, v::CuVector{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
-    cudss_set(solver::CudssSolver, param::String, value)
-    cudss_set(config::CudssConfig, param::String, value)
-    cudss_set(data::CudssData, param::String, value)
+    cudss_set(solver::CudssSolver, parameter::String, value)
+    cudss_set(config::CudssConfig, parameter::String, value)
+    cudss_set(data::CudssData, parameter::String, value)
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
@@ -84,36 +84,36 @@ function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
 end
 
-function cudss_set(solver::CudssSolver, param::String, value)
-  if param ∈ CUDSS_CONFIG_PARAMETERS
-    cudss_set(solver.config, param, value)
-  elseif param ∈ CUDSS_DATA_PARAMETERS
-    cudss_set(solver.data, param, value)
+function cudss_set(solver::CudssSolver, parameter::String, value)
+  if parameter ∈ CUDSS_CONFIG_PARAMETERS
+    cudss_set(solver.config, parameter, value)
+  elseif parameter ∈ CUDSS_DATA_PARAMETERS
+    cudss_set(solver.data, parameter, value)
   else
-    throw(ArgumentError("Unknown data or config parameter $param."))
+    throw(ArgumentError("Unknown data or config parameter $parameter."))
   end
 end
 
-function cudss_set(data::CudssData, param::String, value)
-  (param ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $param."))
-  (param == "user_perm") || throw(ArgumentError("Only the data parameter \"user_perm\" can be set."))
+function cudss_set(data::CudssData, parameter::String, value)
+  (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
+  (parameter == "user_perm") || throw(ArgumentError("Only the data parameter \"user_perm\" can be set."))
   (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
   nbytes = sizeof(value)
-  cudssDataSet(handle(), data, param, value, nbytes)
+  cudssDataSet(handle(), data, parameter, value, nbytes)
 end
 
-function cudss_set(config::CudssConfig, param::String, value)
-  (param ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $config."))
-  type = CUDSS_TYPES[param]
+function cudss_set(config::CudssConfig, parameter::String, value)
+  (parameter ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $parameter."))
+  type = CUDSS_TYPES[parameter]
   val = Ref{type}(value)
   nbytes = sizeof(val)
-  cudssConfigSet(config, param, val, nbytes)
+  cudssConfigSet(config, parameter, val, nbytes)
 end
 
 """
-    value = cudss_get(solver::CudssSolver, param::String)
-    value = cudss_get(config::CudssConfig, param::String)
-    value = cudss_get(data::CudssData, param::String)
+    value = cudss_get(solver::CudssSolver, parameter::String)
+    value = cudss_get(config::CudssConfig, parameter::String)
+    value = cudss_get(data::CudssData, parameter::String)
 
 The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase;
@@ -144,34 +144,37 @@ The data parameters `"perm_row"` and `"perm_col"` are available but not yet func
 """
 function cudss_get end
 
-function cudss_get(solver::CudssSolver, param::String)
-  if param ∈ CUDSS_CONFIG_PARAMETERS
-    cudss_get(solver.config, param)
-  elseif param ∈ CUDSS_DATA_PARAMETERS
-    cudss_get(solver.data, param)
+function cudss_get(solver::CudssSolver, parameter::String)
+  if parameter ∈ CUDSS_CONFIG_PARAMETERS
+    cudss_get(solver.config, parameter)
+  elseif parameter ∈ CUDSS_DATA_PARAMETERS
+    cudss_get(solver.data, parameter)
   else
-    throw(ArgumentError("Unknown data or config parameter $param."))
+    throw(ArgumentError("Unknown data or config parameter $parameter."))
   end
 end
 
-function cudss_get(data::CudssData, param::String)
-  (param ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $param."))
-  (param == "user_perm") && throw(ArgumentError("The data parameter \"user_perm\" cannot be retrieved."))
-  type = CUDSS_TYPES[param]
+function cudss_get(data::CudssData, parameter::String)
+  (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
+  (parameter == "user_perm") && throw(ArgumentError("The data parameter \"user_perm\" cannot be retrieved."))
+  if (parameter == "perm_reorder") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
+    throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
+  end
+  type = CUDSS_TYPES[parameter]
   val = Ref{type}()
   nbytes = sizeof(val)
   nbytes_written = Ref{Cint}()
-  cudssDataGet(handle(), data, param, val, nbytes, nbytes_written)
+  cudssDataGet(handle(), data, parameter, val, nbytes, nbytes_written)
   return val[]
 end
 
-function cudss_get(config::CudssConfig, param::String)
-  (param ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $config."))
-  type = CUDSS_TYPES[param]
+function cudss_get(config::CudssConfig, parameter::String)
+  (parameter ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $parameter."))
+  type = CUDSS_TYPES[parameter]
   val = Ref{type}()
   nbytes = sizeof(val)
   nbytes_written = Ref{Cint}()
-  cudssConfigGet(config, param, val, nbytes, nbytes_written)
+  cudssConfigGet(config, parameter, val, nbytes, nbytes_written)
   return val[]
 end
 
