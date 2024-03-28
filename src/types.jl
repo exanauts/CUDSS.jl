@@ -1,7 +1,7 @@
 # cuDSS types
 
-const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reorder",
-                               "perm_row", "perm_col", "diag", "user_perm")
+const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reorder_row",
+                               "perm_reorder_col", "perm_row", "perm_col", "diag", "user_perm")
 
 const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "matching_type",
                                  "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
@@ -13,7 +13,8 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "lu_nnz" => Int64,
     "npivots" => Cint,
     "inertia" => Tuple{Cint, Cint},
-    "perm_reorder" => Vector{Cint},
+    "perm_reorder_row" => Vector{Cint},
+    "perm_reorder_col" => Vector{Cint},
     "perm_row" => Vector{Cint},
     "perm_col" => Vector{Cint},
     "diag" => Vector{Float64},
@@ -73,8 +74,10 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
         return CUDSS_DATA_NPIVOTS
     elseif data == "inertia"
         return CUDSS_DATA_INERTIA
-    elseif data == "perm_reorder"
-        return CUDSS_DATA_PERM_REORDER
+    elseif data == "perm_reorder_row"
+        return CUDSS_DATA_PERM_REORDER_ROW
+    elseif data == "perm_reorder_col"
+        return CUDSS_DATA_PERM_REORDER_COL
     elseif data == "perm_row"
         return CUDSS_DATA_PERM_ROW
     elseif data == "perm_col"

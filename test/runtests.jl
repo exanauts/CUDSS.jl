@@ -22,6 +22,12 @@ include("test_cudss.jl")
     cudss_sparse()
   end
 
+  @testset "CudssData" begin
+    # Issue #1
+    data = CudssData()
+    CUDSS.cudssDataDestroy(CUDSS.handle(), data)
+  end
+
  @testset "CudssSolver" begin
     cudss_solver()
   end
