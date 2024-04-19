@@ -121,159 +121,159 @@ end
 
 @checked function cudssConfigSet(config, param, value, sizeInBytes)
     initialize_context()
-    @ccall libcudss.cudssConfigSet(config::cudssConfig_t, param::cudssConfigParam_t,
-                                   value::Ptr{Cvoid}, sizeInBytes::Csize_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssConfigSet(config::cudssConfig_t, param::cudssConfigParam_t,
+                                          value::Ptr{Cvoid}, sizeInBytes::Csize_t)::cudssStatus_t
 end
 
 @checked function cudssConfigGet(config, param, value, sizeInBytes, sizeWritten)
     initialize_context()
-    @ccall libcudss.cudssConfigGet(config::cudssConfig_t, param::cudssConfigParam_t,
-                                   value::Ptr{Cvoid}, sizeInBytes::Csize_t,
-                                   sizeWritten::Ptr{Csize_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssConfigGet(config::cudssConfig_t, param::cudssConfigParam_t,
+                                          value::Ptr{Cvoid}, sizeInBytes::Csize_t,
+                                          sizeWritten::Ptr{Csize_t})::cudssStatus_t
 end
 
 @checked function cudssDataSet(handle, data, param, value, sizeInBytes)
     initialize_context()
-    @ccall libcudss.cudssDataSet(handle::cudssHandle_t, data::cudssData_t,
-                                 param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
-                                 sizeInBytes::Csize_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssDataSet(handle::cudssHandle_t, data::cudssData_t,
+                                        param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
+                                        sizeInBytes::Csize_t)::cudssStatus_t
 end
 
 @checked function cudssDataGet(handle, data, param, value, sizeInBytes, sizeWritten)
     initialize_context()
-    @ccall libcudss.cudssDataGet(handle::cudssHandle_t, data::cudssData_t,
-                                 param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
-                                 sizeInBytes::Csize_t, sizeWritten::Ptr{Csize_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssDataGet(handle::cudssHandle_t, data::cudssData_t,
+                                        param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
+                                        sizeInBytes::Csize_t, sizeWritten::Ptr{Csize_t})::cudssStatus_t
 end
 
 @checked function cudssExecute(handle, phase, solverConfig, solverData, inputMatrix,
                                solution, rhs)
     initialize_context()
-    @ccall libcudss.cudssExecute(handle::cudssHandle_t, phase::cudssPhase_t,
-                                 solverConfig::cudssConfig_t, solverData::cudssData_t,
-                                 inputMatrix::cudssMatrix_t, solution::cudssMatrix_t,
-                                 rhs::cudssMatrix_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssExecute(handle::cudssHandle_t, phase::cudssPhase_t,
+                                        solverConfig::cudssConfig_t, solverData::cudssData_t,
+                                        inputMatrix::cudssMatrix_t, solution::cudssMatrix_t,
+                                        rhs::cudssMatrix_t)::cudssStatus_t
 end
 
 @checked function cudssSetStream(handle, stream)
     initialize_context()
-    @ccall libcudss.cudssSetStream(handle::cudssHandle_t, stream::cudaStream_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssSetStream(handle::cudssHandle_t, stream::cudaStream_t)::cudssStatus_t
 end
 
 @checked function cudssConfigCreate(solverConfig)
     initialize_context()
-    @ccall libcudss.cudssConfigCreate(solverConfig::Ptr{cudssConfig_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssConfigCreate(solverConfig::Ptr{cudssConfig_t})::cudssStatus_t
 end
 
 @checked function cudssConfigDestroy(solverConfig)
     initialize_context()
-    @ccall libcudss.cudssConfigDestroy(solverConfig::cudssConfig_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssConfigDestroy(solverConfig::cudssConfig_t)::cudssStatus_t
 end
 
 @checked function cudssDataCreate(handle, solverData)
     initialize_context()
-    @ccall libcudss.cudssDataCreate(handle::cudssHandle_t,
-                                    solverData::Ptr{cudssData_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssDataCreate(handle::cudssHandle_t,
+                                           solverData::Ptr{cudssData_t})::cudssStatus_t
 end
 
 @checked function cudssDataDestroy(handle, solverData)
     initialize_context()
-    @ccall libcudss.cudssDataDestroy(handle::cudssHandle_t,
-                                     solverData::cudssData_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssDataDestroy(handle::cudssHandle_t,
+                                            solverData::cudssData_t)::cudssStatus_t
 end
 
 @checked function cudssCreate(handle)
     initialize_context()
-    @ccall libcudss.cudssCreate(handle::Ptr{cudssHandle_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssCreate(handle::Ptr{cudssHandle_t})::cudssStatus_t
 end
 
 @checked function cudssDestroy(handle)
     initialize_context()
-    @ccall libcudss.cudssDestroy(handle::cudssHandle_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssDestroy(handle::cudssHandle_t)::cudssStatus_t
 end
 
 @checked function cudssGetProperty(propertyType, value)
     initialize_context()
-    @ccall libcudss.cudssGetProperty(propertyType::libraryPropertyType,
-                                     value::Ptr{Cint})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssGetProperty(propertyType::libraryPropertyType,
+                                            value::Ptr{Cint})::cudssStatus_t
 end
 
 @checked function cudssMatrixCreateDn(matrix, nrows, ncols, ld, values, valueType, layout)
     initialize_context()
-    @ccall libcudss.cudssMatrixCreateDn(matrix::Ptr{cudssMatrix_t}, nrows::Int64,
-                                        ncols::Int64, ld::Int64, values::CuPtr{Cvoid},
-                                        valueType::cudaDataType_t,
-                                        layout::cudssLayout_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixCreateDn(matrix::Ptr{cudssMatrix_t}, nrows::Int64,
+                                               ncols::Int64, ld::Int64, values::CuPtr{Cvoid},
+                                               valueType::cudaDataType_t,
+                                               layout::cudssLayout_t)::cudssStatus_t
 end
 
 @checked function cudssMatrixCreateCsr(matrix, nrows, ncols, nnz, rowStart, rowEnd,
                                        colIndices, values, indexType, valueType, mtype,
                                        mview, indexBase)
     initialize_context()
-    @ccall libcudss.cudssMatrixCreateCsr(matrix::Ptr{cudssMatrix_t}, nrows::Int64,
-                                         ncols::Int64, nnz::Int64, rowStart::CuPtr{Cvoid},
-                                         rowEnd::CuPtr{Cvoid}, colIndices::CuPtr{Cvoid},
-                                         values::CuPtr{Cvoid}, indexType::cudaDataType_t,
-                                         valueType::cudaDataType_t,
-                                         mtype::cudssMatrixType_t,
-                                         mview::cudssMatrixViewType_t,
-                                         indexBase::cudssIndexBase_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixCreateCsr(matrix::Ptr{cudssMatrix_t}, nrows::Int64,
+                                                ncols::Int64, nnz::Int64, rowStart::CuPtr{Cvoid},
+                                                rowEnd::CuPtr{Cvoid}, colIndices::CuPtr{Cvoid},
+                                                values::CuPtr{Cvoid}, indexType::cudaDataType_t,
+                                                valueType::cudaDataType_t,
+                                                mtype::cudssMatrixType_t,
+                                                mview::cudssMatrixViewType_t,
+                                                indexBase::cudssIndexBase_t)::cudssStatus_t
 end
 
 @checked function cudssMatrixDestroy(matrix)
     initialize_context()
-    @ccall libcudss.cudssMatrixDestroy(matrix::cudssMatrix_t)::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixDestroy(matrix::cudssMatrix_t)::cudssStatus_t
 end
 
 @checked function cudssMatrixGetDn(matrix, nrows, ncols, ld, values, type, layout)
     initialize_context()
-    @ccall libcudss.cudssMatrixGetDn(matrix::cudssMatrix_t, nrows::Ptr{Int64},
-                                     ncols::Ptr{Int64}, ld::Ptr{Int64},
-                                     values::Ptr{CuPtr{Cvoid}}, type::Ptr{cudaDataType_t},
-                                     layout::Ptr{cudssLayout_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixGetDn(matrix::cudssMatrix_t, nrows::Ptr{Int64},
+                                            ncols::Ptr{Int64}, ld::Ptr{Int64},
+                                            values::Ptr{CuPtr{Cvoid}}, type::Ptr{cudaDataType_t},
+                                            layout::Ptr{cudssLayout_t})::cudssStatus_t
 end
 
 @checked function cudssMatrixGetCsr(matrix, nrows, ncols, nnz, rowStart, rowEnd, colIndices,
                                     values, indexType, valueType, mtype, mview, indexBase)
     initialize_context()
-    @ccall libcudss.cudssMatrixGetCsr(matrix::cudssMatrix_t, nrows::Ptr{Int64},
-                                      ncols::Ptr{Int64}, nnz::Ptr{Int64},
-                                      rowStart::Ptr{CuPtr{Cvoid}}, rowEnd::Ptr{CuPtr{Cvoid}},
-                                      colIndices::Ptr{CuPtr{Cvoid}}, values::Ptr{CuPtr{Cvoid}},
-                                      indexType::Ptr{cudaDataType_t},
-                                      valueType::Ptr{cudaDataType_t},
-                                      mtype::Ptr{cudssMatrixType_t},
-                                      mview::Ptr{cudssMatrixViewType_t},
-                                      indexBase::Ptr{cudssIndexBase_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixGetCsr(matrix::cudssMatrix_t, nrows::Ptr{Int64},
+                                             ncols::Ptr{Int64}, nnz::Ptr{Int64},
+                                             rowStart::Ptr{CuPtr{Cvoid}}, rowEnd::Ptr{CuPtr{Cvoid}},
+                                             colIndices::Ptr{CuPtr{Cvoid}}, values::Ptr{CuPtr{Cvoid}},
+                                             indexType::Ptr{cudaDataType_t},
+                                             valueType::Ptr{cudaDataType_t},
+                                             mtype::Ptr{cudssMatrixType_t},
+                                             mview::Ptr{cudssMatrixViewType_t},
+                                             indexBase::Ptr{cudssIndexBase_t})::cudssStatus_t
 end
 
 @checked function cudssMatrixSetValues(matrix, values)
     initialize_context()
-    @ccall libcudss.cudssMatrixSetValues(matrix::cudssMatrix_t,
-                                         values::CuPtr{Cvoid})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixSetValues(matrix::cudssMatrix_t,
+                                                values::CuPtr{Cvoid})::cudssStatus_t
 end
 
 @checked function cudssMatrixSetCsrPointers(matrix, rowOffsets, rowEnd, colIndices, values)
     initialize_context()
-    @ccall libcudss.cudssMatrixSetCsrPointers(matrix::cudssMatrix_t, rowOffsets::CuPtr{Cvoid},
-                                              rowEnd::CuPtr{Cvoid}, colIndices::CuPtr{Cvoid},
-                                              values::CuPtr{Cvoid})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixSetCsrPointers(matrix::cudssMatrix_t, rowOffsets::CuPtr{Cvoid},
+                                                     rowEnd::CuPtr{Cvoid}, colIndices::CuPtr{Cvoid},
+                                                     values::CuPtr{Cvoid})::cudssStatus_t
 end
 
 @checked function cudssMatrixGetFormat(matrix, format)
     initialize_context()
-    @ccall libcudss.cudssMatrixGetFormat(matrix::cudssMatrix_t,
-                                         format::Ptr{cudssMatrixFormat_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssMatrixGetFormat(matrix::cudssMatrix_t,
+                                                format::Ptr{cudssMatrixFormat_t})::cudssStatus_t
 end
 
 @checked function cudssGetDeviceMemHandler(handle, handler)
     initialize_context()
-    @ccall libcudss.cudssGetDeviceMemHandler(handle::cudssHandle_t,
-                                             handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssGetDeviceMemHandler(handle::cudssHandle_t,
+                                                    handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
 end
 
 @checked function cudssSetDeviceMemHandler(handle, handler)
     initialize_context()
-    @ccall libcudss.cudssSetDeviceMemHandler(handle::cudssHandle_t,
-                                             handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
+    @gcsafe_ccall libcudss.cudssSetDeviceMemHandler(handle::cudssHandle_t,
+                                                    handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
 end
