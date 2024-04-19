@@ -94,6 +94,7 @@ Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssMatrix) = matrix.matrix
 
 """
     data = CudssData()
+    data = CudssData(cudss_handle::cudssHandle_t)
 
 `CudssData` holds internal data (e.g., LU factors arrays).
 """
