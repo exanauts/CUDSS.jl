@@ -42,4 +42,8 @@ include("test_cudss.jl")
   @testset "User permutation" begin
     user_permutation()
   end
+
+  @testset "Iterative refinement" begin
+    iterative_refinement()
+  end
 end
