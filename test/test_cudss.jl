@@ -1,5 +1,5 @@
 function cudss_version()
-  @test CUDSS.version() == v"0.1.0"
+  @test CUDSS.version() == v"0.2.0"
 end
 
 function cudss_dense()
@@ -97,7 +97,7 @@ function cudss_solver()
         end
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col", "perm_reorder", "diag") && continue
+          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag") && continue
           if parameter ≠ "user_perm"
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
@@ -157,10 +157,9 @@ function cudss_execution()
       end
     end
 
-    symmetric_hermitian_pivots = T <: Real ? ('C', 'R', 'N') : ('N',)
     @testset "Symmetric -- Hermitian" begin
       @testset "view = $view" for view in ('F', 'L', 'U')
-        @testset "Pivoting = $pivot" for pivot in symmetric_hermitian_pivots
+        @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
           A_cpu = sprand(T, n, n, 0.01) + I
           A_cpu = A_cpu + A_cpu'
           X_cpu = zeros(T, n, p)

@@ -98,12 +98,14 @@ Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssMatrix) = matrix.matrix
 `CudssData` holds internal data (e.g., LU factors arrays).
 """
 mutable struct CudssData
+    handle::cudssHandle_t
     data::cudssData_t
 
     function CudssData()
         data_ref = Ref{cudssData_t}()
-        cudssDataCreate(handle(), data_ref)
-        obj = new(data_ref[])
+        cudss_handle = handle()
+        cudssDataCreate(cudss_handle, data_ref)
+        obj = new(cudss_handle, data_ref[])
         finalizer(cudssDataDestroy, obj)
         obj
     end
@@ -112,7 +114,7 @@ end
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
 
 function cudssDataDestroy(data::CudssData)
-    cudssDataDestroy(handle(), data)
+    cudssDataDestroy(data.handle, data)
 end
 
 ## Configuration

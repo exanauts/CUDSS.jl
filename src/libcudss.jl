@@ -40,11 +40,12 @@ end
     CUDSS_DATA_LU_NNZ = 1
     CUDSS_DATA_NPIVOTS = 2
     CUDSS_DATA_INERTIA = 3
-    CUDSS_DATA_PERM_REORDER = 4
-    CUDSS_DATA_PERM_ROW = 5
-    CUDSS_DATA_PERM_COL = 6
-    CUDSS_DATA_DIAG = 7
-    CUDSS_DATA_USER_PERM = 8
+    CUDSS_DATA_PERM_REORDER_ROW = 4
+    CUDSS_DATA_PERM_REORDER_COL = 5
+    CUDSS_DATA_PERM_ROW = 6
+    CUDSS_DATA_PERM_COL = 7
+    CUDSS_DATA_DIAG = 8
+    CUDSS_DATA_USER_PERM = 9
 end
 
 @cenum cudssPhase_t::UInt32 begin
@@ -111,31 +112,38 @@ end
     CUDSS_MFORMAT_CSR = 1
 end
 
+struct cudssDeviceMemHandler_t
+    ctx::Ptr{Cvoid}
+    device_alloc::Ptr{Cvoid}
+    device_free::Ptr{Cvoid}
+    name::NTuple{64,Cchar}
+end
+
 @checked function cudssConfigSet(config, param, value, sizeInBytes)
     initialize_context()
     @ccall libcudss.cudssConfigSet(config::cudssConfig_t, param::cudssConfigParam_t,
-                                   value::Ptr{Cvoid}, sizeInBytes::Cint)::cudssStatus_t
+                                   value::Ptr{Cvoid}, sizeInBytes::Csize_t)::cudssStatus_t
 end
 
 @checked function cudssConfigGet(config, param, value, sizeInBytes, sizeWritten)
     initialize_context()
     @ccall libcudss.cudssConfigGet(config::cudssConfig_t, param::cudssConfigParam_t,
-                                   value::Ptr{Cvoid}, sizeInBytes::Cint,
-                                   sizeWritten::Ptr{Cint})::cudssStatus_t
+                                   value::Ptr{Cvoid}, sizeInBytes::Csize_t,
+                                   sizeWritten::Ptr{Csize_t})::cudssStatus_t
 end
 
 @checked function cudssDataSet(handle, data, param, value, sizeInBytes)
     initialize_context()
     @ccall libcudss.cudssDataSet(handle::cudssHandle_t, data::cudssData_t,
                                  param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
-                                 sizeInBytes::Cint)::cudssStatus_t
+                                 sizeInBytes::Csize_t)::cudssStatus_t
 end
 
 @checked function cudssDataGet(handle, data, param, value, sizeInBytes, sizeWritten)
     initialize_context()
     @ccall libcudss.cudssDataGet(handle::cudssHandle_t, data::cudssData_t,
                                  param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
-                                 sizeInBytes::Cint, sizeWritten::Ptr{Cint})::cudssStatus_t
+                                 sizeInBytes::Csize_t, sizeWritten::Ptr{Csize_t})::cudssStatus_t
 end
 
 @checked function cudssExecute(handle, phase, solverConfig, solverData, inputMatrix,
@@ -256,4 +264,16 @@ end
     initialize_context()
     @ccall libcudss.cudssMatrixGetFormat(matrix::cudssMatrix_t,
                                          format::Ptr{cudssMatrixFormat_t})::cudssStatus_t
+end
+
+@checked function cudssGetDeviceMemHandler(handle, handler)
+    initialize_context()
+    @ccall libcudss.cudssGetDeviceMemHandler(handle::cudssHandle_t,
+                                             handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
+end
+
+@checked function cudssSetDeviceMemHandler(handle, handler)
+    initialize_context()
+    @ccall libcudss.cudssSetDeviceMemHandler(handle::cudssHandle_t,
+                                             handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
 end

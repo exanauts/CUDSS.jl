@@ -104,7 +104,7 @@ function cudss_set(data::CudssData, parameter::String, value)
   (parameter == "user_perm") || throw(ArgumentError("Only the data parameter \"user_perm\" can be set."))
   (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
   nbytes = sizeof(value)
-  cudssDataSet(handle(), data, parameter, value, nbytes)
+  cudssDataSet(data.handle, data, parameter, value, nbytes)
 end
 
 function cudss_set(config::CudssConfig, parameter::String, value)
@@ -138,12 +138,13 @@ The available data parameters are:
 - `"lu_nnz"`: Number of non-zero entries in LU factors;
 - `"npivots"`: Number of pivots encountered during factorization;
 - `"inertia"`: Tuple of positive and negative indices of inertia for symmetric and hermitian non positive-definite matrix types;
-- `"perm_reorder"`: Reordering permutation;
+- `"perm_reorder_row"`: Reordering permutation for the rows;
+- `"perm_reorder_col"`: Reordering permutation for the columns;
 - `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
 - `"perm_col"`: Final column permutation (which includes effects of both reordering and pivoting);
 - `"diag"`: Diagonal of the factorized matrix.
 
-The data parameters `"info"`, `"lu_nnz"` and `"perm_reorder"` require the phase `"analyse"` performed by [`cudss`](@ref).
+The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"` and `"perm_reorder_col"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
 The data parameters `"perm_row"` and `"perm_col"` are available but not yet functional.
 """
@@ -162,13 +163,13 @@ end
 function cudss_get(data::CudssData, parameter::String)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
   (parameter == "user_perm") && throw(ArgumentError("The data parameter \"user_perm\" cannot be retrieved."))
-  if (parameter == "perm_reorder") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
+  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
     throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   end
   type = CUDSS_TYPES[parameter]
   val = Ref{type}()
   nbytes = sizeof(val)
-  nbytes_written = Ref{Cint}()
+  nbytes_written = Ref{Csize_t}()
   cudssDataGet(handle(), data, parameter, val, nbytes, nbytes_written)
   return val[]
 end
@@ -178,7 +179,7 @@ function cudss_get(config::CudssConfig, parameter::String)
   type = CUDSS_TYPES[parameter]
   val = Ref{type}()
   nbytes = sizeof(val)
-  nbytes_written = Ref{Cint}()
+  nbytes_written = Ref{Csize_t}()
   cudssConfigGet(config, parameter, val, nbytes, nbytes_written)
   return val[]
 end
@@ -196,7 +197,7 @@ The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not
 function cudss end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}) where T <: BlasFloat
-  cudssExecute(handle(), phase, solver.config, solver.data, solver.matrix, X, B)
+  cudssExecute(solver.data.handle, phase, solver.config, solver.data, solver.matrix, X, B)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}) where T <: BlasFloat
