@@ -101,13 +101,17 @@ mutable struct CudssData
     handle::cudssHandle_t
     data::cudssData_t
 
-    function CudssData()
+    function CudssData(cudss_handle::cudssHandle_t)
         data_ref = Ref{cudssData_t}()
-        cudss_handle = handle()
         cudssDataCreate(cudss_handle, data_ref)
         obj = new(cudss_handle, data_ref[])
         finalizer(cudssDataDestroy, obj)
         obj
+    end
+
+    function CudssData()
+        cudss_handle = handle()
+        CudssData(cudss_handle)
     end
 end
 
