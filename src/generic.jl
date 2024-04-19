@@ -59,7 +59,6 @@ function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,Cint}; view::Char='F', check 
   n = checksquare(A)
   structure = T <: Real ? "S" : "H"
   solver = CudssSolver(A, structure, view)
-  (T <: Complex) && cudss_set(solver, "pivot_type", 'N')
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
   cudss("analysis", solver, x, b)

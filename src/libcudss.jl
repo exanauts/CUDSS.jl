@@ -40,11 +40,12 @@ end
     CUDSS_DATA_LU_NNZ = 1
     CUDSS_DATA_NPIVOTS = 2
     CUDSS_DATA_INERTIA = 3
-    CUDSS_DATA_PERM_REORDER = 4
-    CUDSS_DATA_PERM_ROW = 5
-    CUDSS_DATA_PERM_COL = 6
-    CUDSS_DATA_DIAG = 7
-    CUDSS_DATA_USER_PERM = 8
+    CUDSS_DATA_PERM_REORDER_ROW = 4
+    CUDSS_DATA_PERM_REORDER_COL = 5
+    CUDSS_DATA_PERM_ROW = 6
+    CUDSS_DATA_PERM_COL = 7
+    CUDSS_DATA_DIAG = 8
+    CUDSS_DATA_USER_PERM = 9
 end
 
 @cenum cudssPhase_t::UInt32 begin
@@ -109,6 +110,13 @@ end
 @cenum cudssMatrixFormat_t::UInt32 begin
     CUDSS_MFORMAT_DENSE = 0
     CUDSS_MFORMAT_CSR = 1
+end
+
+struct cudssDeviceMemHandler_t
+    ctx::Ptr{Cvoid}
+    device_alloc::Ptr{Cvoid}
+    device_free::Ptr{Cvoid}
+    name::NTuple{64,Cchar}
 end
 
 @checked function cudssConfigSet(config, param, value, sizeInBytes)
@@ -256,4 +264,16 @@ end
     initialize_context()
     @ccall libcudss.cudssMatrixGetFormat(matrix::cudssMatrix_t,
                                          format::Ptr{cudssMatrixFormat_t})::cudssStatus_t
+end
+
+@checked function cudssGetDeviceMemHandler(handle, handler)
+    initialize_context()
+    @ccall libcudss.cudssGetDeviceMemHandler(handle::cudssHandle_t,
+                                             handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
+end
+
+@checked function cudssSetDeviceMemHandler(handle, handler)
+    initialize_context()
+    @ccall libcudss.cudssSetDeviceMemHandler(handle::cudssHandle_t,
+                                             handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
 end
