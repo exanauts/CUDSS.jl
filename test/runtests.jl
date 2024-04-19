@@ -25,7 +25,6 @@ include("test_cudss.jl")
   @testset "CudssData" begin
     # Issue #1
     data = CudssData()
-    CUDSS.cudssDataDestroy(CUDSS.handle(), data)
   end
 
  @testset "CudssSolver" begin
