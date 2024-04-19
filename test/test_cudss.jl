@@ -494,3 +494,85 @@ function user_permutation()
     end
   end
 end
+
+function iterative_refinement()
+  function ir_lu(T, A_cpu, x_cpu, b_cpu, ir)
+    A_gpu = CuSparseMatrixCSR(A_cpu)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    solver = CudssSolver(A_gpu, "G", 'F')
+    cudss_set(solver, "ir_n_steps", ir)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - A_gpu * x_gpu
+    return norm(r_gpu)
+  end
+
+  function ir_ldlt(T, A_cpu, x_cpu, b_cpu, ir)
+    A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "S" : "H"
+    solver = CudssSolver(A_gpu, structure, 'L')
+    cudss_set(solver, "ir_n_steps", ir)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+    return norm(r_gpu)
+  end
+
+  function ir_llt(T, A_cpu, x_cpu, b_cpu, ir)
+    A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "SPD" : "HPD"
+    solver = CudssSolver(A_gpu, structure, 'U')
+    cudss_set(solver, "ir_n_steps", ir)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+    return norm(r_gpu)
+  end
+
+  n = 100
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
+    @testset "number of iterative refinement: $ir" for ir in (1, 2)
+      @testset "LU" begin
+        A_cpu = sprand(T, n, n, 0.05) + I
+        x_cpu = zeros(T, n)
+        b_cpu = rand(T, n)
+        res = ir_lu(T, A_cpu, x_cpu, b_cpu, ir)
+        @test res ≤ √eps(R)
+      end
+      @testset "LDLᵀ / LDLᴴ" begin
+        A_cpu = sprand(T, n, n, 0.05) + I
+        A_cpu = A_cpu + A_cpu'
+        x_cpu = zeros(T, n)
+        b_cpu = rand(T, n)
+        res = ir_ldlt(T, A_cpu, x_cpu, b_cpu, ir)
+        @test res ≤ √eps(R)
+      end
+      @testset "LLᵀ / LLᴴ" begin
+        A_cpu = sprand(T, n, n, 0.01)
+        A_cpu = A_cpu * A_cpu' + I
+        x_cpu = zeros(T, n)
+        b_cpu = rand(T, n)
+        res = ir_llt(T, A_cpu, x_cpu, b_cpu, ir)
+        @test res ≤ √eps(R)
+      end
+    end
+  end
+end
