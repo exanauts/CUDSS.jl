@@ -114,28 +114,28 @@ end
 @checked function cudssConfigSet(config, param, value, sizeInBytes)
     initialize_context()
     @ccall libcudss.cudssConfigSet(config::cudssConfig_t, param::cudssConfigParam_t,
-                                   value::Ptr{Cvoid}, sizeInBytes::Cint)::cudssStatus_t
+                                   value::Ptr{Cvoid}, sizeInBytes::Csize_t)::cudssStatus_t
 end
 
 @checked function cudssConfigGet(config, param, value, sizeInBytes, sizeWritten)
     initialize_context()
     @ccall libcudss.cudssConfigGet(config::cudssConfig_t, param::cudssConfigParam_t,
-                                   value::Ptr{Cvoid}, sizeInBytes::Cint,
-                                   sizeWritten::Ptr{Cint})::cudssStatus_t
+                                   value::Ptr{Cvoid}, sizeInBytes::Csize_t,
+                                   sizeWritten::Ptr{Csize_t})::cudssStatus_t
 end
 
 @checked function cudssDataSet(handle, data, param, value, sizeInBytes)
     initialize_context()
     @ccall libcudss.cudssDataSet(handle::cudssHandle_t, data::cudssData_t,
                                  param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
-                                 sizeInBytes::Cint)::cudssStatus_t
+                                 sizeInBytes::Csize_t)::cudssStatus_t
 end
 
 @checked function cudssDataGet(handle, data, param, value, sizeInBytes, sizeWritten)
     initialize_context()
     @ccall libcudss.cudssDataGet(handle::cudssHandle_t, data::cudssData_t,
                                  param::cudssDataParam_t, value::PtrOrCuPtr{Cvoid},
-                                 sizeInBytes::Cint, sizeWritten::Ptr{Cint})::cudssStatus_t
+                                 sizeInBytes::Csize_t, sizeWritten::Ptr{Csize_t})::cudssStatus_t
 end
 
 @checked function cudssExecute(handle, phase, solverConfig, solverData, inputMatrix,
