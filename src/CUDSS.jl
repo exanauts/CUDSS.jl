@@ -1,6 +1,6 @@
 module CUDSS
 
-using CUDA, CUDA.CUSPARSE
+using CUDA, CUDA.APIUtils, CUDA.CUSPARSE
 using CUDSS_jll
 using LinearAlgebra
 using SparseArrays
