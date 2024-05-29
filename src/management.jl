@@ -16,8 +16,20 @@ version() = VersionNumber(cudssGetProperty(CUDA.MAJOR_VERSION),
                           cudssGetProperty(CUDA.MINOR_VERSION),
                           cudssGetProperty(CUDA.PATCH_LEVEL))
 
-# cache for created, but unused handles
-const idle_handles = CUDA.HandleCache{CuContext,cudssHandle_t}()
+## handles
+
+function handle_ctor(ctx)
+    context!(ctx) do
+        cudssCreate()
+    end
+end
+function handle_dtor(ctx, handle)
+    context!(ctx; skip_destroyed=true) do
+        cudssDestroy(handle)
+    end
+end
+
+const idle_handles = HandleCache{CuContext,cudssHandle_t}(handle_ctor, handle_dtor)
 
 function handle()
     cuda = CUDA.active_state()
@@ -30,16 +42,10 @@ function handle()
 
     # get library state
     @noinline function new_state(cuda)
-        new_handle = pop!(idle_handles, cuda.context) do
-            cudssCreate()
-        end
+        new_handle = pop!(idle_handles, cuda.context)
 
         finalizer(current_task()) do task
-            push!(idle_handles, cuda.context, new_handle) do
-                context!(cuda.context; skip_destroyed=true) do
-                    cudssDestroy(new_handle)
-                end
-            end
+            push!(idle_handles, cuda.context, new_handle)
         end
 
         cudssSetStream(new_handle, cuda.stream)
