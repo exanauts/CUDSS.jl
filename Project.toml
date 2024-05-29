@@ -1,7 +1,7 @@
 name = "CUDSS"
 uuid = "45b445bb-4962-46a0-9369-b4df9d0f772e"
 authors = ["Alexis Montoison <alexis.montoison@polymtl.ca>"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
@@ -12,7 +12,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 CEnum = "0.4, 0.5"
-CUDA = "5.3.0 - 5.3.4"
+CUDA = "5.3.0 - 5.3.5"
 CUDSS_jll = "0.2.1"
 julia = "1.6"
 LinearAlgebra = "1.6"
