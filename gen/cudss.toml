@@ -1,0 +1,58 @@
+[general]
+library_name = "libcudss"
+output_file_path = "../src/libcudss.jl"
+prologue_file_path = "./libcudss_prologue.jl"
+
+output_ignorelist = [
+    "CUDSS_ALLOCATOR_NAME_LEN",
+    "CUDSS_VERSION",
+    "CUDSS_VERSION_MAJOR",
+    "CUDSS_VERSION_MINOR",
+    "CUDSS_VERSION_PATCH"
+]
+
+[codegen]
+use_ccall_macro = true
+always_NUL_terminated_string = true
+
+[api]
+checked_rettypes = [ "cudssStatus_t" ]
+
+[api.cudssGetVersion]
+needs_context = false
+
+[api.cudssGetProperty]
+needs_context = false
+
+[api.cudssDataSet.argtypes]
+4 = "PtrOrCuPtr{Cvoid}"
+
+[api.cudssDataGet.argtypes]
+4 = "PtrOrCuPtr{Cvoid}"
+
+[api.cudssMatrixCreateDn.argtypes]
+5 = "CuPtr{Cvoid}"
+
+[api.cudssMatrixCreateCsr.argtypes]
+5 = "CuPtr{Cvoid}"
+6 = "CuPtr{Cvoid}"
+7 = "CuPtr{Cvoid}"
+8 = "CuPtr{Cvoid}"
+
+[api.cudssMatrixGetDn.argtypes]
+5 = "Ptr{CuPtr{Cvoid}}"
+
+[api.cudssMatrixGetCsr.argtypes]
+5 = "Ptr{CuPtr{Cvoid}}"
+6 = "Ptr{CuPtr{Cvoid}}"
+7 = "Ptr{CuPtr{Cvoid}}"
+8 = "Ptr{CuPtr{Cvoid}}"
+
+[api.cudssMatrixSetValues.argtypes]
+2 = "CuPtr{Cvoid}"
+
+[api.cudssMatrixSetCsrPointers.argtypes]
+2 = "CuPtr{Cvoid}"
+3 = "CuPtr{Cvoid}"
+4 = "CuPtr{Cvoid}"
+5 = "CuPtr{Cvoid}"
