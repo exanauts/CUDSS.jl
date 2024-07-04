@@ -33,6 +33,9 @@ const cudssConfig_t = Ptr{cudssConfig}
     CUDSS_CONFIG_PIVOT_THRESHOLD = 8
     CUDSS_CONFIG_PIVOT_EPSILON = 9
     CUDSS_CONFIG_MAX_LU_NNZ = 10
+    CUDSS_CONFIG_HYBRID_MODE = 11
+    CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT = 12
+    CUDSS_CONFIG_USE_CUDA_REGISTER_MEMORY = 13
 end
 
 @cenum cudssDataParam_t::UInt32 begin
@@ -46,6 +49,8 @@ end
     CUDSS_DATA_PERM_COL = 7
     CUDSS_DATA_DIAG = 8
     CUDSS_DATA_USER_PERM = 9
+    CUDSS_DATA_HYBRID_DEVICE_MEMORY_MIN = 10
+    CUDSS_DATA_COMM = 11
 end
 
 @cenum cudssPhase_t::UInt32 begin
@@ -64,10 +69,8 @@ end
     CUDSS_STATUS_ALLOC_FAILED = 2
     CUDSS_STATUS_INVALID_VALUE = 3
     CUDSS_STATUS_NOT_SUPPORTED = 4
-    CUDSS_STATUS_ARCH_MISMATCH = 5
-    CUDSS_STATUS_EXECUTION_FAILED = 6
-    CUDSS_STATUS_INTERNAL_ERROR = 7
-    CUDSS_STATUS_ZERO_PIVOT = 8
+    CUDSS_STATUS_EXECUTION_FAILED = 5
+    CUDSS_STATUS_INTERNAL_ERROR = 6
 end
 
 @cenum cudssMatrixType_t::UInt32 begin
@@ -146,8 +149,7 @@ end
                                         sizeInBytes::Csize_t, sizeWritten::Ptr{Csize_t})::cudssStatus_t
 end
 
-@checked function cudssExecute(handle, phase, solverConfig, solverData, inputMatrix,
-                               solution, rhs)
+@checked function cudssExecute(handle, phase, solverConfig, solverData, inputMatrix, solution, rhs)
     initialize_context()
     @gcsafe_ccall libcudss.cudssExecute(handle::cudssHandle_t, phase::cudssPhase_t,
                                         solverConfig::cudssConfig_t, solverData::cudssData_t,
@@ -158,6 +160,12 @@ end
 @checked function cudssSetStream(handle, stream)
     initialize_context()
     @gcsafe_ccall libcudss.cudssSetStream(handle::cudssHandle_t, stream::cudaStream_t)::cudssStatus_t
+end
+
+@checked function cudssSetCommLayer(handle, commLibFileName)
+    initialize_context()
+    @gcsafe_ccall libcudss.cudssSetCommLayer(handle::cudssHandle_t,
+                                             commLibFileName::Cstring)::cudssStatus_t
 end
 
 @checked function cudssConfigCreate(solverConfig)
@@ -206,9 +214,8 @@ end
                                                layout::cudssLayout_t)::cudssStatus_t
 end
 
-@checked function cudssMatrixCreateCsr(matrix, nrows, ncols, nnz, rowStart, rowEnd,
-                                       colIndices, values, indexType, valueType, mtype,
-                                       mview, indexBase)
+@checked function cudssMatrixCreateCsr(matrix, nrows, ncols, nnz, rowStart, rowEnd, colIndices,
+                                       values, indexType, valueType, mtype, mview, indexBase)
     initialize_context()
     @gcsafe_ccall libcudss.cudssMatrixCreateCsr(matrix::Ptr{cudssMatrix_t}, nrows::Int64,
                                                 ncols::Int64, nnz::Int64, rowStart::CuPtr{Cvoid},
@@ -276,4 +283,23 @@ end
     initialize_context()
     @gcsafe_ccall libcudss.cudssSetDeviceMemHandler(handle::cudssHandle_t,
                                                     handler::Ptr{cudssDeviceMemHandler_t})::cudssStatus_t
+end
+
+@cenum cudssOpType_t::UInt32 begin
+    CUDSS_SUM = 0
+    CUDSS_MAX = 1
+    CUDSS_MIN = 2
+end
+
+struct cudssDistributedInterface_t
+    cudssCommRank::Ptr{Cvoid}
+    cudssCommSize::Ptr{Cvoid}
+    cudssSend::Ptr{Cvoid}
+    cudssRecv::Ptr{Cvoid}
+    cudssBcast::Ptr{Cvoid}
+    cudssReduce::Ptr{Cvoid}
+    cudssAllreduce::Ptr{Cvoid}
+    cudssScatterv::Ptr{Cvoid}
+    cudssCommSplit::Ptr{Cvoid}
+    cudssCommFree::Ptr{Cvoid}
 end
