@@ -1,0 +1,32 @@
+[general]
+library_name = "libcudss"
+output_file_path = "../src/libcudss2.jl"
+
+output_ignorelist = [
+    # generates bad code
+    "CUSPARSE_CPP_VERSION",
+    "CUSPARSE_DEPRECATED_REPLACE_WITH",
+    "CUSPARSE_DEPRECATED_ENUM_REPLACE_WITH",
+    # these change often
+    "CUSPARSE_VERSION",
+    "CUSPARSE_VER_.*",
+]
+
+[codegen]
+use_ccall_macro = true
+always_NUL_terminated_string = true
+
+[api]
+checked_rettypes = [ "cudssStatus_t" ]
+
+[api.cusparseGetVersion]
+needs_context = false
+
+[api.cusparseGetProperty]
+needs_context = false
+
+[api.cusparseGetErrorName]
+needs_context = false
+
+[api.cusparseGetErrorString]
+needs_context = false
