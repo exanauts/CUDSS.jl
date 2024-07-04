@@ -191,7 +191,7 @@ function main()
     # function wrap(name, headers; targets=headers, defines=[], include_dirs=[])
     # wrap("cudss", ["$cudss/cudss.h"]; include_dirs=[cuda, cudss])
     args = get_default_args()
-    append!(args, "-I$cuda", "-I$cudss")
+    append!(args, ["-I$cuda", "-I$cudss"])
     # for define in defines
     #     if isa(define, Pair)
     #         append!(args, ["-D", "$(first(define))=$(last(define))"])
@@ -200,10 +200,10 @@ function main()
     #     end
     # end
 
-    options = load_options(joinpath(@__DIR__, "$(name).toml"))
+    options = load_options(joinpath(@__DIR__, "cudss.toml"))
 
     # create context
-    headers = ["$cudss/cudss.h"]
+    headers = ["$cudss/cudss.h", "$cudss/cudss_distributed_interface.h"]
     targets = headers
     ctx = create_context(headers, args, options)
 
