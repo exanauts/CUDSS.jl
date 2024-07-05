@@ -1,11 +1,13 @@
 # cuDSS types
 
 const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reorder_row",
-                               "perm_reorder_col", "perm_row", "perm_col", "diag", "user_perm")
+                               "perm_reorder_col", "perm_row", "perm_col", "diag", "user_perm",
+                               "hybrid_device_memory_min", "comm")
 
 const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "matching_type",
                                  "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
-                                 "pivot_epsilon", "max_lu_nnz")
+                                 "pivot_epsilon", "max_lu_nnz", "hybrid_mode", "hybrid_device_memory_limit",
+                                 "use_cuda_register_memory")
 
 const CUDSS_TYPES = Dict{String, DataType}(
     # data type
@@ -19,6 +21,8 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "perm_col" => Vector{Cint},
     "diag" => Vector{Float64},
     "user_perm" => Vector{Cint},
+    "hybrid_device_memory_min" => Int64,
+    "comm" => Ptr{Cvoid},
     # config type
     "reordering_alg" => cudssAlgType_t,
     "factorization_alg" => cudssAlgType_t,
@@ -30,7 +34,10 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "pivot_type" => cudssPivotType_t,
     "pivot_threshold" => Float64,
     "pivot_epsilon" => Float64,
-    "max_lu_nnz" => Int64
+    "max_lu_nnz" => Int64,
+    "hybrid_mode" => Cint,
+    "hybrid_device_memory_limit" => Int64,
+    "use_cuda_register_memory" => Cint
 )
 
 ## config type
@@ -58,6 +65,12 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_PIVOT_EPSILON
     elseif config == "max_lu_nnz"
         return CUDSS_CONFIG_MAX_LU_NNZ
+    elseif config == "hybrid_mode"
+        return CUDSS_CONFIG_HYBRID_MODE
+    elseif config == "hybrid_device_memory_limit"
+        return CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT
+    elseif config == "use_cuda_register_memory"
+        return CUDSS_CONFIG_USE_CUDA_REGISTER_MEMORY
     else
         throw(ArgumentError("Unknown config parameter $config"))
     end
@@ -86,6 +99,10 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
         return CUDSS_DATA_DIAG
     elseif data == "user_perm"
         return CUDSS_DATA_USER_PERM
+    elseif data == "hybrid_device_memory_min"
+        return CUDSS_DATA_HYBRID_DEVICE_MEMORY_MIN
+    elseif data == "comm"
+        return CUDSS_DATA_COMM
     else
         throw(ArgumentError("Unknown data parameter $data"))
     end

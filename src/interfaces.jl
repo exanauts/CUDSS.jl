@@ -66,10 +66,14 @@ The available configuration parameters are:
 - `"pivot_type"`: Type of pivoting (`'C'`, `'R'` or `'N'`);
 - `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
 - `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
-- `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices.
+- `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
+- `"hybrid_mode"`: Memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
+- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
 
-The available data parameter is:
-- `"user_perm"`: User permutation to be used instead of running the reordering algorithms.
+The available data parameters are:
+- `"user_perm"`: User permutation to be used instead of running the reordering algorithms;
+- `"comm"`: Communicator for Multi-GPU multi-node mode.
 """
 function cudss_set end
 
@@ -101,7 +105,7 @@ end
 
 function cudss_set(data::CudssData, parameter::String, value)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
-  (parameter == "user_perm") || throw(ArgumentError("Only the data parameter \"user_perm\" can be set."))
+  (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"user_perm\" and \"comm\" can be set."))
   (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
   nbytes = sizeof(value)
   cudssDataSet(data.handle, data, parameter, value, nbytes)
@@ -131,7 +135,10 @@ The available configuration parameters are:
 - `"pivot_type"`: Type of pivoting;
 - `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
 - `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
-- `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices.
+- `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
+- `"hybrid_mode"`: Memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
+- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -142,9 +149,10 @@ The available data parameters are:
 - `"perm_reorder_col"`: Reordering permutation for the columns;
 - `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
 - `"perm_col"`: Final column permutation (which includes effects of both reordering and pivoting);
-- `"diag"`: Diagonal of the factorized matrix.
+- `"diag"`: Diagonal of the factorized matrix;
+- `"hybrid_device_memory_min"`: Minimal amount of device memory (number of bytes) required in the hybrid memory mode.
 
-The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"` and `"perm_reorder_col"` require the phase `"analyse"` performed by [`cudss`](@ref).
+The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"` and `"hybrid_device_memory_min"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
 The data parameters `"perm_row"` and `"perm_col"` are available but not yet functional.
 """
@@ -162,7 +170,8 @@ end
 
 function cudss_get(data::CudssData, parameter::String)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
-  (parameter == "user_perm") && throw(ArgumentError("The data parameter \"user_perm\" cannot be retrieved."))
+  if (parameter == "user_perm") || (parameter == "comm")
+    throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
   if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
     throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   end
