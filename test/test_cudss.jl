@@ -576,3 +576,97 @@ function iterative_refinement()
     end
   end
 end
+
+function small_matrices()
+  function cudss_lu(T, A_cpu, x_cpu, b_cpu)
+    A_gpu = CuSparseMatrixCSR(A_cpu)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    solver = CudssSolver(A_gpu, "G", 'F')
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - A_gpu * x_gpu
+    return norm(r_gpu)
+  end
+
+  function cudss_ldlt(T, A_cpu, x_cpu, b_cpu, uplo)
+    if uplo == 'L'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    elseif uplo == 'U'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    else
+      A_gpu = CuSparseMatrixCSR(A_cpu)
+    end
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "S" : "H"
+    solver = CudssSolver(A_gpu, structure, uplo)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+    return norm(r_gpu)
+  end
+
+  function cudss_llt(T, A_cpu, x_cpu, b_cpu, uplo)
+    if uplo == 'L'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    elseif uplo == 'U'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    else
+      A_gpu = CuSparseMatrixCSR(A_cpu)
+    end
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "SPD" : "HPD"
+    solver = CudssSolver(A_gpu, structure, uplo)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+    return norm(r_gpu)
+  end
+
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
+    @testset "Size of the linear system: $n" for n in 1:16
+      @testset "LU" begin
+        A_cpu = sprand(T, n, n, 0.05) + I
+        x_cpu = zeros(T, n)
+        b_cpu = rand(T, n)
+        res = cudss_lu(T, A_cpu, x_cpu, b_cpu)
+        @test res ≤ √eps(R)
+      end
+      @testset "LDLᵀ / LDLᴴ" begin
+        A_cpu = sprand(T, n, n, 0.05) + I
+        A_cpu = A_cpu + A_cpu'
+        x_cpu = zeros(T, n)
+        b_cpu = rand(T, n)
+        @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
+          res = cudss_ldlt(T, A_cpu, x_cpu, b_cpu, uplo)
+          @test res ≤ √eps(R)
+        end
+      end
+      @testset "LLᵀ / LLᴴ" begin
+        A_cpu = sprand(T, n, n, 0.01)
+        A_cpu = A_cpu * A_cpu' + I
+        x_cpu = zeros(T, n)
+        b_cpu = rand(T, n)
+        @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
+          res = cudss_llt(T, A_cpu, x_cpu, b_cpu, uplo)
+          @test res ≤ √eps(R)
+        end
+      end
+    end
+  end
+end
