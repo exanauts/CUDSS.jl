@@ -20,14 +20,10 @@ function description(err::CUDSSError)
         return "an invalid value was used as an argument"
     elseif err.code == CUDSS_STATUS_NOT_SUPPORTED
         return "a parameter is not supported"
-    elseif err.code == CUDSS_STATUS_ARCH_MISMATCH
-        return "an absent device architectural feature is required"
     elseif err.code == CUDSS_STATUS_EXECUTION_FAILED
         return "the GPU program failed to execute"
     elseif err.code == CUDSS_STATUS_INTERNAL_ERROR
         return "an internal operation failed"
-    elseif err.code == CUDSS_STATUS_ZERO_PIVOT
-        return "zero pivots were encountered during the numerical factorization"
     else
         return "no description for this error"
     end

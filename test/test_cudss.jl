@@ -85,10 +85,15 @@ function cudss_solver()
             (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
             (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
             (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
+            (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
             for algo in ("default", "algo1", "algo2", "algo3")
               (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
               (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
               (parameter == "solve_alg") && cudss_set(solver, parameter, algo)
+            end
+            for flag in (0, 1)
+              (parameter == "hybrid_mode") && cudss_set(solver, parameter, flag)
+              (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
             end
             for pivoting in ('C', 'R', 'N')
               (parameter == "pivot_type") && cudss_set(solver, parameter, pivoting)
@@ -98,7 +103,7 @@ function cudss_solver()
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
           parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag") && continue
-          if parameter ≠ "user_perm"
+          if (parameter != "user_perm") && (parameter != "comm")
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
           else
@@ -410,13 +415,19 @@ function user_permutation()
     return nz
   end
 
-  function permutation_ldlt(T, A_cpu, x_cpu, b_cpu, permutation)
-    A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+  function permutation_ldlt(T, A_cpu, x_cpu, b_cpu, permutation, uplo)
+    if uplo == 'L'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    elseif uplo == 'U'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    else
+      A_gpu = CuSparseMatrixCSR(A_cpu)
+    end
     x_gpu = CuVector(x_cpu)
     b_gpu = CuVector(b_cpu)
 
     structure = T <: Real ? "S" : "H"
-    solver = CudssSolver(A_gpu, structure, 'L')
+    solver = CudssSolver(A_gpu, structure, uplo)
     cudss_set(solver, "user_perm", permutation)
 
     cudss("analysis", solver, x_gpu, b_gpu)
@@ -427,13 +438,19 @@ function user_permutation()
     return nz
   end
 
-  function permutation_llt(T, A_cpu, x_cpu, b_cpu, permutation)
-    A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+  function permutation_llt(T, A_cpu, x_cpu, b_cpu, permutation, uplo)
+    if uplo == 'L'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    elseif uplo == 'U'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    else
+      A_gpu = CuSparseMatrixCSR(A_cpu)
+    end
     x_gpu = CuVector(x_cpu)
     b_gpu = CuVector(b_cpu)
 
     structure = T <: Real ? "SPD" : "HPD"
-    solver = CudssSolver(A_gpu, structure, 'U')
+    solver = CudssSolver(A_gpu, structure, uplo)
     cudss_set(solver, "user_perm", permutation)
 
     cudss("analysis", solver, x_gpu, b_gpu)
@@ -471,26 +488,30 @@ function user_permutation()
       A_cpu = A_cpu + A_cpu'
       x_cpu = zeros(T, n)
       b_cpu = rand(T, n)
-      nz1_cpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm1_cpu)
-      nz2_cpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm2_cpu)
-      nz1_gpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm1_gpu)
-      nz2_gpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm2_gpu)
-      @test nz1_cpu == nz1_gpu
-      @test nz2_cpu == nz2_gpu
-      @test nz1_cpu != nz2_cpu
+      @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
+        nz1_cpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm1_cpu, uplo)
+        nz2_cpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm2_cpu, uplo)
+        nz1_gpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm1_gpu, uplo)
+        nz2_gpu = permutation_ldlt(T, A_cpu, x_cpu, b_cpu, perm2_gpu, uplo)
+        @test nz1_cpu == nz1_gpu
+        @test nz2_cpu == nz2_gpu
+        @test nz1_cpu != nz2_cpu
+      end
     end
     @testset "LLᵀ / LLᴴ" begin
       A_cpu = sprand(T, n, n, 0.01)
       A_cpu = A_cpu * A_cpu' + I
       x_cpu = zeros(T, n)
       b_cpu = rand(T, n)
-      nz1_cpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm1_cpu)
-      nz2_cpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm2_cpu)
-      nz1_gpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm1_gpu)
-      nz2_gpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm2_gpu)
-      @test nz1_cpu == nz1_gpu
-      @test nz2_cpu == nz2_gpu
-      @test nz1_cpu != nz2_cpu
+      @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
+        nz1_cpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm1_cpu, uplo)
+        nz2_cpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm2_cpu, uplo)
+        nz1_gpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm1_gpu, uplo)
+        nz2_gpu = permutation_llt(T, A_cpu, x_cpu, b_cpu, perm2_gpu, uplo)
+        @test nz1_cpu == nz1_gpu
+        @test nz2_cpu == nz2_gpu
+        @test nz1_cpu != nz2_cpu
+      end
     end
   end
 end
