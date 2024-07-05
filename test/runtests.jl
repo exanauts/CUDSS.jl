@@ -46,4 +46,8 @@ include("test_cudss.jl")
   @testset "Iterative refinement" begin
     iterative_refinement()
   end
+
+  @testset "Small matrices" begin
+    small_matrices()
+  end
 end
