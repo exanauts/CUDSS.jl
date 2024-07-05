@@ -1,9 +1,7 @@
 # CUDSS.jl: Julia interface for NVIDIA cuDSS
 
-[![docs-stable][docs-stable-img]][docs-stable-url] [![docs-dev][docs-dev-img]][docs-dev-url]
+[![docs-dev][docs-dev-img]][docs-dev-url]
 
-[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
-[docs-stable-url]: https://exanauts.github.io/CUDSS.jl/stable/
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-purple.svg
 [docs-dev-url]: https://exanauts.github.io/CUDSS.jl/dev
 
