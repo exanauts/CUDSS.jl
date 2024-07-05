@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Options · CUDSS.jl</title><meta name="title" content="Options · CUDSS.jl"/><meta property="og:title" content="Options · CUDSS.jl"/><meta property="twitter:title" content="Options · CUDSS.jl"/><meta name="description" content="Documentation for CUDSS.jl."/><meta property="og:description" content="Documentation for CUDSS.jl."/><meta property="twitter:description" content="Documentation for CUDSS.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">CUDSS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../generic/">Generic API</a></li><li class="is-active"><a class="tocitem" href>Options</a><ul class="internal"><li><a class="tocitem" href="#Iterative-refinement"><span>Iterative refinement</span></a></li><li><a class="tocitem" href="#User-permutation"><span>User permutation</span></a></li><li><a class="tocitem" href="#Hybrid-mode"><span>Hybrid mode</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Options</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Options</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl/blob/main/docs/src/options.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h2 id="Iterative-refinement"><a class="docs-heading-anchor" href="#Iterative-refinement">Iterative refinement</a><a id="Iterative-refinement-1"></a><a class="docs-heading-anchor-permalink" href="#Iterative-refinement" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using LinearAlgebra
+using SparseArrays
+
+T = Float64
+n = 100
+p = 5
+A_cpu = sprand(T, n, n, 0.01)
+A_cpu = A_cpu + I
+B_cpu = rand(T, n, p)
+
+A_gpu = CuSparseMatrixCSR(A_cpu)
+B_gpu = CuMatrix(B_cpu)
+X_gpu = similar(B_gpu)
+
+solver = CudssSolver(A_gpu, &quot;G&quot;, &#39;F&#39;)
+
+# Perform one step of iterative refinement
+ir = 1
+cudss_set(solver, &quot;ir_n_steps&quot;, ir)
+
+cudss(&quot;analysis&quot;, solver, X_gpu, B_gpu)
+cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu)
+cudss(&quot;solve&quot;, solver, X_gpu, B_gpu)
+
+R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+norm(R_gpu)</code></pre><h2 id="User-permutation"><a class="docs-heading-anchor" href="#User-permutation">User permutation</a><a id="User-permutation-1"></a><a class="docs-heading-anchor-permalink" href="#User-permutation" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using LinearAlgebra
+using SparseArrays
+using AMD
+
+T = ComplexF64
+n = 100
+A_cpu = sprand(T, n, n, 0.01)
+A_cpu = A_cpu&#39; * A_cpu + I
+b_cpu = rand(T, n)
+
+A_gpu = CuSparseMatrixCSR(A_cpu)
+b_gpu = CuVector(b_cpu)
+x_gpu = similar(b_gpu)
+
+solver = CudssSolver(A_gpu, &quot;HPD&quot;, &#39;F&#39;)
+
+# Provide a user permutation
+permutation = amd(A_cpu) |&gt; Vector{Cint}
+cudss_set(solver, &quot;user_perm&quot;, permutation)
+
+cudss(&quot;analysis&quot;, solver, x_gpu, b_gpu)
+cudss(&quot;factorization&quot;, solver, x_gpu, b_gpu)
+cudss(&quot;solve&quot;, solver, x_gpu, b_gpu)
+
+r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+norm(r_gpu)</code></pre><h2 id="Hybrid-mode"><a class="docs-heading-anchor" href="#Hybrid-mode">Hybrid mode</a><a id="Hybrid-mode-1"></a><a class="docs-heading-anchor-permalink" href="#Hybrid-mode" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using LinearAlgebra
+using SparseArrays
+
+T = Float64
+n = 100
+A_cpu = sprand(T, n, n, 0.01)
+A_cpu = A_cpu + A_cpu&#39; + I
+b_cpu = rand(T, n)
+
+A_gpu = CuSparseMatrixCSR(A_cpu)
+b_gpu = CuVector(b_cpu)
+x_gpu = similar(b_gpu)
+
+solver = CudssSolver(A_gpu, &quot;S&quot;, &#39;F&#39;)
+
+# Use the hybrid mode (host and device memory)
+cudss_set(solver, &quot;hybrid_mode&quot;, 1)
+
+cudss(&quot;analysis&quot;, solver, x_gpu, b_gpu)
+
+# Minimal amount of device memory required in the hybrid memory mode.
+nbytes = cudss_get(solver, &quot;hybrid_device_memory_min&quot;)
+
+# Device memory limit for the hybrid memory mode.
+# Only use it if you don&#39;t want to rely on the internal default heuristic.
+cudss_set(solver, &quot;hybrid_device_memory_limit&quot;, nbytes_gpu)
+
+cudss(&quot;factorization&quot;, solver, x_gpu, b_gpu)
+cudss(&quot;solve&quot;, solver, x_gpu, b_gpu)
+
+r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+norm(r_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../generic/">« Generic API</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Friday 5 July 2024 04:07">Friday 5 July 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
