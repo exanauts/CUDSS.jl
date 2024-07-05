@@ -172,6 +172,7 @@ function cudss_get(data::CudssData, parameter::String)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
   if (parameter == "user_perm") || (parameter == "comm")
     throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
+  end
   if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
     throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   end
