@@ -90,7 +90,7 @@ cudss_set(solver, "hybrid_mode", 1)
 cudss("analysis", solver, x_gpu, b_gpu)
 
 # Minimal amount of device memory required in the hybrid memory mode.
-nbytes = cudss_get(solver, "hybrid_device_memory_min")
+nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")
 
 # Device memory limit for the hybrid memory mode.
 # Only use it if you don't want to rely on the internal default heuristic.

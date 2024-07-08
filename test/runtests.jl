@@ -50,4 +50,8 @@ include("test_cudss.jl")
   @testset "Small matrices" begin
     small_matrices()
   end
+
+  @testset "Hybrid mode" begin
+    hybrid_mode()
+  end
 end
