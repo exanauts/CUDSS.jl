@@ -707,3 +707,108 @@ function small_matrices()
     end
   end
 end
+
+function hybrid_mode()
+  function hybrid_lu(T, A_cpu, x_cpu, b_cpu)
+    A_gpu = CuSparseMatrixCSR(A_cpu)
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    solver = CudssSolver(A_gpu, "G", 'F')
+    cudss_set(solver, "hybrid_mode", 1)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")
+    cudss_set(solver, "hybrid_device_memory_limit", nbytes_gpu)
+
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - A_gpu * x_gpu
+    return norm(r_gpu)
+  end
+
+  function hybrid_ldlt(T, A_cpu, x_cpu, b_cpu, uplo)
+    if uplo == 'L'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    elseif uplo == 'U'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    else
+      A_gpu = CuSparseMatrixCSR(A_cpu)
+    end
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "S" : "H"
+    solver = CudssSolver(A_gpu, structure, uplo)
+    cudss_set(solver, "hybrid_mode", 1)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")
+    cudss_set(solver, "hybrid_device_memory_limit", nbytes_gpu)
+
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+    return norm(r_gpu)
+  end
+
+  function hybrid_llt(T, A_cpu, x_cpu, b_cpu, uplo)
+    if uplo == 'L'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+    elseif uplo == 'U'
+      A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    else
+      A_gpu = CuSparseMatrixCSR(A_cpu)
+    end
+    x_gpu = CuVector(x_cpu)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "SPD" : "HPD"
+    solver = CudssSolver(A_gpu, structure, uplo)
+    cudss_set(solver, "hybrid_mode", 1)
+
+    cudss("analysis", solver, x_gpu, b_gpu)
+    nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")
+    cudss_set(solver, "hybrid_device_memory_limit", nbytes_gpu)
+
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+
+    r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
+    return norm(r_gpu)
+  end
+
+  n = 20
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
+    @testset "LU" begin
+      A_cpu = sprand(T, n, n, 0.05) + I
+      x_cpu = zeros(T, n)
+      b_cpu = rand(T, n)
+      res = hybrid_lu(T, A_cpu, x_cpu, b_cpu)
+      @test res ≤ √eps(R)
+    end
+    @testset "LDLᵀ / LDLᴴ" begin
+      A_cpu = sprand(T, n, n, 0.05) + I
+      A_cpu = A_cpu + A_cpu'
+      x_cpu = zeros(T, n)
+      b_cpu = rand(T, n)
+      @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
+        res = hybrid_ldlt(T, A_cpu, x_cpu, b_cpu, uplo)
+        @test res ≤ √eps(R)
+      end
+    end
+    @testset "LLᵀ / LLᴴ" begin
+      A_cpu = sprand(T, n, n, 0.01)
+      A_cpu = A_cpu * A_cpu' + I
+      x_cpu = zeros(T, n)
+      b_cpu = rand(T, n)
+      @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
+        res = hybrid_llt(T, A_cpu, x_cpu, b_cpu, uplo)
+        @test res ≤ √eps(R)
+      end
+    end
+  end
+end
