@@ -33,7 +33,7 @@ function LinearAlgebra.lu!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint};
   cudss_set(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
-  cudss("factorization", solver, x, b)
+  cudss("refactorization", solver, x, b)
   return solver
 end
 
@@ -80,7 +80,7 @@ function LinearAlgebra.ldlt!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint
   cudss_set(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
-  cudss("factorization", solver, x, b)
+  cudss("refactorization", solver, x, b)
   return solver
 end
 
@@ -127,7 +127,7 @@ function LinearAlgebra.cholesky!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,
   cudss_set(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
-  cudss("factorization", solver, x, b)
+  cudss("refactorization", solver, x, b)
   return solver
 end
 
