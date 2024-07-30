@@ -154,7 +154,7 @@ function cudss_execution()
         c_cpu = rand(T, n)
         c_gpu = CuVector(c_cpu)
 
-        cudss("factorization", solver, x_gpu, c_gpu)
+        cudss("refactorization", solver, x_gpu, c_gpu)
         cudss("solve", solver, x_gpu, c_gpu)
 
         r_gpu = c_gpu - A_gpu * x_gpu
@@ -198,7 +198,7 @@ function cudss_execution()
           C_cpu = rand(T, n, p)
           C_gpu = CuMatrix(C_cpu)
 
-          cudss("factorization", solver, X_gpu, C_gpu)
+          cudss("refactorization", solver, X_gpu, C_gpu)
           cudss("solve", solver, X_gpu, C_gpu)
 
           R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
@@ -243,7 +243,7 @@ function cudss_execution()
           C_cpu = rand(T, n, p)
           C_gpu = CuMatrix(C_cpu)
 
-          cudss("factorization", solver, X_gpu, C_gpu)
+          cudss("refactorization", solver, X_gpu, C_gpu)
           cudss("solve", solver, X_gpu, C_gpu)
 
           R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
