@@ -1,5 +1,5 @@
 function cudss_version()
-  @test CUDSS.version() == v"0.3.0"
+  @test CUDSS.version() == v"0.4.0"
 end
 
 function cudss_dense()
@@ -102,7 +102,7 @@ function cudss_solver()
         end
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag") && continue
+          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "memory_estimates") && continue
           if (parameter != "user_perm") && (parameter != "comm")
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
