@@ -49,6 +49,10 @@ end
     cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
     cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
+    cudss_set(matrix::CudssMatrix{T}, v::Vector{CuVector{T}})
+    cudss_set(matrix::CudssMatrix{T}, A::Vector{CuMatrix{T}})
+    cudss_set(matrix::CudssMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
+    cudss_set(solver::CudssSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
     cudss_set(solver::CudssSolver, parameter::String, value)
     cudss_set(config::CudssConfig, parameter::String, value)
     cudss_set(data::CudssData, parameter::String, value)
@@ -90,6 +94,26 @@ function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T
 end
 
 function cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: BlasFloat
+  cudss_set(solver.matrix, A)
+end
+
+function cudss_set(matrix::CudssMatrix{T}, v::Vector{CuVector{T}}) where T <: BlasFloat
+  cudssMatrixSetBatchValues(matrix, v)
+end
+
+function cudss_set(matrix::CudssMatrix{T}, v::Vector{CuMatrix{T}}) where T <: BlasFloat
+  cudssMatrixSetBatchValues(matrix, v)
+end
+
+function cudss_set(matrix::CudssMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
+  rowsPtrs = [A.rowPtr for Aᵢ in A]
+  colVals = [A.colVal for Aᵢ in A]
+  nzVals = [A.nzVal for Aᵢ in A]
+  PTR_CU_NULL = Ptr{CuPtr{Cvoid}}()
+  cudssMatrixSetBatchCsrPointers(matrix, rowsPtrs, PTR_CU_NULL, colVals, nzVals)
+end
+
+function cudss_set(solver::CudssSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
   cudss_set(solver.matrix, A)
 end
 
