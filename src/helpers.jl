@@ -123,9 +123,9 @@ mutable struct CudssMatrix{T}
         nrows = [size(Aᵢ,1) for Aᵢ in A]
         ncols = [size(Aᵢ,2) for Aᵢ in A]
         nnzA = [nnz(Aᵢ) for Aᵢ in A]
-        rowsPtrs = [A.rowPtr for Aᵢ in A]
-        colVals = [A.colVal for Aᵢ in A]
-        nzVals = [A.nzVal for Aᵢ in A]
+        rowsPtrs = [Aᵢ.rowPtr for Aᵢ in A]
+        colVals = [Aᵢ.colVal for Aᵢ in A]
+        nzVals = [Aᵢ.nzVal for Aᵢ in A]
         PTR_CU_NULL = Ptr{CuPtr{Cvoid}}()
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
                                   PTR_CU_NULL, colVals, nzVals, Cint, T, structure,
