@@ -12,6 +12,7 @@ makedocs(
   sitename = "CUDSS.jl",
   pages = ["Home"        => "index.md",
            "Generic API" => "generic.md",
+           "Batch API"   => "batch.md",
            "Options"     => "options.md"]
 )
 
