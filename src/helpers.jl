@@ -123,7 +123,7 @@ mutable struct CudssMatrix{T}
         nrows = [size(Aᵢ,1) for Aᵢ in A]
         ncols = [size(Aᵢ,2) for Aᵢ in A]
         nnzA = [nnz(Aᵢ) for Aᵢ in A]
-        rowsPtrs = [pointer(Aᵢ.rowPtr) for Aᵢ in A] |> CuVector
+        rowPtrs = [pointer(Aᵢ.rowPtr) for Aᵢ in A] |> CuVector
         colVals = [pointer(Aᵢ.colVal) for Aᵢ in A] |> CuVector
         nzVals = [pointer(Aᵢ.nzVal) for Aᵢ in A] |> CuVector
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
