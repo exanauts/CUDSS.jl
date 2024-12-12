@@ -123,7 +123,7 @@ mutable struct CudssMatrix{T}
         nrows = [size(Aᵢ,1) for Aᵢ in A]
         ncols = [size(Aᵢ,2) for Aᵢ in A]
         nnzA = [nnz(Aᵢ) for Aᵢ in A]
-        rowsPtrs = [Aᵢ.rowPtr for Aᵢ in A]
+        rowPtrs = [Aᵢ.rowPtr for Aᵢ in A]
         colVals = [Aᵢ.colVal for Aᵢ in A]
         nzVals = [Aᵢ.nzVal for Aᵢ in A]
         PTR_CU_NULL = Ptr{CuPtr{Cvoid}}()
