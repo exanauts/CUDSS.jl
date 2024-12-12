@@ -95,7 +95,9 @@ mutable struct CudssMatrix{T}
         nrows = [length(vᵢ) for vᵢ in v]
         ncols = [1 for i = 1:nbatch]
         ld = nrows
-        cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, v, T, 'C')
+        vptrs = unsafe_batch(v)
+        cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, vptrs, T, 'C')
+        # unsafe_free!(vptrs)
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
@@ -107,11 +109,13 @@ mutable struct CudssMatrix{T}
         nrows = [size(Aᵢ,1) for Aᵢ in A]
         ncols = [size(Aᵢ,2) for Aᵢ in A]
         ld = nrows
+        Aptrs = unsafe_batch(A)
         if transposed
-            cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, A, T, 'R')
+            cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Aptrs, T, 'R')
         else
-            cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, A, T, 'C')
+            cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Aptrs, T, 'C')
         end
+        # unsafe_free!(Aptrs)
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
