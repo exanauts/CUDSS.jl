@@ -2,6 +2,7 @@ export CudssSolver, cudss, cudss_set, cudss_get
 
 """
     solver = CudssSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O')
+    solver = CudssSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O')
     solver = CudssSolver(matrix::CudssMatrix{T}, config::CudssConfig, data::CudssData)
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -37,6 +38,13 @@ mutable struct CudssSolver{T}
   end
 
   function CudssSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+    matrix = CudssMatrix(A, structure, view; index)
+    config = CudssConfig()
+    data = CudssData()
+    return new{T}(matrix, config, data)
+  end
+
+  function CudssSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
     matrix = CudssMatrix(A, structure, view; index)
     config = CudssConfig()
     data = CudssData()
@@ -222,6 +230,8 @@ end
 """
     cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T})
     cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T})
+    cudss(phase::String, solver::CudssSolver{T}, x::Vector{CuVector{T}}, b::Vector{CuVector{T}})
+    cudss(phase::String, solver::CudssSolver{T}, X::Vector{CuMatrix{T}}, B::Vector{CuMatrix{T}})
     cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T})
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -242,6 +252,18 @@ function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVecto
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
+  solution = CudssMatrix(X)
+  rhs = CudssMatrix(B)
+  cudss(phase, solver, solution, rhs)
+end
+
+function cudss(phase::String, solver::CudssSolver{T}, x::Vector{CuVector{T}}, b::Vector{CuVector{T}}) where T <: BlasFloat
+  solution = CudssMatrix(x)
+  rhs = CudssMatrix(b)
+  cudss(phase, solver, solution, rhs)
+end
+
+function cudss(phase::String, solver::CudssSolver{T}, X::Vector{CuMatrix{T}}, B::Vector{CuMatrix{T}}) where T <: BlasFloat
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
   cudss(phase, solver, solution, rhs)
