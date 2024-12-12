@@ -123,13 +123,15 @@ mutable struct CudssMatrix{T}
         nrows = [size(Aᵢ,1) for Aᵢ in A]
         ncols = [size(Aᵢ,2) for Aᵢ in A]
         nnzA = [nnz(Aᵢ) for Aᵢ in A]
-        rowPtrs = [Aᵢ.rowPtr for Aᵢ in A]
-        colVals = [Aᵢ.colVal for Aᵢ in A]
-        nzVals = [Aᵢ.nzVal for Aᵢ in A]
-        PTR_CU_NULL = Ptr{CuPtr{Cvoid}}()
+        rowsPtrs = [pointer(Aᵢ.rowPtr) for Aᵢ in A] |> CuVector
+        colVals = [pointer(Aᵢ.colVal) for Aᵢ in A] |> CuVector
+        nzVals = [pointer(Aᵢ.nzVal) for Aᵢ in A] |> CuVector
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
-                                  PTR_CU_NULL, colVals, nzVals, Cint, T, structure,
+                                  CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
                                   view, index)
+        # unsafe_free!(rowsPtrs)
+        # unsafe_free!(colVals)
+        # unsafe_free!(nzVals)
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj

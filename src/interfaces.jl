@@ -114,11 +114,13 @@ function cudss_set(matrix::CudssMatrix{T}, v::Vector{CuMatrix{T}}) where T <: Bl
 end
 
 function cudss_set(matrix::CudssMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
-  rowsPtrs = [A.rowPtr for Aᵢ in A]
-  colVals = [A.colVal for Aᵢ in A]
-  nzVals = [A.nzVal for Aᵢ in A]
-  PTR_CU_NULL = Ptr{CuPtr{Cvoid}}()
-  cudssMatrixSetBatchCsrPointers(matrix, rowsPtrs, PTR_CU_NULL, colVals, nzVals)
+  rowsPtrs = [pointer(Aᵢ.rowPtr) for Aᵢ in A] |> CuVector
+  colVals = [pointer(Aᵢ.colVal) for Aᵢ in A] |> CuVector
+  nzVals = [pointer(Aᵢ.nzVal) for Aᵢ in A] |> CuVector
+  cudssMatrixSetBatchCsrPointers(matrix, rowsPtrs, CUPTR_C_NULL, colVals, nzVals)
+  # unsafe_free!(rowsPtrs)
+  # unsafe_free!(colVals)
+  # unsafe_free!(nzVals)
 end
 
 function cudss_set(solver::CudssSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat

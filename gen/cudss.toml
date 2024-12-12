@@ -34,7 +34,7 @@ needs_context = false
 5 = "CuPtr{Cvoid}"
 
 [api.cudssMatrixCreateBatchDn.argtypes]
-6 = "Ptr{CuPtr{Cvoid}}"
+6 = "CuPtr{Ptr{Cvoid}}"
 
 [api.cudssMatrixCreateCsr.argtypes]
 5 = "CuPtr{Cvoid}"
@@ -43,16 +43,16 @@ needs_context = false
 8 = "CuPtr{Cvoid}"
 
 [api.cudssMatrixCreateBatchCsr.argtypes]
-6 = "Ptr{CuPtr{Cvoid}}"
-7 = "Ptr{CuPtr{Cvoid}}"
-8 = "Ptr{CuPtr{Cvoid}}"
-9 = "Ptr{CuPtr{Cvoid}}"
+6 = "CuPtr{Ptr{Cvoid}}"
+7 = "CuPtr{Ptr{Cvoid}}"
+8 = "CuPtr{Ptr{Cvoid}}"
+9 = "CuPtr{Ptr{Cvoid}}"
 
 [api.cudssMatrixGetDn.argtypes]
 5 = "Ptr{CuPtr{Cvoid}}"
 
 [api.cudssMatrixGetBatchDn.argtypes]
-6 = "Ptr{Ptr{CuPtr{Cvoid}}}"
+6 = "Ptr{CuPtr{Ptr{Cvoid}}}"
 
 [api.cudssMatrixGetCsr.argtypes]
 5 = "Ptr{CuPtr{Cvoid}}"
@@ -61,16 +61,16 @@ needs_context = false
 8 = "Ptr{CuPtr{Cvoid}}"
 
 [api.cudssMatrixGetBatchCsr.argtypes]
-6 = "Ptr{Ptr{CuPtr{Cvoid}}}"
-7 = "Ptr{Ptr{CuPtr{Cvoid}}}"
-8 = "Ptr{Ptr{CuPtr{Cvoid}}}"
-9 = "Ptr{Ptr{CuPtr{Cvoid}}}"
+6 = "Ptr{CuPtr{Ptr{Cvoid}}}"
+7 = "Ptr{CuPtr{Ptr{Cvoid}}}"
+8 = "Ptr{CuPtr{Ptr{Cvoid}}}"
+9 = "Ptr{CuPtr{Ptr{Cvoid}}}"
 
 [api.cudssMatrixSetValues.argtypes]
 2 = "CuPtr{Cvoid}"
 
 [api.cudssMatrixSetBatchValues.argtypes]
-2 = "Ptr{CuPtr{Cvoid}}"
+2 = "CuPtr{Ptr{Cvoid}}"
 
 [api.cudssMatrixSetCsrPointers.argtypes]
 2 = "CuPtr{Cvoid}"
@@ -79,7 +79,7 @@ needs_context = false
 5 = "CuPtr{Cvoid}"
 
 [api.cudssMatrixSetBatchCsrPointers.argtypes]
-2 = "Ptr{CuPtr{Cvoid}}"
-3 = "Ptr{CuPtr{Cvoid}}"
-4 = "Ptr{CuPtr{Cvoid}}"
-5 = "Ptr{CuPtr{Cvoid}}"
+2 = "CuPtr{Ptr{Cvoid}}"
+3 = "CuPtr{Ptr{Cvoid}}"
+4 = "CuPtr{Ptr{Cvoid}}"
+5 = "CuPtr{Ptr{Cvoid}}"
