@@ -262,7 +262,7 @@ end
     @gcsafe_ccall libcudss.cudssMatrixCreateBatchDn(matrix::Ptr{cudssMatrix_t},
                                                     batchCount::Int64, nrows::Ptr{Cvoid},
                                                     ncols::Ptr{Cvoid}, ld::Ptr{Cvoid},
-                                                    values::Ptr{CuPtr{Cvoid}},
+                                                    values::CuPtr{Ptr{Cvoid}},
                                                     valueType::cudaDataType_t,
                                                     layout::cudssLayout_t)::cudssStatus_t
 end
@@ -274,10 +274,10 @@ end
     @gcsafe_ccall libcudss.cudssMatrixCreateBatchCsr(matrix::Ptr{cudssMatrix_t},
                                                      batchCount::Int64, nrows::Ptr{Cvoid},
                                                      ncols::Ptr{Cvoid}, nnz::Ptr{Cvoid},
-                                                     rowStart::Ptr{CuPtr{Cvoid}},
-                                                     rowEnd::Ptr{CuPtr{Cvoid}},
-                                                     colIndices::Ptr{CuPtr{Cvoid}},
-                                                     values::Ptr{CuPtr{Cvoid}},
+                                                     rowStart::CuPtr{Ptr{Cvoid}},
+                                                     rowEnd::CuPtr{Ptr{Cvoid}},
+                                                     colIndices::CuPtr{Ptr{Cvoid}},
+                                                     values::CuPtr{Ptr{Cvoid}},
                                                      indexType::cudaDataType_t,
                                                      valueType::cudaDataType_t,
                                                      mtype::cudssMatrixType_t,
@@ -338,7 +338,7 @@ end
                                                  nrows::Ptr{Ptr{Cvoid}},
                                                  ncols::Ptr{Ptr{Cvoid}},
                                                  ld::Ptr{Ptr{Cvoid}},
-                                                 values::Ptr{Ptr{CuPtr{Cvoid}}},
+                                                 values::Ptr{CuPtr{Ptr{Cvoid}}},
                                                  type::Ptr{cudaDataType_t},
                                                  layout::Ptr{cudssLayout_t})::cudssStatus_t
 end
@@ -352,10 +352,10 @@ end
                                                   nrows::Ptr{Ptr{Cvoid}},
                                                   ncols::Ptr{Ptr{Cvoid}},
                                                   nnz::Ptr{Ptr{Cvoid}},
-                                                  rowStart::Ptr{Ptr{CuPtr{Cvoid}}},
-                                                  rowEnd::Ptr{Ptr{CuPtr{Cvoid}}},
-                                                  colIndices::Ptr{Ptr{CuPtr{Cvoid}}},
-                                                  values::Ptr{Ptr{CuPtr{Cvoid}}},
+                                                  rowStart::Ptr{CuPtr{Ptr{Cvoid}}},
+                                                  rowEnd::Ptr{CuPtr{Ptr{Cvoid}}},
+                                                  colIndices::Ptr{CuPtr{Ptr{Cvoid}}},
+                                                  values::Ptr{CuPtr{Ptr{Cvoid}}},
                                                   indexType::Ptr{cudaDataType_t},
                                                   valueType::Ptr{cudaDataType_t},
                                                   mtype::Ptr{cudssMatrixType_t},
@@ -366,17 +366,17 @@ end
 @checked function cudssMatrixSetBatchValues(matrix, values)
     initialize_context()
     @gcsafe_ccall libcudss.cudssMatrixSetBatchValues(matrix::cudssMatrix_t,
-                                                     values::Ptr{CuPtr{Cvoid}})::cudssStatus_t
+                                                     values::CuPtr{Ptr{Cvoid}})::cudssStatus_t
 end
 
 @checked function cudssMatrixSetBatchCsrPointers(matrix, rowOffsets, rowEnd, colIndices,
                                                  values)
     initialize_context()
     @gcsafe_ccall libcudss.cudssMatrixSetBatchCsrPointers(matrix::cudssMatrix_t,
-                                                          rowOffsets::Ptr{CuPtr{Cvoid}},
-                                                          rowEnd::Ptr{CuPtr{Cvoid}},
-                                                          colIndices::Ptr{CuPtr{Cvoid}},
-                                                          values::Ptr{CuPtr{Cvoid}})::cudssStatus_t
+                                                          rowOffsets::CuPtr{Ptr{Cvoid}},
+                                                          rowEnd::CuPtr{Ptr{Cvoid}},
+                                                          colIndices::CuPtr{Ptr{Cvoid}},
+                                                          values::CuPtr{Ptr{Cvoid}})::cudssStatus_t
 end
 
 @checked function cudssMatrixGetFormat(matrix, format)
