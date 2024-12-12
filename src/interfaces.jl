@@ -2,6 +2,7 @@ export CudssSolver, cudss, cudss_set, cudss_get
 
 """
     solver = CudssSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O')
+    solver = CudssSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O')
     solver = CudssSolver(matrix::CudssMatrix{T}, config::CudssConfig, data::CudssData)
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -42,6 +43,13 @@ mutable struct CudssSolver{T}
     data = CudssData()
     return new{T}(matrix, config, data)
   end
+
+  function CudssSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+    matrix = CudssMatrix(A, structure, view; index)
+    config = CudssConfig()
+    data = CudssData()
+    return new{T}(matrix, config, data)
+  end
 end
 
 """
@@ -49,6 +57,10 @@ end
     cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
     cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
+    cudss_set(matrix::CudssMatrix{T}, v::Vector{CuVector{T}})
+    cudss_set(matrix::CudssMatrix{T}, A::Vector{CuMatrix{T}})
+    cudss_set(matrix::CudssMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
+    cudss_set(solver::CudssSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
     cudss_set(solver::CudssSolver, parameter::String, value)
     cudss_set(config::CudssConfig, parameter::String, value)
     cudss_set(data::CudssData, parameter::String, value)
@@ -90,6 +102,32 @@ function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T
 end
 
 function cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: BlasFloat
+  cudss_set(solver.matrix, A)
+end
+
+function cudss_set(matrix::CudssMatrix{T}, v::Vector{CuVector{T}}) where T <: BlasFloat
+  vptrs = unsafe_batch(v)
+  cudssMatrixSetBatchValues(matrix, vptrs)
+  # unsafe_free!(vptrs)
+end
+
+function cudss_set(matrix::CudssMatrix{T}, A::Vector{CuMatrix{T}}) where T <: BlasFloat
+  Aptrs = unsafe_batch(A)
+  cudssMatrixSetBatchValues(matrix, Aptrs)
+  # unsafe_free!(Aptrs)
+end
+
+function cudss_set(matrix::CudssMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
+  rowsPtrs = [pointer(Aᵢ.rowPtr) for Aᵢ in A] |> CuVector
+  colVals = [pointer(Aᵢ.colVal) for Aᵢ in A] |> CuVector
+  nzVals = [pointer(Aᵢ.nzVal) for Aᵢ in A] |> CuVector
+  cudssMatrixSetBatchCsrPointers(matrix, rowsPtrs, CUPTR_C_NULL, colVals, nzVals)
+  # unsafe_free!(rowsPtrs)
+  # unsafe_free!(colVals)
+  # unsafe_free!(nzVals)
+end
+
+function cudss_set(solver::CudssSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
   cudss_set(solver.matrix, A)
 end
 
@@ -150,9 +188,10 @@ The available data parameters are:
 - `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
 - `"perm_col"`: Final column permutation (which includes effects of both reordering and pivoting);
 - `"diag"`: Diagonal of the factorized matrix;
-- `"hybrid_device_memory_min"`: Minimal amount of device memory (number of bytes) required in the hybrid memory mode.
+- `"hybrid_device_memory_min"`: Minimal amount of device memory (number of bytes) required in the hybrid memory mode;
+- `"memory_estimates"`: Memory estimates (in bytes) for host and device memory required for the chosen memory mode.
 
-The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"` and `"hybrid_device_memory_min"` require the phase `"analyse"` performed by [`cudss`](@ref).
+The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
 The data parameters `"perm_row"` and `"perm_col"` are available but not yet functional.
 """
@@ -173,7 +212,7 @@ function cudss_get(data::CudssData, parameter::String)
   if (parameter == "user_perm") || (parameter == "comm")
     throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
   end
-  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
+  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag") || (parameter == "memory_estimates")
     throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   end
   type = CUDSS_TYPES[parameter]
@@ -197,6 +236,8 @@ end
 """
     cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T})
     cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T})
+    cudss(phase::String, solver::CudssSolver{T}, x::Vector{CuVector{T}}, b::Vector{CuVector{T}})
+    cudss(phase::String, solver::CudssSolver{T}, X::Vector{CuMatrix{T}}, B::Vector{CuMatrix{T}})
     cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T})
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -217,6 +258,18 @@ function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVecto
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
+  solution = CudssMatrix(X)
+  rhs = CudssMatrix(B)
+  cudss(phase, solver, solution, rhs)
+end
+
+function cudss(phase::String, solver::CudssSolver{T}, x::Vector{CuVector{T}}, b::Vector{CuVector{T}}) where T <: BlasFloat
+  solution = CudssMatrix(x)
+  rhs = CudssMatrix(b)
+  cudss(phase, solver, solution, rhs)
+end
+
+function cudss(phase::String, solver::CudssSolver{T}, X::Vector{CuMatrix{T}}, B::Vector{CuMatrix{T}}) where T <: BlasFloat
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
   cudss(phase, solver, solution, rhs)

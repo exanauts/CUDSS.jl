@@ -2,7 +2,7 @@
 
 const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reorder_row",
                                "perm_reorder_col", "perm_row", "perm_col", "diag", "user_perm",
-                               "hybrid_device_memory_min", "comm")
+                               "hybrid_device_memory_min", "comm", "memory_estimates")
 
 const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "matching_type",
                                  "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
@@ -23,6 +23,7 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "user_perm" => Vector{Cint},
     "hybrid_device_memory_min" => Int64,
     "comm" => Ptr{Cvoid},
+    "memory_estimates" => Vector{Int64},
     # config type
     "reordering_alg" => cudssAlgType_t,
     "factorization_alg" => cudssAlgType_t,
@@ -103,6 +104,8 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
         return CUDSS_DATA_HYBRID_DEVICE_MEMORY_MIN
     elseif data == "comm"
         return CUDSS_DATA_COMM
+    elseif data == "memory_estimates"
+        return CUDSS_DATA_MEMORY_ESTIMATES
     else
         throw(ArgumentError("Unknown data parameter $data"))
     end

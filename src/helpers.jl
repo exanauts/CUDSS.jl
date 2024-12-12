@@ -7,6 +7,9 @@ export CudssMatrix, CudssData, CudssConfig
     matrix = CudssMatrix(v::CuVector{T})
     matrix = CudssMatrix(A::CuMatrix{T})
     matrix = CudssMatrix(A::CuSparseMatrixCSR{T,Cint}, struture::String, view::Char; index::Char='O')
+    matrix = CudssMatrix(v::Vector{CuVector{T}})
+    matrix = CudssMatrix(A::Vector{CuMatrix{T}})
+    matrix = CudssMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, struture::String, view::Char; index::Char='O')
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
@@ -79,8 +82,60 @@ mutable struct CudssMatrix{T}
         m,n = size(A)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateCsr(matrix_ref, m, n, nnz(A), A.rowPtr, CU_NULL,
-                             A.colVal, A.nzVal, eltype(A.rowPtr), T, structure,
+                             A.colVal, A.nzVal, Cint, T, structure,
                              view, index)
+        obj = new{T}(T, matrix_ref[])
+        finalizer(cudssMatrixDestroy, obj)
+        obj
+    end
+
+    function CudssMatrix(v::Vector{CuVector{T}}) where T <: BlasFloat
+        matrix_ref = Ref{cudssMatrix_t}()
+        nbatch = length(v)
+        nrows = [length(vᵢ) for vᵢ in v]
+        ncols = [1 for i = 1:nbatch]
+        ld = nrows
+        vptrs = unsafe_batch(v)
+        cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, vptrs, T, 'C')
+        # unsafe_free!(vptrs)
+        obj = new{T}(T, matrix_ref[])
+        finalizer(cudssMatrixDestroy, obj)
+        obj
+    end
+
+    function CudssMatrix(A::Vector{CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
+        matrix_ref = Ref{cudssMatrix_t}()
+        nbatch = length(A)
+        nrows = [size(Aᵢ,1) for Aᵢ in A]
+        ncols = [size(Aᵢ,2) for Aᵢ in A]
+        ld = nrows
+        Aptrs = unsafe_batch(A)
+        if transposed
+            cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Aptrs, T, 'R')
+        else
+            cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Aptrs, T, 'C')
+        end
+        # unsafe_free!(Aptrs)
+        obj = new{T}(T, matrix_ref[])
+        finalizer(cudssMatrixDestroy, obj)
+        obj
+    end
+
+    function CudssMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+        matrix_ref = Ref{cudssMatrix_t}()
+        nbatch = length(A)
+        nrows = [size(Aᵢ,1) for Aᵢ in A]
+        ncols = [size(Aᵢ,2) for Aᵢ in A]
+        nnzA = [nnz(Aᵢ) for Aᵢ in A]
+        rowPtrs = [pointer(Aᵢ.rowPtr) for Aᵢ in A] |> CuVector
+        colVals = [pointer(Aᵢ.colVal) for Aᵢ in A] |> CuVector
+        nzVals = [pointer(Aᵢ.nzVal) for Aᵢ in A] |> CuVector
+        cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
+                                  CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
+                                  view, index)
+        # unsafe_free!(rowsPtrs)
+        # unsafe_free!(colVals)
+        # unsafe_free!(nzVals)
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
