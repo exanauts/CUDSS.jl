@@ -95,7 +95,7 @@ mutable struct CudssMatrix{T}
         nrows = [length(vᵢ) for vᵢ in v]
         ncols = [1 for i = 1:nbatch]
         ld = nrows
-        cudssMatrixCreateBatchDn(matrix, nbatch, nrows, ncols, ld, v, T, 'C')
+        cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, v, T, 'C')
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
