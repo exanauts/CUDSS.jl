@@ -105,13 +105,13 @@ function cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T
   cudss_set(solver.matrix, A)
 end
 
-function cudss_set(matrix::CudssMatrix{T}, v::Vector{CuVector{T}}) where T <: BlasFloat
+function cudss_set(matrix::CudssMatrix{T}, v::Vector{<:CuVector{T}}) where T <: BlasFloat
   vptrs = unsafe_cudss_batch(v)
   cudssMatrixSetBatchValues(matrix, vptrs)
   # unsafe_free!(vptrs)
 end
 
-function cudss_set(matrix::CudssMatrix{T}, A::Vector{CuMatrix{T}}) where T <: BlasFloat
+function cudss_set(matrix::CudssMatrix{T}, A::Vector{<:CuMatrix{T}}) where T <: BlasFloat
   Aptrs = unsafe_cudss_batch(A)
   cudssMatrixSetBatchValues(matrix, Aptrs)
   # unsafe_free!(Aptrs)
@@ -261,13 +261,13 @@ function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatri
   cudss(phase, solver, solution, rhs)
 end
 
-function cudss(phase::String, solver::CudssSolver{T}, x::Vector{CuVector{T}}, b::Vector{CuVector{T}}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssSolver{T}, x::Vector{<:CuVector{T}}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
   solution = CudssMatrix(x)
   rhs = CudssMatrix(b)
   cudss(phase, solver, solution, rhs)
 end
 
-function cudss(phase::String, solver::CudssSolver{T}, X::Vector{CuMatrix{T}}, B::Vector{CuMatrix{T}}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssSolver{T}, X::Vector{<:CuMatrix{T}}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
   cudss(phase, solver, solution, rhs)

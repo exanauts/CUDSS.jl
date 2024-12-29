@@ -89,7 +89,7 @@ mutable struct CudssMatrix{T}
         obj
     end
 
-    function CudssMatrix(v::Vector{CuVector{T}}) where T <: BlasFloat
+    function CudssMatrix(v::Vector{<:CuVector{T}}) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(v)
         nrows = Int64[length(vᵢ) for vᵢ in v]
@@ -103,7 +103,7 @@ mutable struct CudssMatrix{T}
         obj
     end
 
-    function CudssMatrix(A::Vector{CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
+    function CudssMatrix(A::Vector{<:CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(A)
         nrows = Int64[size(Aᵢ,1) for Aᵢ in A]
