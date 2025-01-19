@@ -89,13 +89,13 @@ mutable struct CudssMatrix{T}
         obj
     end
 
-    function CudssMatrix(v::Vector{CuVector{T}}) where T <: BlasFloat
+    function CudssMatrix(v::Vector{<:CuVector{T}}) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(v)
-        nrows = [length(vᵢ) for vᵢ in v]
-        ncols = [1 for i = 1:nbatch]
+        nrows = Int64[length(vᵢ) for vᵢ in v]
+        ncols = Int64[1 for i = 1:nbatch]
         ld = nrows
-        vptrs = unsafe_batch(v)
+        vptrs = unsafe_cudss_batch(v)
         cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, vptrs, T, 'C')
         # unsafe_free!(vptrs)
         obj = new{T}(T, matrix_ref[])
@@ -103,13 +103,13 @@ mutable struct CudssMatrix{T}
         obj
     end
 
-    function CudssMatrix(A::Vector{CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
+    function CudssMatrix(A::Vector{<:CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(A)
-        nrows = [size(Aᵢ,1) for Aᵢ in A]
-        ncols = [size(Aᵢ,2) for Aᵢ in A]
+        nrows = Int64[size(Aᵢ,1) for Aᵢ in A]
+        ncols = Int64[size(Aᵢ,2) for Aᵢ in A]
         ld = nrows
-        Aptrs = unsafe_batch(A)
+        Aptrs = unsafe_cudss_batch(A)
         if transposed
             cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Aptrs, T, 'R')
         else
@@ -124,12 +124,10 @@ mutable struct CudssMatrix{T}
     function CudssMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(A)
-        nrows = [size(Aᵢ,1) for Aᵢ in A]
-        ncols = [size(Aᵢ,2) for Aᵢ in A]
-        nnzA = [nnz(Aᵢ) for Aᵢ in A]
-        rowPtrs = [pointer(Aᵢ.rowPtr) for Aᵢ in A] |> CuVector
-        colVals = [pointer(Aᵢ.colVal) for Aᵢ in A] |> CuVector
-        nzVals = [pointer(Aᵢ.nzVal) for Aᵢ in A] |> CuVector
+        nrows = Int64[size(Aᵢ,1) for Aᵢ in A]
+        ncols = Int64[size(Aᵢ,2) for Aᵢ in A]
+        nnzA = Int64[nnz(Aᵢ) for Aᵢ in A]
+        rowPtrs, colVals, nzVals = unsafe_cudss_batch(A)
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
                                   CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
                                   view, index)
