@@ -55,7 +55,7 @@ batch_r_gpu = batch_b_gpu .- batch_A_gpu .* batch_x_gpu
 norm.(batch_r_gpu)
 ```
 
-### Batch LDLᵀ and LDLᴴ
+## Batch LDLᵀ and LDLᴴ
 
 ```julia
 using CUDA, CUDA.CUSPARSE
@@ -118,7 +118,7 @@ batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm(batch_R_gpu)
 ```
 
-### Batch LLᵀ and LLᴴ
+## Batch LLᵀ and LLᴴ
 
 ```julia
 using CUDA, CUDA.CUSPARSE
