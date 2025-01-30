@@ -4,8 +4,8 @@ export CudssMatrix, CudssBatchedMatrix, CudssData, CudssConfig
 ## Matrix
 
 """
-    matrix = CudssMatrix(v::CuVector{T})
-    matrix = CudssMatrix(A::CuMatrix{T})
+    matrix = CudssMatrix(b::CuVector{T})
+    matrix = CudssMatrix(B::CuMatrix{T})
     matrix = CudssMatrix(A::CuSparseMatrixCSR{T,Cint}, struture::String, view::Char; index::Char='O')
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -33,42 +33,22 @@ mutable struct CudssMatrix{T}
     type::Type{T}
     matrix::cudssMatrix_t
 
-    function CudssMatrix(::Type{T}, n::Integer) where T <: BlasFloat
+    function CudssMatrix(b::CuVector{T}) where T <: BlasFloat
+        m = length(b)
         matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateDn(matrix_ref, n, 1, n, CU_NULL, T, 'C')
+        cudssMatrixCreateDn(matrix_ref, m, 1, m, b, T, 'C')
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
 
-    function CudssMatrix(::Type{T}, m::Integer, n::Integer; transposed::Bool=false) where T <: BlasFloat
+    function CudssMatrix(B::CuMatrix{T}; transposed::Bool=false) where T <: BlasFloat
+        m,n = size(B)
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
-            cudssMatrixCreateDn(matrix_ref, n, m, m, CU_NULL, T, 'R')
+            cudssMatrixCreateDn(matrix_ref, n, m, m, B, T, 'R')
         else
-            cudssMatrixCreateDn(matrix_ref, m, n, m, CU_NULL, T, 'C')
-        end
-        obj = new{T}(T, matrix_ref[])
-        finalizer(cudssMatrixDestroy, obj)
-        obj
-    end
-
-    function CudssMatrix(v::CuVector{T}) where T <: BlasFloat
-        m = length(v)
-        matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateDn(matrix_ref, m, 1, m, v, T, 'C')
-        obj = new{T}(T, matrix_ref[])
-        finalizer(cudssMatrixDestroy, obj)
-        obj
-    end
-
-    function CudssMatrix(A::CuMatrix{T}; transposed::Bool=false) where T <: BlasFloat
-        m,n = size(A)
-        matrix_ref = Ref{cudssMatrix_t}()
-        if transposed
-            cudssMatrixCreateDn(matrix_ref, n, m, m, A, T, 'R')
-        else
-            cudssMatrixCreateDn(matrix_ref, m, n, m, A, T, 'C')
+            cudssMatrixCreateDn(matrix_ref, m, n, m, B, T, 'C')
         end
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
@@ -90,8 +70,8 @@ end
 Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssMatrix) = matrix.matrix
 
 """
-    matrix = CudssBatchedMatrix(v::Vector{CuVector{T}})
-    matrix = CudssBatchedMatrix(A::Vector{CuMatrix{T}})
+    matrix = CudssBatchedMatrix(b::Vector{CuVector{T}})
+    matrix = CudssBatchedMatrix(B::Vector{CuMatrix{T}})
     matrix = CudssBatchedMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, struture::String, view::Char; index::Char='O')
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -115,42 +95,41 @@ The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 - `'Z'`: 0-based indexing;
 - `'O'`: 1-based indexing.
 """
-mutable struct CudssBatchedMatrix{T}
+mutable struct CudssBatchedMatrix{T,M}
     type::Type{T}
     matrix::cudssMatrix_t
     nbatch::Int
-    Aptrs::CuVector{CuPtr{Cvoid}}
-    rowPtrs::CuVector{CuPtr{Cvoid}}
-    colVals::CuVector{CuPtr{Cvoid}}
-    nzVals::CuVector{CuPtr{Cvoid}}
+    nrows::Vector{Cint}
+    ncols::Vector{Cint}
+    nnzA::Vector{Cint}
+    Mptrs::M
 
-    function CudssBatchedMatrix(v::Vector{<:CuVector{T}}) where T <: BlasFloat
+    function CudssBatchedMatrix(b::Vector{<:CuVector{T}}) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
-        nbatch = length(v)
-        nrows = Cint[length(vᵢ) for vᵢ in v]
+        nbatch = length(b)
+        nrows = Cint[length(bᵢ) for bᵢ in b]
         ncols = Cint[1 for i = 1:nbatch]
         ld = nrows
-        vptrs = unsafe_cudss_batch(v)
-        cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, vptrs, T, 'C')
-        # unsafe_free!(vptrs)
-        obj = new{T}(T, matrix_ref[], nbatch)
+        Mptrs = unsafe_cudss_batch(b)
+        cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Mptrs, T, 'C')
+        obj = new(T, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
 
-    function CudssBatchedMatrix(A::Vector{<:CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
+    function CudssBatchedMatrix(B::Vector{<:CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
-        nbatch = length(A)
-        nrows = Cint[size(Aᵢ,1) for Aᵢ in A]
-        ncols = Cint[size(Aᵢ,2) for Aᵢ in A]
+        nbatch = length(B)
+        nrows = Cint[size(Bᵢ,1) for Bᵢ in B]
+        ncols = Cint[size(Bᵢ,2) for Bᵢ in B]
         ld = nrows
-        Aptrs = unsafe_cudss_batch(A)
+        Mptrs = unsafe_cudss_batch(B)
         if transposed
-            cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Aptrs, T, 'R')
+            cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Mptrs, T, 'R')
         else
-            cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Aptrs, T, 'C')
+            cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Mptrs, T, 'C')
         end
-        obj = new{T}(T, matrix_ref[], nbatch)
+        obj = new(T, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
@@ -165,7 +144,8 @@ mutable struct CudssBatchedMatrix{T}
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
                                   CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
                                   view, index)
-        obj = new{T}(T, matrix_ref[], nbatch)
+        Mptrs = (rowPtrs, colVals, nzVals)
+        obj = new(T, matrix_ref[], nbatch, nrows, ncols, nnzA, Mptrs)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
@@ -173,9 +153,15 @@ end
 
 function cudssBatchedMatrixDestroy(matrix::CudssBatchedMatrix)
     cudssMatrixDestroy(matrix.matrix)
-    # unsafe_free!(rowPtrs)
-    # unsafe_free!(colVals)
-    # unsafe_free!(nzVals)
+    if matrix.Mptrs isa Tuple
+        # sparse matrix
+        unsafe_free!(matrix.Mptrs[1])  # rowPtrs
+        unsafe_free!(matrix.Mptrs[2])  # colVals
+        unsafe_free!(matrix.Mptrs[3])  # nzVals
+    else
+        # dense vector or matrix
+        unsafe_free!(matrix.Mptrs)
+    end
 end
 
 Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.matrix
