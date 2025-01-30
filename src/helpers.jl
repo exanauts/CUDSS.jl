@@ -92,8 +92,8 @@ mutable struct CudssMatrix{T}
     function CudssMatrix(v::Vector{<:CuVector{T}}) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(v)
-        nrows = Int64[length(vᵢ) for vᵢ in v]
-        ncols = Int64[1 for i = 1:nbatch]
+        nrows = Cint[length(vᵢ) for vᵢ in v]
+        ncols = Cint[1 for i = 1:nbatch]
         ld = nrows
         vptrs = unsafe_cudss_batch(v)
         cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, vptrs, T, 'C')
@@ -106,8 +106,8 @@ mutable struct CudssMatrix{T}
     function CudssMatrix(A::Vector{<:CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(A)
-        nrows = Int64[size(Aᵢ,1) for Aᵢ in A]
-        ncols = Int64[size(Aᵢ,2) for Aᵢ in A]
+        nrows = Cint[size(Aᵢ,1) for Aᵢ in A]
+        ncols = Cint[size(Aᵢ,2) for Aᵢ in A]
         ld = nrows
         Aptrs = unsafe_cudss_batch(A)
         if transposed
@@ -124,9 +124,9 @@ mutable struct CudssMatrix{T}
     function CudssMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(A)
-        nrows = Int64[size(Aᵢ,1) for Aᵢ in A]
-        ncols = Int64[size(Aᵢ,2) for Aᵢ in A]
-        nnzA = Int64[nnz(Aᵢ) for Aᵢ in A]
+        nrows = Cint[size(Aᵢ,1) for Aᵢ in A]
+        ncols = Cint[size(Aᵢ,2) for Aᵢ in A]
+        nnzA = Cint[nnz(Aᵢ) for Aᵢ in A]
         rowPtrs, colVals, nzVals = unsafe_cudss_batch(A)
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
                                   CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
