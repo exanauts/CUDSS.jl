@@ -76,8 +76,8 @@ end
 
 # Create a batch of pointers in device memory from a batch of sparse matrices
 @inline function unsafe_cudss_batch(batch::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
-    rowsPtrs = [Base.unsafe_convert(CuPtr{Cvoid}, Aᵢ.rowPtr) for Aᵢ in batch] |> CuVector
+    rowPtrs = [Base.unsafe_convert(CuPtr{Cvoid}, Aᵢ.rowPtr) for Aᵢ in batch] |> CuVector
     colVals = [Base.unsafe_convert(CuPtr{Cvoid}, Aᵢ.colVal) for Aᵢ in batch] |> CuVector
     nzVals = [Base.unsafe_convert(CuPtr{Cvoid}, Aᵢ.nzVal) for Aᵢ in batch] |> CuVector
-    return rowsPtrs, colVals, nzVals
+    return rowPtrs, colVals, nzVals
 end

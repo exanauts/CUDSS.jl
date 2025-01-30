@@ -131,7 +131,7 @@ mutable struct CudssMatrix{T}
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
                                   CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
                                   view, index)
-        unsafe_free!(rowsPtrs)
+        unsafe_free!(rowPtrs)
         unsafe_free!(colVals)
         unsafe_free!(nzVals)
         obj = new{T}(T, matrix_ref[])
