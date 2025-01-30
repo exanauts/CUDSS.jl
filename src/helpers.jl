@@ -97,7 +97,7 @@ mutable struct CudssMatrix{T}
         ld = nrows
         vptrs = unsafe_cudss_batch(v)
         cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, vptrs, T, 'C')
-        # unsafe_free!(vptrs)
+        unsafe_free!(vptrs)
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
@@ -115,7 +115,7 @@ mutable struct CudssMatrix{T}
         else
             cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Aptrs, T, 'C')
         end
-        # unsafe_free!(Aptrs)
+        unsafe_free!(Aptrs)
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
@@ -131,9 +131,9 @@ mutable struct CudssMatrix{T}
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
                                   CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
                                   view, index)
-        # unsafe_free!(rowsPtrs)
-        # unsafe_free!(colVals)
-        # unsafe_free!(nzVals)
+        unsafe_free!(rowsPtrs)
+        unsafe_free!(colVals)
+        unsafe_free!(nzVals)
         obj = new{T}(T, matrix_ref[])
         finalizer(cudssMatrixDestroy, obj)
         obj
