@@ -23,7 +23,7 @@ for i = 1:nbatch
     push!(batch_b_gpu, b_cpu |> CuVector)
 end
 
-solver = CudssSolver(batch_A_gpu, "G", 'F')
+solver = CudssBatchedSolver(batch_A_gpu, "G", 'F')
 
 cudss("analysis", solver, batch_x_gpu, batch_b_gpu)
 cudss("factorization", solver, batch_x_gpu, batch_b_gpu)
@@ -83,7 +83,7 @@ for i = 1:nbatch
 end
 
 structure = T <: Real ? "S" : "H"
-solver = CudssSolver(batch_A_gpu, structure, 'L')
+solver = CudssBatchedSolver(batch_A_gpu, structure, 'L')
 
 cudss("analysis", solver, batch_X_gpu, batch_B_gpu)
 cudss("factorization", solver, batch_X_gpu, batch_B_gpu)
@@ -145,7 +145,7 @@ for i = 1:nbatch
 end
 
 structure = T <: Real ? "SPD" : "HPD"
-solver = CudssSolver(batch_A_gpu, structure, 'U')
+solver = CudssBatchedSolver(batch_A_gpu, structure, 'U')
 
 cudss("analysis", solver, batch_X_gpu, batch_B_gpu)
 cudss("factorization", solver, batch_X_gpu, batch_B_gpu)

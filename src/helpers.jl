@@ -1,5 +1,5 @@
 # cuDSS helper functions
-export CudssMatrix, CudssData, CudssConfig
+export CudssMatrix, CudssBatchedMatrix, CudssData, CudssConfig
 
 ## Matrix
 
@@ -7,28 +7,25 @@ export CudssMatrix, CudssData, CudssConfig
     matrix = CudssMatrix(v::CuVector{T})
     matrix = CudssMatrix(A::CuMatrix{T})
     matrix = CudssMatrix(A::CuSparseMatrixCSR{T,Cint}, struture::String, view::Char; index::Char='O')
-    matrix = CudssMatrix(v::Vector{CuVector{T}})
-    matrix = CudssMatrix(A::Vector{CuMatrix{T}})
-    matrix = CudssMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, struture::String, view::Char; index::Char='O')
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 `CudssMatrix` is a wrapper for `CuVector`, `CuMatrix` and `CuSparseMatrixCSR`.
-`CudssMatrix` is used to pass matrix of the linear system, as well as solution and right-hand side.
+`CudssMatrix` is used to pass the matrix of the sparse linear system, as well as solution and right-hand side.
 
-`structure` specifies the stucture for sparse matrices:
+`structure` specifies the stucture for the sparse matrix:
 - `"G"`: General matrix -- LDU factorization;
 - `"S"`: Real symmetric matrix -- LDLᵀ factorization;
 - `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
 - `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
 - `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
 
-`view` specifies matrix view for sparse matrices:
+`view` specifies matrix view for the sparse matrix:
 - `'L'`: Lower-triangular matrix and all values above the main diagonal are ignored;
 - `'U'`: Upper-triangular matrix and all values below the main diagonal are ignored;
 - `'F'`: Full matrix.
 
-`index` specifies indexing base for sparse matrix indices:
+`index` specifies indexing base for the sparse matrix:
 - `'Z'`: 0-based indexing;
 - `'O'`: 1-based indexing.
 """
@@ -88,8 +85,46 @@ mutable struct CudssMatrix{T}
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
+end
 
-    function CudssMatrix(v::Vector{<:CuVector{T}}) where T <: BlasFloat
+Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssMatrix) = matrix.matrix
+
+"""
+    matrix = CudssBatchedMatrix(v::Vector{CuVector{T}})
+    matrix = CudssBatchedMatrix(A::Vector{CuMatrix{T}})
+    matrix = CudssBatchedMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, struture::String, view::Char; index::Char='O')
+
+The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+
+`CudssBatchedMatrix` is a wrapper for `Vector{CuVector}`, `Vector{CuMatrix}` and `Vector{CuSparseMatrixCSR}`.
+`CudssBatchedMatrix` is used to pass the matrices of the sparse linear systems, as well as solutions and right-hand sides.
+
+`structure` specifies the stucture for the sparse matrices:
+- `"G"`: General matrix -- LDU factorization;
+- `"S"`: Real symmetric matrix -- LDLᵀ factorization;
+- `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
+- `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
+- `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
+
+`view` specifies matrix view for the sparse matrices:
+- `'L'`: Lower-triangular matrix and all values above the main diagonal are ignored;
+- `'U'`: Upper-triangular matrix and all values below the main diagonal are ignored;
+- `'F'`: Full matrix.
+
+`index` specifies indexing base for the sparse matrices:
+- `'Z'`: 0-based indexing;
+- `'O'`: 1-based indexing.
+"""
+mutable struct CudssBatchedMatrix{T}
+    type::Type{T}
+    matrix::cudssMatrix_t
+    nbatch::Int
+    Aptrs::CuVector{CuPtr{Cvoid}}
+    rowPtrs::CuVector{CuPtr{Cvoid}}
+    colVals::CuVector{CuPtr{Cvoid}}
+    nzVals::CuVector{CuPtr{Cvoid}}
+
+    function CudssBatchedMatrix(v::Vector{<:CuVector{T}}) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(v)
         nrows = Cint[length(vᵢ) for vᵢ in v]
@@ -98,12 +133,12 @@ mutable struct CudssMatrix{T}
         vptrs = unsafe_cudss_batch(v)
         cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, vptrs, T, 'C')
         # unsafe_free!(vptrs)
-        obj = new{T}(T, matrix_ref[])
-        finalizer(cudssMatrixDestroy, obj)
+        obj = new{T}(T, matrix_ref[], nbatch)
+        finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
 
-    function CudssMatrix(A::Vector{<:CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
+    function CudssBatchedMatrix(A::Vector{<:CuMatrix{T}}; transposed::Bool=false) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(A)
         nrows = Cint[size(Aᵢ,1) for Aᵢ in A]
@@ -115,13 +150,12 @@ mutable struct CudssMatrix{T}
         else
             cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Aptrs, T, 'C')
         end
-        # unsafe_free!(Aptrs)
-        obj = new{T}(T, matrix_ref[])
-        finalizer(cudssMatrixDestroy, obj)
+        obj = new{T}(T, matrix_ref[], nbatch)
+        finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
 
-    function CudssMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+    function CudssBatchedMatrix(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
         nbatch = length(A)
         nrows = Cint[size(Aᵢ,1) for Aᵢ in A]
@@ -131,17 +165,20 @@ mutable struct CudssMatrix{T}
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
                                   CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
                                   view, index)
-        # unsafe_free!(rowPtrs)
-        # unsafe_free!(colVals)
-        # unsafe_free!(nzVals)
-        obj = new{T}(T, matrix_ref[])
-        finalizer(cudssMatrixDestroy, obj)
+        obj = new{T}(T, matrix_ref[], nbatch)
+        finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
 end
 
-Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssMatrix) = matrix.matrix
+function cudssBatchedMatrixDestroy(matrix::CudssBatchedMatrix)
+    cudssMatrixDestroy(matrix.matrix)
+    # unsafe_free!(rowPtrs)
+    # unsafe_free!(colVals)
+    # unsafe_free!(nzVals)
+end
 
+Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.matrix
 
 ## Data
 

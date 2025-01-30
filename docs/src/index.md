@@ -18,9 +18,11 @@ pkg> test CUDSS
 
 ```@docs
 CudssMatrix
+CudssBatchedMatrix
 CudssConfig
 CudssData
 CudssSolver
+CudssBatchedSolver
 ```
 
 ## Functions
