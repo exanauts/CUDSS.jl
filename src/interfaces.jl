@@ -95,11 +95,11 @@ end
     cudss_set(solver::CudssBatchedSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
     cudss_set(config::CudssConfig, parameter::String, value)
     cudss_set(data::CudssData, parameter::String, value)
-    cudss_set(matrix::CudssMatrix{T}, v::CuVector{T})
-    cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T})
+    cudss_set(matrix::CudssMatrix{T}, b::CuVector{T})
+    cudss_set(matrix::CudssMatrix{T}, B::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
-    cudss_set(matrix::CudssBatchedMatrix{T}, v::Vector{CuVector{T}})
-    cudss_set(matrix::CudssBatchedMatrix{T}, A::Vector{CuMatrix{T}})
+    cudss_set(matrix::CudssBatchedMatrix{T}, b::Vector{CuVector{T}})
+    cudss_set(matrix::CudssBatchedMatrix{T}, B::Vector{CuMatrix{T}})
     cudss_set(matrix::CudssBatchedMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -126,12 +126,12 @@ The available data parameters are:
 """
 function cudss_set end
 
-function cudss_set(matrix::CudssMatrix{T}, v::CuVector{T}) where T <: BlasFloat
-  cudssMatrixSetValues(matrix, v)
+function cudss_set(matrix::CudssMatrix{T}, b::CuVector{T}) where T <: BlasFloat
+  cudssMatrixSetValues(matrix, b)
 end
 
-function cudss_set(matrix::CudssMatrix{T}, A::CuMatrix{T}) where T <: BlasFloat
-  cudssMatrixSetValues(matrix, A)
+function cudss_set(matrix::CudssMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
+  cudssMatrixSetValues(matrix, B)
 end
 
 function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: BlasFloat
@@ -142,16 +142,16 @@ function cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T
   cudss_set(solver.matrix, A)
 end
 
-function cudss_set(matrix::CudssBatchedMatrix{T}, v::Vector{<:CuVector{T}}) where T <: BlasFloat
-  vptrs = unsafe_cudss_batch(v)
-  cudssMatrixSetBatchValues(matrix, vptrs)
-  # unsafe_free!(vptrs)
+function cudss_set(matrix::CudssBatchedMatrix{T}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
+  Mptrs = unsafe_cudss_batch(b)
+  cudssMatrixSetBatchValues(matrix, Mptrs)
+  # unsafe_free!(Mptrs)
 end
 
-function cudss_set(matrix::CudssBatchedMatrix{T}, A::Vector{<:CuMatrix{T}}) where T <: BlasFloat
-  Aptrs = unsafe_cudss_batch(A)
-  cudssMatrixSetBatchValues(matrix, Aptrs)
-  # unsafe_free!(Aptrs)
+function cudss_set(matrix::CudssBatchedMatrix{T}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
+  Mptrs = unsafe_cudss_batch(B)
+  cudssMatrixSetBatchValues(matrix, Mptrs)
+  # unsafe_free!(Mptrs)
 end
 
 function cudss_set(matrix::CudssBatchedMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
@@ -166,7 +166,7 @@ function cudss_set(solver::CudssBatchedSolver{T}, A::Vector{CuSparseMatrixCSR{T,
   cudss_set(solver.matrix, A)
 end
 
-function cudss_set(solver::CudssSolver, parameter::String, value)
+function cudss_set(solver::Union{CudssSolver,CudssBatchedSolver}, parameter::String, value)
   if parameter ∈ CUDSS_CONFIG_PARAMETERS
     cudss_set(solver.config, parameter, value)
   elseif parameter ∈ CUDSS_DATA_PARAMETERS
@@ -233,17 +233,7 @@ The data parameters `"perm_row"` and `"perm_col"` are available but not yet func
 """
 function cudss_get end
 
-function cudss_get(solver::CudssSolver, parameter::String)
-  if parameter ∈ CUDSS_CONFIG_PARAMETERS
-    cudss_get(solver.config, parameter)
-  elseif parameter ∈ CUDSS_DATA_PARAMETERS
-    cudss_get(solver.data, parameter)
-  else
-    throw(ArgumentError("Unknown data or config parameter $parameter."))
-  end
-end
-
-function cudss_get(solver::CudssBatchedSolver, parameter::String)
+function cudss_get(solver::Union{CudssSolver,CudssBatchedSolver}, parameter::String)
   if parameter ∈ CUDSS_CONFIG_PARAMETERS
     cudss_get(solver.config, parameter)
   elseif parameter ∈ CUDSS_DATA_PARAMETERS
