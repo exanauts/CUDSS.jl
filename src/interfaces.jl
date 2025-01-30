@@ -108,21 +108,21 @@ end
 function cudss_set(matrix::CudssMatrix{T}, v::Vector{<:CuVector{T}}) where T <: BlasFloat
   vptrs = unsafe_cudss_batch(v)
   cudssMatrixSetBatchValues(matrix, vptrs)
-  # unsafe_free!(vptrs)
+  unsafe_free!(vptrs)
 end
 
 function cudss_set(matrix::CudssMatrix{T}, A::Vector{<:CuMatrix{T}}) where T <: BlasFloat
   Aptrs = unsafe_cudss_batch(A)
   cudssMatrixSetBatchValues(matrix, Aptrs)
-  # unsafe_free!(Aptrs)
+  unsafe_free!(Aptrs)
 end
 
 function cudss_set(matrix::CudssMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
   rowsPtrs, colVals, nzVals = unsafe_cudss_batch(A)
   cudssMatrixSetBatchCsrPointers(matrix, rowsPtrs, CUPTR_C_NULL, colVals, nzVals)
-  # unsafe_free!(rowsPtrs)
-  # unsafe_free!(colVals)
-  # unsafe_free!(nzVals)
+  unsafe_free!(rowsPtrs)
+  unsafe_free!(colVals)
+  unsafe_free!(nzVals)
 end
 
 function cudss_set(solver::CudssSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
