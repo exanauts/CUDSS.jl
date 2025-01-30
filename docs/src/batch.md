@@ -1,6 +1,3 @@
-!!! danger
-    The interface for the batch linear solvers is still under development.
-
 ## Batch LU
 
 ```julia
@@ -96,9 +93,11 @@ batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)
 
 # In-place LDLᵀ
-d_gpu = rand(R, n) |> CuVector
+d_cpu = rand(R, n)
+d_gpu = CuVector(d_cpu)
 for i = 1:nbatch
     batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
+    batch_A_cpu[i] = batch_A_cpu[i] + Diagonal(d_cpu)
 end
 cudss_set(solver, batch_A_gpu)
 
@@ -111,11 +110,8 @@ end
 cudss("refactorization", solver, batch_X_gpu, batch_B_gpu)
 cudss("solve", solver, batch_X_gpu, batch_B_gpu)
 
-for A_cpu in batch_A_cpu
-    A_cpu = A_cpu + Diagonal(d_gpu |> Vector)
-end
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
-norm(batch_R_gpu)
+norm.(batch_R_gpu)
 ```
 
 ## Batch LLᵀ and LLᴴ
@@ -156,12 +152,14 @@ cudss("factorization", solver, batch_X_gpu, batch_B_gpu)
 cudss("solve", solver, batch_X_gpu, batch_B_gpu)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
-norm(batch_R_gpu)
+norm.(batch_R_gpu)
 
 # In-place LLᴴ
-d_gpu = rand(R, n) |> CuVector
+d_cpu = rand(R, n)
+d_gpu = CuVector(d_cpu)
 for i = 1:nbatch
     batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
+    batch_A_cpu[i] = batch_A_cpu[i] + Diagonal(d_cpu)
 end
 cudss_set(solver, batch_A_gpu)
 
@@ -174,9 +172,6 @@ end
 cudss("refactorization", solver, batch_X_gpu, batch_B_gpu)
 cudss("solve", solver, batch_X_gpu, batch_B_gpu)
 
-for A_cpu in batch_A_cpu
-    A_cpu = A_cpu + Diagonal(d_gpu |> Vector)
-end
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
-norm(batch_R_gpu)
+norm.(batch_R_gpu)
 ```
