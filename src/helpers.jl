@@ -111,8 +111,9 @@ mutable struct CudssBatchedMatrix{T,M}
         ncols = Cint[1 for i = 1:nbatch]
         ld = nrows
         Mptrs = unsafe_cudss_batch(b)
+        M = typeof(Mptrs)
         cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Mptrs, T, 'C')
-        obj = new(T, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
+        obj = new{T,M}(T, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
@@ -124,12 +125,13 @@ mutable struct CudssBatchedMatrix{T,M}
         ncols = Cint[size(Bᵢ,2) for Bᵢ in B]
         ld = nrows
         Mptrs = unsafe_cudss_batch(B)
+        M = typeof(Mptrs)
         if transposed
             cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Mptrs, T, 'R')
         else
             cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Mptrs, T, 'C')
         end
-        obj = new(T, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
+        obj = new{T,M}(T, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
@@ -145,7 +147,8 @@ mutable struct CudssBatchedMatrix{T,M}
                                   CUPTR_C_NULL, colVals, nzVals, Cint, T, structure,
                                   view, index)
         Mptrs = (rowPtrs, colVals, nzVals)
-        obj = new(T, matrix_ref[], nbatch, nrows, ncols, nnzA, Mptrs)
+        M = typeof(Mptrs)
+        obj = new{T,M}(T, matrix_ref[], nbatch, nrows, ncols, nnzA, Mptrs)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
