@@ -71,20 +71,22 @@ One constructor of `CudssBatchedSolver` takes as input the same parameters as [`
 
 `CudssBatchedSolver` can be also constructed from the three structures [`CudssBatchedMatrix`](@ref), [`CudssConfig`](@ref) and [`CudssData`](@ref) if needed.
 """
-mutable struct CudssBatchedSolver{T}
-  matrix::CudssBatchedMatrix{T}
+mutable struct CudssBatchedSolver{T,M}
+  matrix::CudssBatchedMatrix{T,M}
   config::CudssConfig
   data::CudssData
 
   function CudssBatchedSolver(matrix::CudssBatchedMatrix{T}, config::CudssConfig, data::CudssData) where T <: BlasFloat
-    return new{T}(matrix, config, data)
+    M = typeof(matrix.Mptrs)
+    return new{T,M}(matrix, config, data)
   end
 
   function CudssBatchedSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
     matrix = CudssBatchedMatrix(A, structure, view; index)
     config = CudssConfig()
     data = CudssData()
-    return new{T}(matrix, config, data)
+    M = typeof(matrix.Mptrs)
+    return new{T,M}(matrix, config, data)
   end
 end
 
@@ -144,22 +146,27 @@ end
 
 function cudss_set(matrix::CudssBatchedMatrix{T}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
   Mptrs = unsafe_cudss_batch(b)
-  cudssMatrixSetBatchValues(matrix, Mptrs)
-  # unsafe_free!(Mptrs)
+  copyto!(matrix.Mptrs, Mptrs)
+  cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
+  unsafe_free!(Mptrs)
 end
 
 function cudss_set(matrix::CudssBatchedMatrix{T}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
   Mptrs = unsafe_cudss_batch(B)
-  cudssMatrixSetBatchValues(matrix, Mptrs)
-  # unsafe_free!(Mptrs)
+  copyto!(matrix.Mptrs, Mptrs)
+  cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
+  unsafe_free!(Mptrs)
 end
 
 function cudss_set(matrix::CudssBatchedMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
   rowPtrs, colVals, nzVals = unsafe_cudss_batch(A)
-  cudssMatrixSetBatchCsrPointers(matrix, rowPtrs, CUPTR_C_NULL, colVals, nzVals)
-  # unsafe_free!(rowPtrs)
-  # unsafe_free!(colVals)
-  # unsafe_free!(nzVals)
+  copyto!(matrix.Mptrs[1], rowPtrs)
+  copyto!(matrix.Mptrs[2], colVals)
+  copyto!(matrix.Mptrs[3], nzVals)
+  cudssMatrixSetBatchCsrPointers(matrix, matrix.Mptrs[1], CUPTR_C_NULL, matrix.Mptrs[2], matrix.Mptrs[3])
+  unsafe_free!(rowPtrs)
+  unsafe_free!(colVals)
+  unsafe_free!(nzVals)
 end
 
 function cudss_set(solver::CudssBatchedSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}}) where T <: BlasFloat
