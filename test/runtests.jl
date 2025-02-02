@@ -59,8 +59,27 @@ include("test_batched_cudss.jl")
   @testset "Refactorization Cholesky" begin
     refactorization_cholesky()
   end
+end
 
-  @testset "Refactorization batched Cholesky" begin
+@testset "Batched CUDSS" begin
+  @testset "CudssBatchedMatrix" begin
+    cudss_batched_dense()
+    cudss_batched_sparse()
+  end
+
+ @testset "CudssBatchedSolver" begin
+    cudss_batched_solver()
+  end
+
+  @testset "CudssExecution -- batched" begin
+    cudss_batched_execution()
+  end
+
+  @testset "Hybrid mode -- batched" begin
+    hybrid_batched_mode()
+  end
+
+  @testset "Refactorization Cholesky -- batched" begin
     refactorization_batched_cholesky()
   end
 end
