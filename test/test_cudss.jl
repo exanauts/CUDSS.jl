@@ -60,7 +60,7 @@ function cudss_solver()
   n = 20
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     A_cpu = sprand(T, n, n, 1.0)
-    A_cpu = A_cpu + A_cpu'
+    A_cpu = A_cpu * A_cpu' + I
     A_gpu = CuSparseMatrixCSR(A_cpu)
     @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
       @testset "view = $view" for view in ('L', 'U', 'F')
@@ -72,6 +72,24 @@ function cudss_solver()
         b_gpu = CuVector(b_cpu)
         cudss("analysis", solver, x_gpu, b_gpu)
         cudss("factorization", solver, x_gpu, b_gpu)
+
+        @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
+          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm") && continue
+          @testset "cudss_get" begin
+            (parameter == "user_perm") && continue
+            (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
+            val = cudss_get(solver, parameter)
+          end
+          @testset "cudss_set" begin
+            if parameter == "user_perm"
+              perm_cpu = Cint[i for i=n:-1:1]
+              cudss_set(solver, parameter, perm_cpu)
+              perm_gpu = CuVector{Cint}(perm_cpu)
+              cudss_set(solver, parameter, perm_gpu)
+            end
+            (parameter == "info") && cudss_set(solver, parameter, 1)
+          end
+        end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
           @testset "cudss_get" begin
@@ -98,19 +116,6 @@ function cudss_solver()
             for pivoting in ('C', 'R', 'N')
               (parameter == "pivot_type") && cudss_set(solver, parameter, pivoting)
             end
-          end
-        end
-
-        @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "memory_estimates") && continue
-          if (parameter != "user_perm") && (parameter != "comm")
-            (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
-            val = cudss_get(solver, parameter)
-          else
-            perm_cpu = Cint[i for i=n:-1:1]
-            cudss_set(solver, parameter, perm_cpu)
-            perm_gpu = CuVector{Cint}(perm_cpu)
-            cudss_set(solver, parameter, perm_gpu)
           end
         end
       end

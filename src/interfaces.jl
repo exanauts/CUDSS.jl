@@ -189,12 +189,13 @@ end
 
 function cudss_set(data::CudssData, parameter::String, value)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
+  (parameter == "comm") && throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   if parameter == "info"
     val = Ref{Cint}(value)
     nbytes = sizeof(val)
     cudssDataSet(data.handle, data, parameter, val, nbytes)
   else
-    (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"info\", \"user_perm\" and \"comm\" can be set."))
+    (parameter == "user_perm") || throw(ArgumentError("Only the data parameters \"info\" and \"user_perm\" can be set."))
     (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
     nbytes = sizeof(value)
     cudssDataSet(data.handle, data, parameter, value, nbytes)
@@ -265,15 +266,20 @@ function cudss_get(data::CudssData, parameter::String)
   if (parameter == "user_perm") || (parameter == "comm")
     throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
   end
-  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag") || (parameter == "memory_estimates")
+  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
     throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   end
-  type = CUDSS_TYPES[parameter]
-  val = Ref{type}()
+  if parameter == "memory_estimates"
+    val = zeros(Int64, 16)
+  else
+    type = CUDSS_TYPES[parameter]
+    val = Ref{type}()
+  end
   nbytes = sizeof(val)
   nbytes_written = Ref{Csize_t}()
   cudssDataGet(handle(), data, parameter, val, nbytes, nbytes_written)
-  return val[]
+  parameter_value = (parameter == "memory_estimates") ? val : val[]
+  return parameter_value
 end
 
 function cudss_get(config::CudssConfig, parameter::String)
