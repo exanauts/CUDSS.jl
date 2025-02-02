@@ -13,22 +13,3 @@ julia> ]
 pkg> add CUDSS
 pkg> test CUDSS
 ```
-
-## Types
-
-```@docs
-CudssMatrix
-CudssBatchedMatrix
-CudssConfig
-CudssData
-CudssSolver
-CudssBatchedSolver
-```
-
-## Functions
-
-```@docs
-cudss_set
-cudss_get
-cudss
-```
