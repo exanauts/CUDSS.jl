@@ -812,3 +812,38 @@ function hybrid_mode()
     end
   end
 end
+
+function refactorization_cholesky()
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
+    n = 100
+    p = 5
+    A_cpu = sprand(T, n, n, 0.01)
+    A_cpu = A_cpu * A_cpu' - 20 * I
+    X_cpu = zeros(T, n, p)
+    B_cpu = rand(T, n, p)
+
+    A_gpu = CuSparseMatrixCSR(A_cpu |> triu)
+    X_gpu = CuMatrix(X_cpu)
+    B_gpu = CuMatrix(B_cpu)
+
+    structure = T <: Real ? "SPD" : "HPD"
+    solver = CudssSolver(A_gpu, structure, 'U')
+
+    cudss("analysis", solver, X_gpu, B_gpu)
+    cudss("factorization", solver, X_gpu, B_gpu)
+    cudss("solve", solver, X_gpu, B_gpu)
+
+    info = cudss_get(solver, "info")
+    @test info == 1
+
+    A_gpu = A_gpu + 21 * I
+    cudss_set(solver, A_gpu)
+
+    cudss("refactorization", solver, X_gpu, B_gpu)
+    cudss("solve", solver, X_gpu, B_gpu)
+
+    info = cudss_get(solver, "info")
+    @test info == 0
+  end
+end

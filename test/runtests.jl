@@ -54,4 +54,8 @@ include("test_cudss.jl")
   @testset "Hybrid mode" begin
     hybrid_mode()
   end
+
+  @testset "Refactorization Cholesky" begin
+    refactorization_cholesky()
+  end
 end

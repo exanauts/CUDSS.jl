@@ -123,9 +123,12 @@ The available configuration parameters are:
 - `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
 
 The available data parameters are:
-- `"info"`: Device-side error information, should be manually restored to 0 if factorization fails and refactorization is performed;
+- `"info"`: Device-side error information;
 - `"user_perm"`: User permutation to be used instead of running the reordering algorithms;
 - `"comm"`: Communicator for Multi-GPU multi-node mode.
+
+The data parameter `"info"` must be restored to `0` if a Cholesky factorization fails
+due to indefiniteness and refactorization is performed on an updated matrix.
 """
 function cudss_set end
 
