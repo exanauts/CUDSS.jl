@@ -11,6 +11,8 @@ makedocs(
                            collapselevel = 1),
   sitename = "CUDSS.jl",
   pages = ["Home"        => "index.md",
+           "Types"       => "types.md",
+           "Functions"   => "functions.md",
            "Generic API" => "generic.md",
            "Batch API"   => "batch.md",
            "Options"     => "options.md"]
