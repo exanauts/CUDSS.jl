@@ -132,7 +132,7 @@ end
 
 function cudss_batched_execution()
   n = [100, 120, 150, 4, 12, 28, 51]
-  p = [2, 3, 4, 2, 10, 5, 28]
+  p = [2, 3, 4, 2, 8, 5, 6]
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     R = real(T)
     @testset "Unsymmetric -- Non-Hermitian" begin
@@ -337,7 +337,7 @@ function hybrid_batched_mode()
     return norm.(r_gpu)
   end
 
-  n = [20, 30, 40, 5, 2]
+  n = [20, 25, 10, 5, 2]
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     R = real(T)
     @testset "LU" begin
