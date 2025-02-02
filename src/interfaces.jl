@@ -299,16 +299,19 @@ The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not
 function cudss end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}) where T <: BlasFloat
+  (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudssExecute(solver.data.handle, phase, solver.config, solver.data, solver.matrix, X, B)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}) where T <: BlasFloat
+  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(x)
   rhs = CudssMatrix(b)
   cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
+  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
   cudss(phase, solver, solution, rhs)
