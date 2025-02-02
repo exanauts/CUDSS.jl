@@ -123,8 +123,12 @@ The available configuration parameters are:
 - `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
 
 The available data parameters are:
+- `"info"`: Device-side error information;
 - `"user_perm"`: User permutation to be used instead of running the reordering algorithms;
 - `"comm"`: Communicator for Multi-GPU multi-node mode.
+
+The data parameter `"info"` must be restored to `0` if a Cholesky factorization fails
+due to indefiniteness and refactorization is performed on an updated matrix.
 """
 function cudss_set end
 
@@ -185,10 +189,16 @@ end
 
 function cudss_set(data::CudssData, parameter::String, value)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
-  (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"user_perm\" and \"comm\" can be set."))
-  (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
-  nbytes = sizeof(value)
-  cudssDataSet(data.handle, data, parameter, value, nbytes)
+  if parameter == "info"
+    val = Ref{Cint}(value)
+    nbytes = sizeof(val)
+    cudssDataSet(data.handle, data, parameter, val, nbytes)
+  else
+    (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"info\", \"user_perm\" and \"comm\" can be set."))
+    (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
+    nbytes = sizeof(value)
+    cudssDataSet(data.handle, data, parameter, value, nbytes)
+  end
 end
 
 function cudss_set(config::CudssConfig, parameter::String, value)
@@ -292,16 +302,19 @@ The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not
 function cudss end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}) where T <: BlasFloat
+  (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudssExecute(solver.data.handle, phase, solver.config, solver.data, solver.matrix, X, B)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}) where T <: BlasFloat
+  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(x)
   rhs = CudssMatrix(b)
   cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
+  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
   cudss(phase, solver, solution, rhs)
