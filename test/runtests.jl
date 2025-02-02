@@ -11,6 +11,7 @@ import CUDSS: CUDSS_DATA_PARAMETERS, CUDSS_CONFIG_PARAMETERS
 Random.seed!(666)  # Random tests are diabolical
 
 include("test_cudss.jl")
+include("test_batched_cudss.jl")
 
 @testset "CUDSS" begin
   @testset "version" begin
@@ -57,5 +58,9 @@ include("test_cudss.jl")
 
   @testset "Refactorization Cholesky" begin
     refactorization_cholesky()
+  end
+
+  @testset "Refactorization batched Cholesky" begin
+    refactorization_batched_cholesky()
   end
 end
