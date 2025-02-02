@@ -103,15 +103,19 @@ function cudss_solver()
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
           parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm") && continue
-          if parameter == "user_perm"
-            perm_cpu = Cint[i for i=n:-1:1]
-            cudss_set(solver, parameter, perm_cpu)
-            perm_gpu = CuVector{Cint}(perm_cpu)
-            cudss_set(solver, parameter, perm_gpu)
-          else
+          @testset "cudss_set" begin
+            if parameter == "user_perm"
+              perm_cpu = Cint[i for i=n:-1:1]
+              cudss_set(solver, parameter, perm_cpu)
+              perm_gpu = CuVector{Cint}(perm_cpu)
+              cudss_set(solver, parameter, perm_gpu)
+            end
+            (parameter == "info") && cudss_set(solver, "info", 1)
+          end
+          @testset "cudss_get" begin
+            (parameter == "user_perm") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
-            (parameter == "info") && cudss_set(solver, "1")
           end
         end
       end
