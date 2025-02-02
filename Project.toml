@@ -1,7 +1,7 @@
 name = "CUDSS"
 uuid = "45b445bb-4962-46a0-9369-b4df9d0f772e"
 authors = ["Alexis Montoison <alexis.montoison@polymtl.ca>"]
-version = "0.4.2"
+version = "0.4.3"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
