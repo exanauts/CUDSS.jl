@@ -20,27 +20,28 @@ function refactorization_batched_cholesky()
       push!(batch_A_gpu, A_cpu |> triu |> CuSparseMatrixCSR)
       push!(batch_X_gpu, X_cpu |> CuMatrix)
       push!(batch_B_gpu, B_cpu |> CuMatrix)
-  end
+    end
 
-  structure = T <: Real ? "SPD" : "HPD"
-  solver = CudssBatchedSolver(batch_A_gpu, structure, 'U')
+    structure = T <: Real ? "SPD" : "HPD"
+    solver = CudssBatchedSolver(batch_A_gpu, structure, 'U')
 
-  cudss("analysis", solver, batch_X_gpu, batch_B_gpu)
-  cudss("factorization", solver, batch_X_gpu, batch_B_gpu)
-  cudss("solve", solver, batch_X_gpu, batch_B_gpu)
+    cudss("analysis", solver, batch_X_gpu, batch_B_gpu)
+    cudss("factorization", solver, batch_X_gpu, batch_B_gpu)
+    cudss("solve", solver, batch_X_gpu, batch_B_gpu)
 
-  info = cudss_get(solver, "info")
-  @test info == 1
+    info = cudss_get(solver, "info")
+    @test info == 1
 
-  for i = 1:nbatch
+    for i = 1:nbatch
       batch_A_gpu[i] = batch_A_gpu[i] + 21 * I
       batch_A_cpu[i] = batch_A_cpu[i] + 21 * I
+    end
+    cudss_set(solver, batch_A_gpu)
+
+    cudss("refactorization", solver, batch_X_gpu, batch_B_gpu)
+    cudss("solve", solver, batch_X_gpu, batch_B_gpu)
+
+    info = cudss_get(solver, "info")
+    @test info == 0
   end
-  cudss_set(solver, batch_A_gpu)
-
-  cudss("refactorization", solver, batch_X_gpu, batch_B_gpu)
-  cudss("solve", solver, batch_X_gpu, batch_B_gpu)
-
-  info = cudss_get(solver, "info")
-  @test info == 0
 end
