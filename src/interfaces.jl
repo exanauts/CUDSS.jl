@@ -186,10 +186,16 @@ end
 
 function cudss_set(data::CudssData, parameter::String, value)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
-  (parameter == "info") || (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"info\", \"user_perm\" and \"comm\" can be set."))
-  (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
-  nbytes = sizeof(value)
-  cudssDataSet(data.handle, data, parameter, value, nbytes)
+  if parameter == "info"
+    val = Ref{Cint}(value)
+    nbytes = sizeof(val)
+    cudssDataSet(data.handle, data, parameter, val, nbytes)
+  else
+    (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"info\", \"user_perm\" and \"comm\" can be set."))
+    (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
+    nbytes = sizeof(value)
+    cudssDataSet(data.handle, data, parameter, value, nbytes)
+  end
 end
 
 function cudss_set(config::CudssConfig, parameter::String, value)
