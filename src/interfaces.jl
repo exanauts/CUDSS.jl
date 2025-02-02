@@ -123,6 +123,7 @@ The available configuration parameters are:
 - `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
 
 The available data parameters are:
+- `"info"`: Device-side error information, should be manually restored to 0 if factorization fails and refactorization is performed;
 - `"user_perm"`: User permutation to be used instead of running the reordering algorithms;
 - `"comm"`: Communicator for Multi-GPU multi-node mode.
 """
@@ -185,7 +186,7 @@ end
 
 function cudss_set(data::CudssData, parameter::String, value)
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
-  (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"user_perm\" and \"comm\" can be set."))
+  (parameter == "info") || (parameter == "user_perm") || (parameter == "comm") || throw(ArgumentError("Only the data parameters \"info\", \"user_perm\" and \"comm\" can be set."))
   (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
   nbytes = sizeof(value)
   cudssDataSet(data.handle, data, parameter, value, nbytes)
