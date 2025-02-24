@@ -126,7 +126,6 @@ The available configuration parameters are:
 - `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation.
 
 The available data parameters are:
-- `"info"`: Device-side error information;
 - `"user_perm"`: User permutation to be used instead of running the reordering algorithms;
 - `"comm"`: Communicator for Multi-GPU multi-node mode.
 
@@ -314,38 +313,32 @@ The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not
 function cudss end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}) where T <: BlasFloat
-  (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudssExecute(solver.data.handle, phase, solver.config, solver.data, solver.matrix, X, B)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}) where T <: BlasFloat
-  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(x)
   rhs = CudssMatrix(b)
   cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
-  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
   cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T}) where T <: BlasFloat
-  (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudssExecute(solver.data.handle, phase, solver.config, solver.data, solver.matrix, X, B)
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{<:CuVector{T}}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
-  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssBatchedMatrix(x)
   rhs = CudssBatchedMatrix(b)
   cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, X::Vector{<:CuMatrix{T}}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
-  (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssBatchedMatrix(X)
   rhs = CudssBatchedMatrix(B)
   cudss(phase, solver, solution, rhs)

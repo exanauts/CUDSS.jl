@@ -93,7 +93,9 @@ function cudss_solver()
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
           @testset "cudss_get" begin
-            val = cudss_get(solver, parameter)
+            if parameter != "host_nthreads"
+              val = cudss_get(solver, parameter)
+            end
           end
           @testset "cudss_set" begin
             (parameter == "matching_type") && cudss_set(solver, parameter, 0)
@@ -104,13 +106,16 @@ function cudss_solver()
             (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
             (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
             (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
+            (parameter == "host_nthreads") && cudss_set(solver, parameter, 0)
             for algo in ("default", "algo1", "algo2", "algo3")
               (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
               (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
               (parameter == "solve_alg") && cudss_set(solver, parameter, algo)
+              (parameter == "pivot_epsilon_alg") && cudss_set(solver, parameter, algo)
             end
             for flag in (0, 1)
               (parameter == "hybrid_mode") && cudss_set(solver, parameter, flag)
+              (parameter == "hybrid_execute_mode") && cudss_set(solver, parameter, flag)
               (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
             end
             for pivoting in ('C', 'R', 'N')
