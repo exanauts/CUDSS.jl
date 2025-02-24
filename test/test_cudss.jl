@@ -1,5 +1,5 @@
 function cudss_version()
-  @test CUDSS.version() >= v"0.4.0"
+  @test CUDSS.version() >= v"0.5.0"
 end
 
 function cudss_dense()
@@ -10,7 +10,7 @@ function cudss_dense()
       A_cpu = rand(T, n)
       A_gpu = CuVector(A_cpu)
       matrix = CudssMatrix(A_gpu)
-      format = Ref{CUDSS.cudssMatrixFormat_t}()
+      format = Ref{Cint}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
       @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
 
@@ -23,7 +23,7 @@ function cudss_dense()
       A_cpu = rand(T, n, p)
       A_gpu = CuMatrix(A_cpu)
       matrix = CudssMatrix(A_gpu)
-      format = Ref{CUDSS.cudssMatrixFormat_t}()
+      format = Ref{Cint}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
       @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
 
@@ -43,7 +43,7 @@ function cudss_sparse()
     @testset "view = $view" for view in ('L', 'U', 'F')
       @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
         matrix = CudssMatrix(A_gpu, structure, view) 
-        format = Ref{CUDSS.cudssMatrixFormat_t}()
+        format = Ref{Cint}()
         CUDSS.cudssMatrixGetFormat(matrix, format)
         @test format[] == CUDSS.CUDSS_MFORMAT_CSR
 
