@@ -5,25 +5,6 @@ const cudaStream_t = CUstream
 const cudaDataType_t = cudaDataType
 const CUPTR_C_NULL = CuPtr{Ptr{Cvoid}}(0)
 
-@cenum cudssOpType_t::UInt32 begin
-    CUDSS_SUM = 0
-    CUDSS_MAX = 1
-    CUDSS_MIN = 2
-end
-
-struct cudssDistributedInterface_t
-    cudssCommRank::Ptr{Cvoid}
-    cudssCommSize::Ptr{Cvoid}
-    cudssSend::Ptr{Cvoid}
-    cudssRecv::Ptr{Cvoid}
-    cudssBcast::Ptr{Cvoid}
-    cudssReduce::Ptr{Cvoid}
-    cudssAllreduce::Ptr{Cvoid}
-    cudssScatterv::Ptr{Cvoid}
-    cudssCommSplit::Ptr{Cvoid}
-    cudssCommFree::Ptr{Cvoid}
-end
-
 mutable struct cudssContext end
 
 const cudssHandle_t = Ptr{cudssContext}
@@ -55,6 +36,9 @@ const cudssConfig_t = Ptr{cudssConfig}
     CUDSS_CONFIG_HYBRID_MODE = 11
     CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT = 12
     CUDSS_CONFIG_USE_CUDA_REGISTER_MEMORY = 13
+    CUDSS_CONFIG_HOST_NTHREADS = 14
+    CUDSS_CONFIG_HYBRID_EXECUTE_MODE = 15
+    CUDSS_CONFIG_PIVOT_EPSILON_ALG = 16
 end
 
 @cenum cudssDataParam_t::UInt32 begin
@@ -131,8 +115,9 @@ end
 end
 
 @cenum cudssMatrixFormat_t::UInt32 begin
-    CUDSS_MFORMAT_DENSE = 0
-    CUDSS_MFORMAT_CSR = 1
+    CUDSS_MFORMAT_DENSE = 1
+    CUDSS_MFORMAT_CSR = 2
+    CUDSS_MFORMAT_BATCH = 4
 end
 
 struct cudssDeviceMemHandler_t
@@ -191,6 +176,12 @@ end
     initialize_context()
     @gcsafe_ccall libcudss.cudssSetCommLayer(handle::cudssHandle_t,
                                              commLibFileName::Cstring)::cudssStatus_t
+end
+
+@checked function cudssSetThreadingLayer(handle, thrLibFileName)
+    initialize_context()
+    @gcsafe_ccall libcudss.cudssSetThreadingLayer(handle::cudssHandle_t,
+                                                  thrLibFileName::Cstring)::cudssStatus_t
 end
 
 @checked function cudssConfigCreate(solverConfig)
@@ -257,12 +248,13 @@ end
 end
 
 @checked function cudssMatrixCreateBatchDn(matrix, batchCount, nrows, ncols, ld, values,
-                                           valueType, layout)
+                                           indexType, valueType, layout)
     initialize_context()
     @gcsafe_ccall libcudss.cudssMatrixCreateBatchDn(matrix::Ptr{cudssMatrix_t},
                                                     batchCount::Int64, nrows::Ptr{Cvoid},
                                                     ncols::Ptr{Cvoid}, ld::Ptr{Cvoid},
                                                     values::CuPtr{Ptr{Cvoid}},
+                                                    indexType::cudaDataType_t,
                                                     valueType::cudaDataType_t,
                                                     layout::cudssLayout_t)::cudssStatus_t
 end
@@ -330,8 +322,8 @@ end
                                                      values::CuPtr{Cvoid})::cudssStatus_t
 end
 
-@checked function cudssMatrixGetBatchDn(matrix, batchCount, nrows, ncols, ld, values, type,
-                                        layout)
+@checked function cudssMatrixGetBatchDn(matrix, batchCount, nrows, ncols, ld, values,
+                                        indexType, valueType, layout)
     initialize_context()
     @gcsafe_ccall libcudss.cudssMatrixGetBatchDn(matrix::cudssMatrix_t,
                                                  batchCount::Ptr{Int64},
@@ -339,7 +331,8 @@ end
                                                  ncols::Ptr{Ptr{Cvoid}},
                                                  ld::Ptr{Ptr{Cvoid}},
                                                  values::Ptr{CuPtr{Ptr{Cvoid}}},
-                                                 type::Ptr{cudaDataType_t},
+                                                 indexType::Ptr{cudaDataType_t},
+                                                 valueType::Ptr{cudaDataType_t},
                                                  layout::Ptr{cudssLayout_t})::cudssStatus_t
 end
 
@@ -382,7 +375,7 @@ end
 @checked function cudssMatrixGetFormat(matrix, format)
     initialize_context()
     @gcsafe_ccall libcudss.cudssMatrixGetFormat(matrix::cudssMatrix_t,
-                                                format::Ptr{cudssMatrixFormat_t})::cudssStatus_t
+                                                format::Ptr{Cint})::cudssStatus_t
 end
 
 @checked function cudssGetDeviceMemHandler(handle, handler)

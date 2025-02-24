@@ -120,7 +120,10 @@ The available configuration parameters are:
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
 - `"hybrid_mode"`: Memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
 - `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
-- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
+- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
+- `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;
+- `"hybrid_execute_mode"`: Hybrid execute mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -230,7 +233,10 @@ The available configuration parameters are:
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
 - `"hybrid_mode"`: Memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
 - `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
-- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
+- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
+- `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;
+- `"hybrid_execute_mode"`: Hybrid execute mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation.
 
 The available data parameters are:
 - `"info"`: Device-side error information;

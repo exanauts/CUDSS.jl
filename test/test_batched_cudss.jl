@@ -6,9 +6,9 @@ function cudss_batched_dense()
       A_cpu = rand(T, n)
       A_gpu = [CuVector(A_cpu)]
       matrix = CudssBatchedMatrix(A_gpu)
-      format = Ref{CUDSS.cudssMatrixFormat_t}()
+      format = Ref{Cint}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
-      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
+      @test format[] == CUDSS.CUDSS_MFORMAT_BATCH
 
       A_cpu2 = rand(T, n)
       A_gpu2 = [CuVector(A_cpu2)]
@@ -19,9 +19,9 @@ function cudss_batched_dense()
       A_cpu = rand(T, n, p)
       A_gpu = [CuMatrix(A_cpu)]
       matrix = CudssBatchedMatrix(A_gpu)
-      format = Ref{CUDSS.cudssMatrixFormat_t}()
+      format = Ref{CInt}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
-      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
+      @test format[] == CUDSS.CUDSS_MFORMAT_BATCH
 
       A_cpu2 = rand(T, n, p)
       A_gpu2 = [CuMatrix(A_cpu2)]
@@ -39,9 +39,9 @@ function cudss_batched_sparse()
     @testset "view = $view" for view in ('L', 'U', 'F')
       @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
         matrix = CudssBatchedMatrix(A_gpu, structure, view)
-        format = Ref{CUDSS.cudssMatrixFormat_t}()
+        format = Ref{Cint}()
         CUDSS.cudssMatrixGetFormat(matrix, format)
-        @test format[] == CUDSS.CUDSS_MFORMAT_CSR
+        @test format[] == CUDSS.CUDSS_MFORMAT_BATCH
 
         A_cpu2 = sprand(T, n, n, 1.0)
         A_cpu2 = A_cpu2 + A_cpu2'

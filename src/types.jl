@@ -7,7 +7,8 @@ const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reo
 const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "matching_type",
                                  "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
                                  "pivot_epsilon", "max_lu_nnz", "hybrid_mode", "hybrid_device_memory_limit",
-                                 "use_cuda_register_memory")
+                                 "use_cuda_register_memory", "host_nthreads", "hybrid_execute_mode",
+                                 "pivot_epsilon_alg")
 
 const CUDSS_TYPES = Dict{String, DataType}(
     # data type
@@ -38,7 +39,10 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "max_lu_nnz" => Int64,
     "hybrid_mode" => Cint,
     "hybrid_device_memory_limit" => Int64,
-    "use_cuda_register_memory" => Cint
+    "use_cuda_register_memory" => Cint,
+    "host_nthreads" => Cint,
+    "hybrid_execute_mode" => Cint,
+    "pivot_epsilon_alg" => cudssAlgType_t,
 )
 
 ## config type
@@ -72,6 +76,12 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT
     elseif config == "use_cuda_register_memory"
         return CUDSS_CONFIG_USE_CUDA_REGISTER_MEMORY
+    elseif config == "host_nthreads"
+        return CUDSS_CONFIG_HOST_NTHREADS
+    elseif config == "hybrid_execute_mode"
+        return CUDSS_CONFIG_HYBRID_EXECUTE_MODE
+    elseif config == "pivot_epsilon_alg"
+        return CUDSS_CONFIG_PIVOT_EPSILON_ALG
     else
         throw(ArgumentError("Unknown config parameter $config"))
     end
@@ -226,6 +236,8 @@ function Base.convert(::Type{cudssMatrixFormat_t}, format::Char)
         return CUDSS_MFORMAT_DENSE
     elseif format == 'S'
         return CUDSS_MFORMAT_CSR
+    elseif format == 'B'
+        return CUDSS_MFORMAT_BATCH
     else
         throw(ArgumentError("Unknown format $format"))
     end
