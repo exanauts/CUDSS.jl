@@ -27,7 +27,7 @@ One constructor of `CudssSolver` takes as input the same parameters as [`CudssMa
 
 `CudssSolver` can be also constructed from the three structures [`CudssMatrix`](@ref), [`CudssConfig`](@ref) and [`CudssData`](@ref) if needed.
 """
-mutable struct CudssSolver{T}
+mutable struct CudssSolver{T} <: Factorization{T}
   matrix::CudssMatrix{T}
   config::CudssConfig
   data::CudssData
@@ -71,7 +71,7 @@ One constructor of `CudssBatchedSolver` takes as input the same parameters as [`
 
 `CudssBatchedSolver` can be also constructed from the three structures [`CudssBatchedMatrix`](@ref), [`CudssConfig`](@ref) and [`CudssData`](@ref) if needed.
 """
-mutable struct CudssBatchedSolver{T,M}
+mutable struct CudssBatchedSolver{T,M} <: Factorization{T}
   matrix::CudssBatchedMatrix{T,M}
   config::CudssConfig
   data::CudssData
