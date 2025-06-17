@@ -25,20 +25,24 @@ const cudssConfig_t = Ptr{cudssConfig}
     CUDSS_CONFIG_REORDERING_ALG = 0
     CUDSS_CONFIG_FACTORIZATION_ALG = 1
     CUDSS_CONFIG_SOLVE_ALG = 2
-    CUDSS_CONFIG_MATCHING_TYPE = 3
-    CUDSS_CONFIG_SOLVE_MODE = 4
-    CUDSS_CONFIG_IR_N_STEPS = 5
-    CUDSS_CONFIG_IR_TOL = 6
-    CUDSS_CONFIG_PIVOT_TYPE = 7
-    CUDSS_CONFIG_PIVOT_THRESHOLD = 8
-    CUDSS_CONFIG_PIVOT_EPSILON = 9
-    CUDSS_CONFIG_MAX_LU_NNZ = 10
-    CUDSS_CONFIG_HYBRID_MODE = 11
-    CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT = 12
-    CUDSS_CONFIG_USE_CUDA_REGISTER_MEMORY = 13
-    CUDSS_CONFIG_HOST_NTHREADS = 14
-    CUDSS_CONFIG_HYBRID_EXECUTE_MODE = 15
-    CUDSS_CONFIG_PIVOT_EPSILON_ALG = 16
+    CUDSS_CONFIG_USE_MATCHING = 3
+    CUDSS_CONFIG_MATCHING_ALG = 4
+    CUDSS_CONFIG_SOLVE_MODE = 5
+    CUDSS_CONFIG_IR_N_STEPS = 6
+    CUDSS_CONFIG_IR_TOL = 7
+    CUDSS_CONFIG_PIVOT_TYPE = 8
+    CUDSS_CONFIG_PIVOT_THRESHOLD = 9
+    CUDSS_CONFIG_PIVOT_EPSILON = 10
+    CUDSS_CONFIG_MAX_LU_NNZ = 11
+    CUDSS_CONFIG_HYBRID_MODE = 12
+    CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT = 13
+    CUDSS_CONFIG_USE_CUDA_REGISTER_MEMORY = 14
+    CUDSS_CONFIG_HOST_NTHREADS = 15
+    CUDSS_CONFIG_HYBRID_EXECUTE_MODE = 16
+    CUDSS_CONFIG_PIVOT_EPSILON_ALG = 17
+    CUDSS_CONFIG_ND_NLEVELS = 18
+    CUDSS_CONFIG_UBATCH_SIZE = 19
+    CUDSS_CONFIG_UBATCH_INDEX = 20
 end
 
 @cenum cudssDataParam_t::UInt32 begin
@@ -55,16 +59,21 @@ end
     CUDSS_DATA_HYBRID_DEVICE_MEMORY_MIN = 10
     CUDSS_DATA_COMM = 11
     CUDSS_DATA_MEMORY_ESTIMATES = 12
+    CUDSS_DATA_PERM_MATCHING = 13
+    CUDSS_DATA_SCALE_ROW = 14
+    CUDSS_DATA_SCALE_COL = 15
 end
 
 @cenum cudssPhase_t::UInt32 begin
-    CUDSS_PHASE_ANALYSIS = 1
-    CUDSS_PHASE_FACTORIZATION = 2
-    CUDSS_PHASE_REFACTORIZATION = 4
-    CUDSS_PHASE_SOLVE = 8
+    CUDSS_PHASE_REORDERING = 1
+    CUDSS_PHASE_SYMBOLIC_FACTORIZATION = 2
+    CUDSS_PHASE_ANALYSIS = 3
+    CUDSS_PHASE_FACTORIZATION = 4
+    CUDSS_PHASE_REFACTORIZATION = 8
     CUDSS_PHASE_SOLVE_FWD = 16
     CUDSS_PHASE_SOLVE_DIAG = 32
     CUDSS_PHASE_SOLVE_BWD = 64
+    CUDSS_PHASE_SOLVE = 112
 end
 
 @cenum cudssStatus_t::UInt32 begin
@@ -106,6 +115,8 @@ end
     CUDSS_ALG_1 = 1
     CUDSS_ALG_2 = 2
     CUDSS_ALG_3 = 3
+    CUDSS_ALG_4 = 4
+    CUDSS_ALG_5 = 5
 end
 
 @cenum cudssPivotType_t::UInt32 begin
@@ -118,6 +129,7 @@ end
     CUDSS_MFORMAT_DENSE = 1
     CUDSS_MFORMAT_CSR = 2
     CUDSS_MFORMAT_BATCH = 4
+    CUDSS_MFORMAT_DISTRIBUTED = 8
 end
 
 struct cudssDeviceMemHandler_t
@@ -159,7 +171,7 @@ end
 @checked function cudssExecute(handle, phase, solverConfig, solverData, inputMatrix,
                                solution, rhs)
     initialize_context()
-    @gcsafe_ccall libcudss.cudssExecute(handle::cudssHandle_t, phase::cudssPhase_t,
+    @gcsafe_ccall libcudss.cudssExecute(handle::cudssHandle_t, phase::Cint,
                                         solverConfig::cudssConfig_t,
                                         solverData::cudssData_t, inputMatrix::cudssMatrix_t,
                                         solution::cudssMatrix_t,
@@ -376,6 +388,20 @@ end
     initialize_context()
     @gcsafe_ccall libcudss.cudssMatrixGetFormat(matrix::cudssMatrix_t,
                                                 format::Ptr{Cint})::cudssStatus_t
+end
+
+@checked function cudssMatrixSetDistributionRow1d(matrix, first_row, last_row)
+    initialize_context()
+    @gcsafe_ccall libcudss.cudssMatrixSetDistributionRow1d(matrix::cudssMatrix_t,
+                                                           first_row::Int64,
+                                                           last_row::Int64)::cudssStatus_t
+end
+
+@checked function cudssMatrixGetDistributionRow1d(matrix, first_row, last_row)
+    initialize_context()
+    @gcsafe_ccall libcudss.cudssMatrixGetDistributionRow1d(matrix::cudssMatrix_t,
+                                                           first_row::Ptr{Int64},
+                                                           last_row::Ptr{Int64})::cudssStatus_t
 end
 
 @checked function cudssGetDeviceMemHandler(handle, handler)
