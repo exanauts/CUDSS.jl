@@ -272,7 +272,9 @@ function cudss_get(data::CudssData, parameter::String)
   if (parameter == "user_perm") || (parameter == "comm")
     throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
   end
-  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
+  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") ||
+     (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag") ||
+     (parameter == "perm_matching") || (parameter == "scale_row") || (parameter == "scale_col")
     throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   end
   if parameter == "memory_estimates"

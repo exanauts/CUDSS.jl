@@ -74,7 +74,7 @@ function cudss_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm") && continue
+          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm", "perm_matching", "scale_row", "scale_col") && continue
           @testset "cudss_get" begin
             (parameter == "user_perm") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
@@ -98,7 +98,8 @@ function cudss_solver()
             end
           end
           @testset "cudss_set" begin
-            # (parameter == "matching_type") && cudss_set(solver, parameter, 0)
+            (parameter == "use_matching") && cudss_set(solver, parameter, 0)
+            (parameter == "matching_alg") && cudss_set(solver, parameter, 0)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)

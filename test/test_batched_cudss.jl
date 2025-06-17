@@ -81,7 +81,7 @@ function cudss_batched_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm") && continue
+          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm", "perm_matching", "scale_row", "scale_col") && continue
           @testset "cudss_get" begin
             (parameter == "user_perm") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue

@@ -27,15 +27,15 @@ const CUDSS_TYPES = Dict{String, Type}(
     "hybrid_device_memory_min" => Int64,
     "comm" => Ptr{Cvoid},
     "memory_estimates" => Vector{Int64},
-    ## "perm_matching" => ...,
-    ## "scale_row" => ...,
-    ## "scale_col" => ...,
+    "perm_matching" => Vector{Cint},
+    "scale_row" => Vector{Float64},
+    "scale_col" => Vector{Float64},
     # config type
     "reordering_alg" => cudssAlgType_t,
     "factorization_alg" => cudssAlgType_t,
     "solve_alg" => cudssAlgType_t,
-    ## "use_matching" => Cint,
-    ## "matching_alg" => ...,
+    "use_matching" => Cint,
+    "matching_alg" => cudssAlgType_t,
     "solve_mode" => Cint,
     "ir_n_steps" => Cint,
     "ir_tol" => Float64,
@@ -49,9 +49,9 @@ const CUDSS_TYPES = Dict{String, Type}(
     "host_nthreads" => Cint,
     "hybrid_execute_mode" => Cint,
     "pivot_epsilon_alg" => cudssAlgType_t,
-    ## "nd_nlevels" => ...,
-    ## "ubatch_size" => ...,
-    ## "ubatch_index" => ...,
+    "nd_nlevels" => Cint,
+    "ubatch_size" => Cint,
+    "ubatch_index" => Cint,
 )
 
 ## config type
@@ -151,7 +151,7 @@ function Base.convert(::Type{cudssPhase_t}, phase::String)
         return CUDSS_PHASE_REORDERING
     elseif phase == "symbolic_factorization"
         return CUDSS_PHASE_SYMBOLIC_FACTORIZATION
-    if phase == "analysis"
+    elseif phase == "analysis"
         return CUDSS_PHASE_ANALYSIS
     elseif phase == "factorization"
         return CUDSS_PHASE_FACTORIZATION
