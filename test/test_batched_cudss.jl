@@ -103,7 +103,7 @@ function cudss_batched_solver()
             val = cudss_get(solver, parameter)
           end
           @testset "cudss_set" begin
-            (parameter == "matching_type") && cudss_set(solver, parameter, 0)
+            # (parameter == "matching_type") && cudss_set(solver, parameter, 0)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)

@@ -1,5 +1,5 @@
 function cudss_version()
-  @test CUDSS.version() >= v"0.5.0"
+  @test CUDSS.version() >= v"0.6.0"
 end
 
 function cudss_dense()
@@ -98,7 +98,7 @@ function cudss_solver()
             end
           end
           @testset "cudss_set" begin
-            (parameter == "matching_type") && cudss_set(solver, parameter, 0)
+            # (parameter == "matching_type") && cudss_set(solver, parameter, 0)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)

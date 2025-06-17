@@ -107,9 +107,9 @@ end
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 The available configuration parameters are:
-- `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
-- `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
-- `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
+- `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
+- `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
+- `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
 - `"matching_type"`: Type of matching;
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
@@ -308,7 +308,7 @@ end
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
-The available phases are `"analysis"`, `"factorization"`, `"refactorization"` and `"solve"`.
+The available phases are `"reordering"`, `"symbolic_factorization"`, `"analysis"`, `"factorization"`, `"refactorization"` and `"solve"`.
 The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not yet functional.
 """
 function cudss end
