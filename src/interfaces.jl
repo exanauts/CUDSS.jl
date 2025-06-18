@@ -333,16 +333,14 @@ function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVecto
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(x)
   rhs = CudssMatrix(b)
-  cudss_phase = convert(cudssPhase_t, phase)
-  cudss(cudss_phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
-  cudss_phase = convert(cudssPhase_t, phase)
-  cudss(cudss_phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T}) where T <: BlasFloat
@@ -355,14 +353,12 @@ function cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{<:CuVecto
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssBatchedMatrix(x)
   rhs = CudssBatchedMatrix(b)
-  cudss_phase = convert(cudssPhase_t, phase)
-  cudss(cudss_phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs)
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, X::Vector{<:CuMatrix{T}}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssBatchedMatrix(X)
   rhs = CudssBatchedMatrix(B)
-  cudss_phase = convert(cudssPhase_t, phase)
-  cudss(cudss_phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs)
 end
