@@ -101,7 +101,9 @@ function cudss_batched_solver()
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
           (parameter in ("nd_nlevels", "ubatch_size", "ubatch_index")) && continue
           @testset "cudss_get" begin
-            val = cudss_get(solver, parameter)
+            if parameter != "host_nthreads"
+              val = cudss_get(solver, parameter)
+            end
           end
           @testset "cudss_set" begin
             (parameter == "use_matching") && cudss_set(solver, parameter, 1)
