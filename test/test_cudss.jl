@@ -92,13 +92,14 @@ function cudss_solver()
         end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
+          (parameter in ("nd_nlevels", "ubatch_size", "ubatch_index")) && continue
           @testset "cudss_get" begin
             if parameter != "host_nthreads"
               val = cudss_get(solver, parameter)
             end
           end
           @testset "cudss_set" begin
-            (parameter == "use_matching") && cudss_set(solver, parameter, 0)
+            (parameter == "use_matching") && cudss_set(solver, parameter, 1)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)

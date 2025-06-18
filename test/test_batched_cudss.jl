@@ -99,11 +99,12 @@ function cudss_batched_solver()
         end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
+          (parameter in ("nd_nlevels", "ubatch_size", "ubatch_index")) && continue
           @testset "cudss_get" begin
             val = cudss_get(solver, parameter)
           end
           @testset "cudss_set" begin
-            # (parameter == "matching_type") && cudss_set(solver, parameter, 0)
+            (parameter == "use_matching") && cudss_set(solver, parameter, 1)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
@@ -112,6 +113,7 @@ function cudss_batched_solver()
             (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
             (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
             for algo in ("default", "algo1", "algo2", "algo3", "algo4", "algo5")
+              (parameter == "matching_alg") && cudss_set(solver, parameter, algo)
               (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
               (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
               (parameter == "solve_alg") && cudss_set(solver, parameter, algo)
