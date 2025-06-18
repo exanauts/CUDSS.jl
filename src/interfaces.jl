@@ -110,7 +110,8 @@ The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
 - `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
 - `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
-- `"matching_type"`: Type of matching;
+- `"use_matching"`: A flag to enable (`1`) or disable (`0`) the matching;
+- `"matching_alg"`: Algorithm for the matching;
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
@@ -123,7 +124,10 @@ The available configuration parameters are:
 - `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
 - `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;
 - `"hybrid_execute_mode"`: Hybrid execute mode -- `0` (default = device-only) or `1` (hybrid = host/device);
-- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation.
+- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
+- `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
+- `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
+- `"ubatch_index"`: Specify cuDSS to process all matrices in the uniform batch at once.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -223,7 +227,8 @@ The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase;
 - `"factorization_alg"`: Algorithm for the factorization phase;
 - `"solve_alg"`: Algorithm for the solving phase;
-- `"matching_type"`: Type of matching;
+- `"use_matching"`: A flag to enable (`1`) or disable (`0`) the matching;
+- `"matching_alg"`: Algorithm for the matching;
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
@@ -236,7 +241,10 @@ The available configuration parameters are:
 - `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
 - `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;
 - `"hybrid_execute_mode"`: Hybrid execute mode -- `0` (default = device-only) or `1` (hybrid = host/device);
-- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation.
+- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
+- `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
+- `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
+- `"ubatch_index"`: Specify cuDSS to process all matrices in the uniform batch at once.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
