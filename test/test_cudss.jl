@@ -12,7 +12,7 @@ function cudss_dense()
       matrix = CudssMatrix(A_gpu)
       format = Ref{Cint}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
-      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
+      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE |> Cint
 
       A_cpu2 = rand(T, n)
       A_gpu2 = CuVector(A_cpu2)
@@ -25,7 +25,7 @@ function cudss_dense()
       matrix = CudssMatrix(A_gpu)
       format = Ref{Cint}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
-      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
+      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE |> Cint
 
       A_cpu2 = rand(T, n, p)
       A_gpu2 = CuMatrix(A_cpu2)
@@ -45,7 +45,7 @@ function cudss_sparse()
         matrix = CudssMatrix(A_gpu, structure, view) 
         format = Ref{Cint}()
         CUDSS.cudssMatrixGetFormat(matrix, format)
-        @test format[] == CUDSS.CUDSS_MFORMAT_CSR
+        @test format[] == CUDSS.CUDSS_MFORMAT_CSR |> Cint
 
         A_cpu2 = sprand(T, n, n, 1.0)
         A_cpu2 = A_cpu2 + A_cpu2'
