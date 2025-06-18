@@ -170,7 +170,7 @@ function Base.convert(::Type{cudssPhase_t}, phase::String)
     end
 end
 
-Base.convert(::Type{Cint}, phase::String) = Base.convert(cudssPhase_t, phase) |> Cint
+Base.convert(::Type{Cint}, phase::cudssPhase_t) = Cint(phase)
 
 ## matrix structure type
 
