@@ -147,7 +147,7 @@ mutable struct CudssBatchedMatrix{T,M}
         Mptrs = unsafe_cudss_batch(B)
         M = typeof(Mptrs)
         if transposed
-            cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Mptrs, CInt, T, 'R')
+            cudssMatrixCreateBatchDn(matrix_ref, nbatch, ncols, nrows, ld, Mptrs, Cint, T, 'R')
         else
             cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Mptrs, Cint, T, 'C')
         end
