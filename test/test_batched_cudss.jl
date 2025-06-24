@@ -6,9 +6,9 @@ function cudss_batched_dense()
       A_cpu = rand(T, n)
       A_gpu = [CuVector(A_cpu)]
       matrix = CudssBatchedMatrix(A_gpu)
-      format = Ref{CUDSS.cudssMatrixFormat_t}()
+      format = Ref{Cint}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
-      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
+      @test format[] == 5  # BATCH + DENSE
 
       A_cpu2 = rand(T, n)
       A_gpu2 = [CuVector(A_cpu2)]
@@ -19,9 +19,9 @@ function cudss_batched_dense()
       A_cpu = rand(T, n, p)
       A_gpu = [CuMatrix(A_cpu)]
       matrix = CudssBatchedMatrix(A_gpu)
-      format = Ref{CUDSS.cudssMatrixFormat_t}()
+      format = Ref{Cint}()
       CUDSS.cudssMatrixGetFormat(matrix, format)
-      @test format[] == CUDSS.CUDSS_MFORMAT_DENSE
+      @test format[] == 5  # BATCH + DENSE
 
       A_cpu2 = rand(T, n, p)
       A_gpu2 = [CuMatrix(A_cpu2)]
@@ -39,9 +39,9 @@ function cudss_batched_sparse()
     @testset "view = $view" for view in ('L', 'U', 'F')
       @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
         matrix = CudssBatchedMatrix(A_gpu, structure, view)
-        format = Ref{CUDSS.cudssMatrixFormat_t}()
+        format = Ref{Cint}()
         CUDSS.cudssMatrixGetFormat(matrix, format)
-        @test format[] == CUDSS.CUDSS_MFORMAT_CSR
+        @test format[] == 6  # BATCH + CSR
 
         A_cpu2 = sprand(T, n, n, 1.0)
         A_cpu2 = A_cpu2 + A_cpu2'
@@ -81,7 +81,7 @@ function cudss_batched_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm") && continue
+          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm", "perm_matching", "scale_row", "scale_col") && continue
           @testset "cudss_get" begin
             (parameter == "user_perm") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
@@ -99,11 +99,14 @@ function cudss_batched_solver()
         end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
+          (parameter in ("nd_nlevels", "ubatch_size", "ubatch_index")) && continue
           @testset "cudss_get" begin
-            val = cudss_get(solver, parameter)
+            if parameter != "host_nthreads"
+              val = cudss_get(solver, parameter)
+            end
           end
           @testset "cudss_set" begin
-            (parameter == "matching_type") && cudss_set(solver, parameter, 0)
+            (parameter == "use_matching") && cudss_set(solver, parameter, 1)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
@@ -111,7 +114,8 @@ function cudss_batched_solver()
             (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
             (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
             (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
-            for algo in ("default", "algo1", "algo2", "algo3")
+            for algo in ("default", "algo1", "algo2", "algo3", "algo4", "algo5")
+              (parameter == "matching_alg") && cudss_set(solver, parameter, algo)
               (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
               (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
               (parameter == "solve_alg") && cudss_set(solver, parameter, algo)

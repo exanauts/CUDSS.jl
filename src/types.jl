@@ -2,14 +2,17 @@
 
 const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reorder_row",
                                "perm_reorder_col", "perm_row", "perm_col", "diag", "user_perm",
-                               "hybrid_device_memory_min", "comm", "memory_estimates")
+                               "hybrid_device_memory_min", "comm", "memory_estimates",
+                               "perm_matching", "scale_row", "scale_col")
 
-const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "matching_type",
-                                 "solve_mode", "ir_n_steps", "ir_tol", "pivot_type", "pivot_threshold",
-                                 "pivot_epsilon", "max_lu_nnz", "hybrid_mode", "hybrid_device_memory_limit",
-                                 "use_cuda_register_memory")
+const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "use_matching",
+                                 "matching_alg", "solve_mode", "ir_n_steps", "ir_tol", "pivot_type",
+                                 "pivot_threshold", "pivot_epsilon", "max_lu_nnz", "hybrid_mode",
+                                 "hybrid_device_memory_limit", "use_cuda_register_memory", "host_nthreads",
+                                 "hybrid_execute_mode", "pivot_epsilon_alg", "nd_nlevels", "ubatch_size",
+                                 "ubatch_index")
 
-const CUDSS_TYPES = Dict{String, DataType}(
+const CUDSS_TYPES = Dict{String, Type}(
     # data type
     "info" => Cint,
     "lu_nnz" => Int64,
@@ -24,11 +27,15 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "hybrid_device_memory_min" => Int64,
     "comm" => Ptr{Cvoid},
     "memory_estimates" => Vector{Int64},
+    "perm_matching" => Vector{Cint},
+    "scale_row" => Vector{Float64},
+    "scale_col" => Vector{Float64},
     # config type
     "reordering_alg" => cudssAlgType_t,
     "factorization_alg" => cudssAlgType_t,
     "solve_alg" => cudssAlgType_t,
-    "matching_type" => Cint,
+    "use_matching" => Cint,
+    "matching_alg" => cudssAlgType_t,
     "solve_mode" => Cint,
     "ir_n_steps" => Cint,
     "ir_tol" => Float64,
@@ -38,7 +45,13 @@ const CUDSS_TYPES = Dict{String, DataType}(
     "max_lu_nnz" => Int64,
     "hybrid_mode" => Cint,
     "hybrid_device_memory_limit" => Int64,
-    "use_cuda_register_memory" => Cint
+    "use_cuda_register_memory" => Cint,
+    "host_nthreads" => Cint,
+    "hybrid_execute_mode" => Cint,
+    "pivot_epsilon_alg" => cudssAlgType_t,
+    "nd_nlevels" => Cint,
+    "ubatch_size" => Cint,
+    "ubatch_index" => Cint,
 )
 
 ## config type
@@ -50,8 +63,10 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_FACTORIZATION_ALG
     elseif config == "solve_alg"
         return CUDSS_CONFIG_SOLVE_ALG
-    elseif config == "matching_type"
-        return CUDSS_CONFIG_MATCHING_TYPE
+    elseif config == "use_matching"
+        return CUDSS_CONFIG_USE_MATCHING
+    elseif config == "matching_alg"
+        return CUDSS_CONFIG_MATCHING_ALG
     elseif config == "solve_mode"
         return CUDSS_CONFIG_SOLVE_MODE
     elseif config == "ir_n_steps"
@@ -72,6 +87,18 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT
     elseif config == "use_cuda_register_memory"
         return CUDSS_CONFIG_USE_CUDA_REGISTER_MEMORY
+    elseif config == "host_nthreads"
+        return CUDSS_CONFIG_HOST_NTHREADS
+    elseif config == "hybrid_execute_mode"
+        return CUDSS_CONFIG_HYBRID_EXECUTE_MODE
+    elseif config == "pivot_epsilon_alg"
+        return CUDSS_CONFIG_PIVOT_EPSILON_ALG
+    elseif config == "nd_nlevels"
+        return CUDSS_CONFIG_ND_NLEVELS
+    elseif config == "ubatch_size"
+        return CUDSS_CONFIG_UBATCH_SIZE
+    elseif config == "ubatch_index"
+        return CUDSS_CONFIG_UBATCH_INDEX
     else
         throw(ArgumentError("Unknown config parameter $config"))
     end
@@ -106,6 +133,12 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
         return CUDSS_DATA_COMM
     elseif data == "memory_estimates"
         return CUDSS_DATA_MEMORY_ESTIMATES
+    elseif data == "perm_matching"
+        return CUDSS_DATA_PERM_MATCHING
+    elseif data == "scale_row"
+        return CUDSS_DATA_SCALE_ROW
+    elseif data == "scale_col"
+        return CUDSS_DATA_SCALE_COL
     else
         throw(ArgumentError("Unknown data parameter $data"))
     end
@@ -114,24 +147,30 @@ end
 ## phase type
 
 function Base.convert(::Type{cudssPhase_t}, phase::String)
-    if phase == "analysis"
+    if phase == "reordering"
+        return CUDSS_PHASE_REORDERING
+    elseif phase == "symbolic_factorization"
+        return CUDSS_PHASE_SYMBOLIC_FACTORIZATION
+    elseif phase == "analysis"
         return CUDSS_PHASE_ANALYSIS
     elseif phase == "factorization"
         return CUDSS_PHASE_FACTORIZATION
     elseif phase == "refactorization"
         return CUDSS_PHASE_REFACTORIZATION
-    elseif phase == "solve"
-        return CUDSS_PHASE_SOLVE
     elseif phase == "solve_fwd"
         return CUDSS_PHASE_SOLVE_FWD
     elseif phase == "solve_diag"
         return CUDSS_PHASE_SOLVE_DIAG
     elseif phase == "solve_bwd"
         return CUDSS_PHASE_SOLVE_BWD
+    elseif phase == "solve"
+        return CUDSS_PHASE_SOLVE
     else
         throw(ArgumentError("Unknown phase $phase"))
     end
 end
+
+Base.convert(::Type{Cint}, phase::cudssPhase_t) = Cint(phase)
 
 ## matrix structure type
 
@@ -200,6 +239,10 @@ function Base.convert(::Type{cudssAlgType_t}, algorithm::String)
         CUDSS_ALG_2
     elseif algorithm == "algo3"
         CUDSS_ALG_3
+    elseif algorithm == "algo4"
+        CUDSS_ALG_4
+    elseif algorithm == "algo5"
+        CUDSS_ALG_5
     else
         throw(ArgumentError("Unknown algorithm $algorithm"))
     end
@@ -221,11 +264,15 @@ end
 
 # matrix format type
 
-function Base.convert(::Type{cudssMatrixFormat_t}, format::Char)
-    if format == 'D'
+function Base.convert(::Type{cudssMatrixFormat_t}, format::String)
+    if format == "DENSE"
         return CUDSS_MFORMAT_DENSE
-    elseif format == 'S'
+    elseif format == "CSR"
         return CUDSS_MFORMAT_CSR
+    elseif format == "BATCH"
+        return CUDSS_MFORMAT_BATCH
+    elseif format == "DISTRIBUTED"
+        return CUDSS_MFORMAT_DISTRIBUTED
     else
         throw(ArgumentError("Unknown format $format"))
     end

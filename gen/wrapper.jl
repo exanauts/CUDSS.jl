@@ -166,7 +166,7 @@ function main()
 
     # create context
     headers = ["$cudss/cudss.h"]
-    targets = ["$cudss/cudss.h", "$cudss/cudss_distributed_interface.h"]
+    targets = ["$cudss/cudss.h"]  # ["$cudss/cudss_distributed_interface.h", "$cudss/cudss_threading_interface.h"]
     ctx = create_context(headers, args, options)
 
     # run generator

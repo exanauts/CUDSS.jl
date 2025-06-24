@@ -107,10 +107,11 @@ end
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 The available configuration parameters are:
-- `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
-- `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
-- `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"` or `"algo3"`);
-- `"matching_type"`: Type of matching;
+- `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
+- `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
+- `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
+- `"use_matching"`: A flag to enable (`1`) or disable (`0`) the matching;
+- `"matching_alg"`: Algorithm for the matching;
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
@@ -120,7 +121,13 @@ The available configuration parameters are:
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
 - `"hybrid_mode"`: Memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
 - `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
-- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
+- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
+- `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;
+- `"hybrid_execute_mode"`: Hybrid execute mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
+- `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
+- `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
+- `"ubatch_index"`: Specify cuDSS to process all matrices in the uniform batch at once.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -220,7 +227,8 @@ The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase;
 - `"factorization_alg"`: Algorithm for the factorization phase;
 - `"solve_alg"`: Algorithm for the solving phase;
-- `"matching_type"`: Type of matching;
+- `"use_matching"`: A flag to enable (`1`) or disable (`0`) the matching;
+- `"matching_alg"`: Algorithm for the matching;
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
@@ -230,7 +238,13 @@ The available configuration parameters are:
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
 - `"hybrid_mode"`: Memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
 - `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
-- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode.
+- `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
+- `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;
+- `"hybrid_execute_mode"`: Hybrid execute mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
+- `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
+- `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
+- `"ubatch_index"`: Specify cuDSS to process all matrices in the uniform batch at once.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -266,7 +280,9 @@ function cudss_get(data::CudssData, parameter::String)
   if (parameter == "user_perm") || (parameter == "comm")
     throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
   end
-  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") || (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag")
+  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") ||
+     (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag") ||
+     (parameter == "perm_matching") || (parameter == "scale_row") || (parameter == "scale_col")
     throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
   end
   if parameter == "memory_estimates"
@@ -302,14 +318,15 @@ end
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
-The available phases are `"analysis"`, `"factorization"`, `"refactorization"` and `"solve"`.
+The available phases are `"reordering"`, `"symbolic_factorization"`, `"analysis"`, `"factorization"`, `"refactorization"` and `"solve"`.
 The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not yet functional.
 """
 function cudss end
 
 function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
-  cudssExecute(solver.data.handle, phase, solver.config, solver.data, solver.matrix, X, B)
+  cudss_phase = convert(cudssPhase_t, phase)
+  cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}) where T <: BlasFloat
@@ -328,7 +345,8 @@ end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T}) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
-  cudssExecute(solver.data.handle, phase, solver.config, solver.data, solver.matrix, X, B)
+  cudss_phase = convert(cudssPhase_t, phase)
+  cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{<:CuVector{T}}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
