@@ -1,6 +1,7 @@
 module CUDSS
 
-using CUDA, CUDA.APIUtils, CUDA.CUSPARSE, CUDA.CUBLAS
+using CUDA, CUDA.CUSPARSE, CUDA.CUBLAS
+using GPUToolbox
 using CUDSS_jll
 using LinearAlgebra
 using SparseArrays
@@ -13,7 +14,8 @@ else
   const CUDSS_INSTALLATION = "YGGDRASIL"
 end
 
-import CUDA: @checked, libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream, @gcsafe_ccall, unsafe_free!
+import CUDA: libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream, unsafe_free!
+import CUDA.APIUtils: HandleCache
 import LinearAlgebra: lu, lu!, ldlt, ldlt!, cholesky, cholesky!, ldiv!, BlasFloat, BlasReal, checksquare, Factorization
 import Base: \
 
