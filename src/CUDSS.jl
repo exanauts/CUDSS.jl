@@ -15,6 +15,7 @@ else
 end
 
 import CUDA: libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream, unsafe_free!
+import CUDA.APIUtils: HandleCache
 import LinearAlgebra: lu, lu!, ldlt, ldlt!, cholesky, cholesky!, ldiv!, BlasFloat, BlasReal, checksquare, Factorization
 import Base: \
 
