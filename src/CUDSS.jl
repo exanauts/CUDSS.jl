@@ -1,6 +1,6 @@
 module CUDSS
 
-using CUDA, CUDA.APIUtils, CUDA.CUSPARSE, CUDA.CUBLAS
+using CUDA, CUDA.CUSPARSE, CUDA.CUBLAS
 using GPUToolbox
 using CUDSS_jll
 using LinearAlgebra
