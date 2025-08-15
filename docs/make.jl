@@ -10,13 +10,13 @@ makedocs(
                            prettyurls = get(ENV, "CI", nothing) == "true",
                            collapselevel = 1),
   sitename = "CUDSS.jl",
-  pages = ["Home"        => "index.md",
-           "Types"       => "types.md",
-           "Functions"   => "functions.md",
+  pages = ["Home" => "index.md",
+           "Types" => "types.md",
+           "Functions" => "functions.md",
            "Generic interface" => "generic.md",
-           "Uniform Batch" => "uniform_batch.md",
-           "Non-uniform Batch" => "nonuniform_batch.md",
-           "Options"     => "options.md"]
+           "Uniform batch" => "uniform_batch.md",
+           "Non-uniform batch" => "nonuniform_batch.md",
+           "Options" => "options.md"]
 )
 
 deploydocs(
