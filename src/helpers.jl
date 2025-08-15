@@ -102,7 +102,7 @@ mutable struct CudssMatrix{T}
         n = length(rowPtr) - 1
         nz = length(nzVal)
         matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateCsr(matrix_ref, n, n, length(ColVal), rowPtr, CU_NULL,
+        cudssMatrixCreateCsr(matrix_ref, n, n, length(colVal), rowPtr, CU_NULL,
                              colVal, nzVal, Cint, T, structure,
                              view, index)
         obj = new{T}(T, matrix_ref[], n, n, nz)
