@@ -1,6 +1,6 @@
-## Batch factorization of matrices with a common sparsity pattern
+#### Batch factorization of matrices with a common sparsity pattern
 
-### Batch LU
+## Batch LU
 
 ```julia
 using CUDA, CUDA.CUSPARSE
@@ -54,7 +54,7 @@ end
 rλ_gpu
 ```
 
-### Batch LDLᵀ and LDLᴴ
+## Batch LDLᵀ and LDLᴴ
 
 ```julia
 using CUDA, CUDA.CUSPARSE
@@ -105,7 +105,7 @@ end
 Rλ_gpu
 ```
 
-### Batch LLᵀ and LLᴴ
+## Batch LLᵀ and LLᴴ
 
 ```julia
 using CUDA, CUDA.CUSPARSE
