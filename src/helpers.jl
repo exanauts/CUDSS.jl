@@ -44,7 +44,7 @@ mutable struct CudssMatrix{T}
         nz = n * nbatch
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, n, 1, n, CU_NULL, T, 'C')
-        obj = new{T}(T, matrix_ref[], nz)
+        obj = new{T}(T, matrix_ref[], n, 1, nz)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -67,7 +67,7 @@ mutable struct CudssMatrix{T}
         m = length(b)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, m, 1, m, b, T, 'C')
-        obj = new{T}(T, matrix_ref[], 1, m, 1)
+        obj = new{T}(T, matrix_ref[], m, 1, m)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -78,10 +78,11 @@ mutable struct CudssMatrix{T}
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
             cudssMatrixCreateDn(matrix_ref, n, m, m, B, T, 'R')
+            obj = new{T}(T, matrix_ref[], n, m, nz)
         else
             cudssMatrixCreateDn(matrix_ref, m, n, m, B, T, 'C')
+            obj = new{T}(T, matrix_ref[], m, n, nz)
         end
-        obj = new{T}(T, matrix_ref[], 1, m, n)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
