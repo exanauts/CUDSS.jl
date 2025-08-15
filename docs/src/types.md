@@ -1,36 +1,36 @@
-## Types
+# Types
 
-### CudssSolver
+## CudssSolver
 
 ```@docs
 CudssSolver
 ```
 
-### CudssBatchedSolver
+## CudssBatchedSolver
 
 ```@docs
 CudssBatchedSolver
 ```
 
-### CudssMatrix
+## CudssMatrix
 
 ```@docs
 CudssMatrix
 ```
 
-### CudssBatchedMatrix
+## CudssBatchedMatrix
 
 ```@docs
 CudssBatchedMatrix
 ```
 
-### CudssConfig
+## CudssConfig
 
 ```@docs
 CudssConfig
 ```
 
-### CudssData
+## CudssData
 
 ```@docs
 CudssData

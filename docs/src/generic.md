@@ -1,6 +1,6 @@
-## Generic interface
+#### Generic interface
 
-### LLᵀ and LLᴴ
+## LLᵀ and LLᴴ
 
 ```@docs
     LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,Cint}; view::Char='F') where T <: LinearAlgebra.BlasFloat
@@ -52,7 +52,7 @@ H_gpu = Hermitian(A_gpu, :U)
 F = cholesky(H_gpu)
 ```
 
-### LDLᵀ and LDLᴴ
+## LDLᵀ and LDLᴴ
 
 ```@docs
     LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,Cint}; view::Char='F') where T <: LinearAlgebra.BlasFloat
@@ -104,7 +104,7 @@ S_gpu = Symmetric(A_gpu, :L)
 F = ldlt(S_gpu)
 ```
 
-### LU
+## LU
 
 ```@docs
     LinearAlgebra.lu(A::CuSparseMatrixCSR{T,Cint}) where T <: LinearAlgebra.BlasFloat
