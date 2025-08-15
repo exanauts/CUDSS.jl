@@ -94,7 +94,7 @@ mutable struct CudssMatrix{T}
         cudssMatrixCreateCsr(matrix_ref, m, n, nz, A.rowPtr, CU_NULL,
                              A.colVal, A.nzVal, Cint, T, structure,
                              view, index)
-        obj = new{T}(T, matrix_ref[], 1, m, n, nz)
+        obj = new{T}(T, matrix_ref[], m, n, nz)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
