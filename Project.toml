@@ -13,7 +13,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 CEnum = "0.5"
-CUDA = "5.4.0 - 5.8.2"
+CUDA = "5.4.0-5.8.2"
 CUDSS_jll = "0.6.0"
 GPUToolbox = "0.3.0"
 LinearAlgebra = "1.10"
