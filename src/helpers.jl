@@ -44,8 +44,8 @@ mutable struct CudssMatrix{T}
         nz = n * nbatch
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, n, 1, n, CU_NULL, T, 'C')
-        obj = new{T}(T, matrix_ref[])
-        finalizer(cudssMatrixDestroy, obj, nz)
+        obj = new{T}(T, matrix_ref[], nz)
+        finalizer(cudssMatrixDestroy, obj)
         obj
     end
 

@@ -13,8 +13,9 @@ makedocs(
   pages = ["Home"        => "index.md",
            "Types"       => "types.md",
            "Functions"   => "functions.md",
-           "Generic API" => "generic.md",
-           "Batch API"   => "batch.md",
+           "Generic interface" => "generic.md",
+           "Uniform Batch" => "uniform_batch.md",
+           "Non-uniform Batch" => "nonuniform_batch.md",
            "Options"     => "options.md"]
 )
 

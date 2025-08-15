@@ -1,3 +1,5 @@
+# Batch factorization of matrices with different sparsity patterns
+
 ## Batch LU
 
 ```julia
