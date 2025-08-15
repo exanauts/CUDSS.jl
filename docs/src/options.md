@@ -123,8 +123,10 @@ nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
 
 bλ_gpu = CuVector{T}([7, 12, 25, 4, 13, 13, 15, 29, 8, 14])
 xλ_gpu = CuVector{T}(undef, n * nbatch)
-cudss_bλ_gpu = CudssMatrix(n, nrhs, bλ_gpu)
-cudss_xλ_gpu = CudssMatrix(n, nrhs, xλ_gpu)
+cudss_bλ_gpu = CudssMatrix(T, n, nrhs; nbatch)
+cudss_xλ_gpu = CudssMatrix(T, n, nrhs; nbatch)
+cudss_set(cudss_bλ_gpu, bλ_gpu)
+cudss_set(cudss_xλ_gpu, xλ_gpu)
 
 # Constructor for uniform batch of systems
 solver = CudssSolver(rowPtr, colVal, nzVal, "SPD", 'U')
@@ -176,8 +178,10 @@ nzVal = CuVector{T}([1+Λ[1], 3, 4, 5+Λ[1], 2, 6, 2+Λ[1],
 
 bλ_gpu = CuVector{T}([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
 xλ_gpu = CuVector{T}(undef, n * nbatch)
-cudss_bλ_gpu = CudssMatrix(n, nrhs, bλ_gpu)
-cudss_xλ_gpu = CudssMatrix(n, nrhs, xλ_gpu)
+cudss_bλ_gpu = CudssMatrix(T, n, nrhs; nbatch)
+cudss_xλ_gpu = CudssMatrix(T, n, nrhs; nbatch)
+cudss_set(cudss_bλ_gpu, bλ_gpu)
+cudss_set(cudss_xλ_gpu, xλ_gpu)
 
 # Constructor for uniform batch of systems
 solver = CudssSolver(rowPtr, colVal, nzVal, "G", 'F')
