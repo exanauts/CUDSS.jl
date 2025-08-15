@@ -1,18 +1,18 @@
-# Functions
+## Functions
 
-## cudss
+### cudss
 
 ```@docs
 cudss
 ```
 
-## cudss_set
+### cudss_set
 
 ```@docs
 cudss_set
 ```
 
-## cudss_get
+### cudss_get
 
 ```@docs
 cudss_get

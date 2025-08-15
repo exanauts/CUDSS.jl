@@ -1,4 +1,4 @@
-## Iterative refinement
+### Iterative refinement
 
 ```julia
 using CUDA, CUDA.CUSPARSE
@@ -31,7 +31,7 @@ R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)
 ```
 
-## User permutation
+### User permutation
 
 ```julia
 using CUDA, CUDA.CUSPARSE
@@ -64,7 +64,7 @@ r_gpu = b_gpu - CuSparseMatrixCSR(A_cpu) * x_gpu
 norm(r_gpu)
 ```
 
-## Hybrid mode
+### Hybrid mode
 
 ```julia
 using CUDA, CUDA.CUSPARSE
