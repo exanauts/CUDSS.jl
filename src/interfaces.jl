@@ -2,12 +2,14 @@ export CudssSolver, CudssBatchedSolver, cudss, cudss_set, cudss_get
 
 """
     solver = CudssSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O')
+    solver = CudssSolver(rowPtr::CuVector{Cint}, colVal::CuVector{Cint}, nzVal::CuVector{T}, structure::String, view::Char; index::Char='O')
     solver = CudssSolver(matrix::CudssMatrix{T}, config::CudssConfig, data::CudssData)
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 `CudssSolver` contains all structures required to solve a linear system with cuDSS.
-One constructor of `CudssSolver` takes as input the same parameters as [`CudssMatrix`](@ref).
+It can also be used to solve a batch of linear systems sharing the same sparsity pattern.
+Two constructors of `CudssSolver` take as input the same parameters as [`CudssMatrix`](@ref).
 
 `structure` specifies the stucture for the sparse matrix:
 - `"G"`: General matrix -- LDU factorization;
@@ -42,10 +44,17 @@ mutable struct CudssSolver{T} <: Factorization{T}
     data = CudssData()
     return new{T}(matrix, config, data)
   end
+
+  function CudssSolver(rowPtr::CuVector{Cint}, colVal::CuVector{Cint}, nzVal::CuVector{T}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+    matrix = CudssMatrix(rowPtr, colVal, nzVal, structure, view; index)
+    config = CudssConfig()
+    data = CudssData()
+    return new{T}(matrix, config, data)
+  end
 end
 
 """
-    solver = CudssBatchedSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O')
+    solver = CudssBatchedSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O')
     solver = CudssBatchedSolver(matrix::CudssBatchedMatrix{T}, config::CudssConfig, data::CudssData)
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
@@ -93,6 +102,7 @@ end
 """
     cudss_set(solver::CudssSolver, parameter::String, value)
     cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
+    cudss_set(solver::CudssSolver{T}, rowPtr::CuVector{Cint}, colVal::CuVector{Cint}, nzVal::CuVector{T})
     cudss_set(solver::CudssBatchedSolver, parameter::String, value)
     cudss_set(solver::CudssBatchedSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
     cudss_set(config::CudssConfig, parameter::String, value)
@@ -100,6 +110,7 @@ end
     cudss_set(matrix::CudssMatrix{T}, b::CuVector{T})
     cudss_set(matrix::CudssMatrix{T}, B::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
+    cudss_set(matrix::CudssMatrix{T}, rowPtr::CuVector{Cint}, colVal::CuVector{Cint}, nzVal::CuVector{T})
     cudss_set(matrix::CudssBatchedMatrix{T}, b::Vector{CuVector{T}})
     cudss_set(matrix::CudssBatchedMatrix{T}, B::Vector{CuMatrix{T}})
     cudss_set(matrix::CudssBatchedMatrix{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
@@ -151,8 +162,16 @@ function cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint}) where T
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
 end
 
+function cudss_set(matrix::CudssMatrix{T}, rowPtr::CuVector{Cint}, colVal::CuVector{Cint}, nzVal::CuVector{T}) where T <: BlasFloat
+  cudssMatrixSetCsrPointers(matrix, rowPtr, CU_NULL, colVal, nzVal)
+end
+
 function cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: BlasFloat
   cudss_set(solver.matrix, A)
+end
+
+function cudss_set(solver::CudssSolver{T}, rowPtr::CuVector{Cint}, colVal::CuVector{Cint}, nzVal::CuVector{T}) where T <: BlasFloat
+  cudss_set(solver.matrix, rowPtr, colVal, nzVal)
 end
 
 function cudss_set(matrix::CudssBatchedMatrix{T}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
