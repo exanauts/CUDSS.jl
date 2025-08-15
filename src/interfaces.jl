@@ -56,8 +56,11 @@ end
 """
     solver = CudssBatchedSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O')
     solver = CudssBatchedSolver(matrix::CudssBatchedMatrix{T}, config::CudssConfig, data::CudssData)
+
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+
 `CudssBatchedSolver` contains all structures required to solve a batch of linear systems with cuDSS.
+
 One constructor of `CudssBatchedSolver` takes as input the same parameters as [`CudssBatchedMatrix`](@ref).
 `structure` specifies the stucture for the sparse matrices:
 - `"G"`: General matrix -- LDU factorization;
@@ -65,6 +68,7 @@ One constructor of `CudssBatchedSolver` takes as input the same parameters as [`
 - `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
 - `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
 - `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
+
 `view` specifies matrix view for the sparse matrices:
 - `'L'`: Lower-triangular matrix and all values above the main diagonal are ignored;
 - `'U'`: Upper-triangular matrix and all values below the main diagonal are ignored;
@@ -87,7 +91,10 @@ mutable struct CudssBatchedSolver{T,M} <: Factorization{T}
 
   function CudssBatchedSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
     matrix = CudssBatchedMatrix(A, structure, view; index)
+    config = CudssConfig()
+    data = CudssData()
     M = typeof(matrix.Mptrs)
+    return new{T,M}(matrix, config, data)
   end
 end
 

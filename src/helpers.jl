@@ -85,7 +85,7 @@ mutable struct CudssMatrix{T}
         obj
     end
 
-    function CudssMatrix(m::Integer, n::Integer, val::CuVector{T}; transposed::Bool=false) where T <: BlasFloat
+    function CudssMatrix(m::Integer, n::Integer, val::CuArray{T}; transposed::Bool=false) where T <: BlasFloat
         nval = length(val)
         nbatch = div(val, m * n)
         matrix_ref = Ref{cudssMatrix_t}()
