@@ -54,6 +54,44 @@ mutable struct CudssSolver{T} <: Factorization{T}
 end
 
 """
+    solver = CudssBatchedSolver(A::CuSparseMatrixCSR{T,Cint}, structure::String, view::Char; index::Char='O')
+    solver = CudssBatchedSolver(matrix::CudssBatchedMatrix{T}, config::CudssConfig, data::CudssData)
+The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+`CudssBatchedSolver` contains all structures required to solve a batch of linear systems with cuDSS.
+One constructor of `CudssBatchedSolver` takes as input the same parameters as [`CudssBatchedMatrix`](@ref).
+`structure` specifies the stucture for the sparse matrices:
+- `"G"`: General matrix -- LDU factorization;
+- `"S"`: Real symmetric matrix -- LDLᵀ factorization;
+- `"H"`: Complex Hermitian matrix -- LDLᴴ factorization;
+- `"SPD"`: Symmetric positive-definite matrix -- LLᵀ factorization;
+- `"HPD"`: Hermitian positive-definite matrix -- LLᴴ factorization.
+`view` specifies matrix view for the sparse matrices:
+- `'L'`: Lower-triangular matrix and all values above the main diagonal are ignored;
+- `'U'`: Upper-triangular matrix and all values below the main diagonal are ignored;
+- `'F'`: Full matrix.
+
+`index` specifies indexing base for the sparse matrices:
+- `'Z'`: 0-based indexing;
+- `'O'`: 1-based indexing.
+`CudssBatchedSolver` can be also constructed from the three structures [`CudssBatchedMatrix`](@ref), [`CudssConfig`](@ref) and [`CudssData`](@ref) if needed.
+"""
+mutable struct CudssBatchedSolver{T,M} <: Factorization{T}
+  matrix::CudssBatchedMatrix{T,M}
+  config::CudssConfig
+  data::CudssData
+
+  function CudssBatchedSolver(matrix::CudssBatchedMatrix{T}, config::CudssConfig, data::CudssData) where T <: BlasFloat
+    M = typeof(matrix.Mptrs)
+    return new{T,M}(matrix, config, data)
+  end
+
+  function CudssBatchedSolver(A::Vector{CuSparseMatrixCSR{T,Cint}}, structure::String, view::Char; index::Char='O') where T <: BlasFloat
+    matrix = CudssBatchedMatrix(A, structure, view; index)
+    M = typeof(matrix.Mptrs)
+  end
+end
+
+"""
     cudss_set(solver::CudssSolver, parameter::String, value)
     cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
     cudss_set(solver::CudssBatchedSolver, parameter::String, value)
