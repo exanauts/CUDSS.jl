@@ -138,7 +138,7 @@ The available configuration parameters are:
 - `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
 - `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
 - `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
-- `"ubatch_index"`: Specify cuDSS to process all matrices in the uniform batch at once.
+- `"ubatch_index"`: Use `-1` (default) to process all matrices in the uniform batch, or a 0-based index to process a single matrix during the factorization or solve phase.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -263,7 +263,7 @@ The available configuration parameters are:
 - `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
 - `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
 - `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
-- `"ubatch_index"`: Specify cuDSS to process all matrices in the uniform batch at once.
+- `"ubatch_index"`: Use `-1` (default) to process all matrices in the uniform batch, or a 0-based index to process a single matrix during the factorization or solve phase.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -280,7 +280,7 @@ The available data parameters are:
 
 The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
-The data parameters `"perm_row"` and `"perm_col"` are available but not yet functional.
+The data parameters `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_row"` and `"perm_col"` are available but not yet functional.
 """
 function cudss_get end
 
