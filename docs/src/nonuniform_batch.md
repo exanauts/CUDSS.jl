@@ -1,5 +1,8 @@
 #### Batch factorization of matrices with different sparsity patterns
 
+!!! note
+    This functionality requires CUDSS.jl v0.4.2 and above.
+
 ## Batch LU
 
 ```julia
