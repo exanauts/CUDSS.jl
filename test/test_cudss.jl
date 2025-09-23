@@ -65,6 +65,7 @@ function cudss_solver()
     @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
       @testset "view = $view" for view in ('L', 'U', 'F')
         solver = CudssSolver(A_gpu, structure, view)
+        cudss_set(solver, "use_matching", 1)  # neeeded for "perm_matching" / "scale_row" / "scale_col"
 
         x_cpu = zeros(T, n)
         x_gpu = CuVector(x_cpu)
@@ -74,13 +75,13 @@ function cudss_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm", "perm_matching", "scale_row", "scale_col") && continue
           @testset "cudss_get" begin
-            (parameter == "user_perm") && continue
+            parameter ∈ ("comm", "user_perm", "perm_row", "perm_col") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
           end
           @testset "cudss_set" begin
+            parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm", "perm_matching", "scale_row", "scale_col") && continue
             if parameter == "user_perm"
               perm_cpu = Cint[i for i=n:-1:1]
               cudss_set(solver, parameter, perm_cpu)
