@@ -225,11 +225,13 @@ Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.
 mutable struct CudssData
     handle::cudssHandle_t
     data::cudssData_t
+    nbytes_written::Base.RefValue{Csize_t}
 
     function CudssData(cudss_handle::cudssHandle_t)
         data_ref = Ref{cudssData_t}()
         cudssDataCreate(cudss_handle, data_ref)
-        obj = new(cudss_handle, data_ref[])
+        nbytes_written = Ref{Csize_t}()
+        obj = new(cudss_handle, data_ref[], nbytes_written)
         finalizer(cudssDataDestroy, obj)
         obj
     end
@@ -255,11 +257,13 @@ end
 """
 mutable struct CudssConfig
     config::cudssConfig_t
+    nbytes_written::Base.RefValue{Csize_t}
 
     function CudssConfig()
         config_ref = Ref{cudssConfig_t}()
         cudssConfigCreate(config_ref)
-        obj = new(config_ref[])
+        nbytes_written = Ref{Csize_t}()
+        obj = new(config_ref[], nbytes_written)
         finalizer(cudssConfigDestroy, obj)
         obj
     end
