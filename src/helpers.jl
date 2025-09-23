@@ -33,7 +33,7 @@ The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 - `'Z'`: 0-based indexing;
 - `'O'`: 1-based indexing.
 """
-mutable struct CudssMatrix{T}
+mutable struct CudssMatrix{T} <: AbstractCudssMatrix{T}
     type::Type{T}
     matrix::cudssMatrix_t
     nrows::Cint
@@ -140,7 +140,7 @@ The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 - `'Z'`: 0-based indexing;
 - `'O'`: 1-based indexing.
 """
-mutable struct CudssBatchedMatrix{T,M}
+mutable struct CudssBatchedMatrix{T,M} <: AbstractCudssMatrix{T}
     type::Type{T}
     matrix::cudssMatrix_t
     nbatch::Int

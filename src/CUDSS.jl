@@ -19,6 +19,9 @@ import CUDA.APIUtils: HandleCache
 import LinearAlgebra: lu, lu!, ldlt, ldlt!, cholesky, cholesky!, ldiv!, BlasFloat, BlasReal, checksquare, Factorization
 import Base: \
 
+abstract type AbstractCudssMatrix{T} end
+abstract type AbstractCudssSolver{T} <: Factorization{T} end
+
 include("libcudss.jl")
 include("error.jl")
 include("types.jl")

@@ -29,7 +29,7 @@ Two constructors of `CudssSolver` take as input the same parameters as [`CudssMa
 
 `CudssSolver` can be also constructed from the three structures [`CudssMatrix`](@ref), [`CudssConfig`](@ref) and [`CudssData`](@ref) if needed.
 """
-mutable struct CudssSolver{T} <: Factorization{T}
+mutable struct CudssSolver{T} <: AbstractCudssSolver{T}
   matrix::CudssMatrix{T}
   config::CudssConfig
   data::CudssData
@@ -80,7 +80,7 @@ One constructor of `CudssBatchedSolver` takes as input the same parameters as [`
 
 `CudssBatchedSolver` can be also constructed from the three structures [`CudssBatchedMatrix`](@ref), [`CudssConfig`](@ref) and [`CudssData`](@ref) if needed.
 """
-mutable struct CudssBatchedSolver{T,M} <: Factorization{T}
+mutable struct CudssBatchedSolver{T,M} <: AbstractCudssSolver{T}
   matrix::CudssBatchedMatrix{T,M}
   config::CudssConfig
   data::CudssData
@@ -239,8 +239,6 @@ end
 """
     value = cudss_get(solver::CudssSolver, parameter::String)
     value = cudss_get(solver::CudssBatchedSolver, parameter::String)
-    value = cudss_get(config::CudssConfig, parameter::String)
-    value = cudss_get(data::CudssData, parameter::String)
 
 The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase;
@@ -269,50 +267,60 @@ The available data parameters are:
 - `"info"`: Device-side error information;
 - `"lu_nnz"`: Number of non-zero entries in LU factors;
 - `"npivots"`: Number of pivots encountered during factorization;
-- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric and hermitian non positive-definite matrix types;
+- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric and hermitian indefinite matrices;
 - `"perm_reorder_row"`: Reordering permutation for the rows;
 - `"perm_reorder_col"`: Reordering permutation for the columns;
 - `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
 - `"perm_col"`: Final column permutation (which includes effects of both reordering and pivoting);
+- `"perm_matching"`: Matching (column) permutation Q such that A[:,Q] is reordered and then factorized;
+- `"scale_row"`: A vector of scaling factors applied to the rows of the factorized matrix;
+- `"scale_col"`: A vector of scaling factors applied to the columns of the factorized matrix;
 - `"diag"`: Diagonal of the factorized matrix;
 - `"hybrid_device_memory_min"`: Minimal amount of device memory (number of bytes) required in the hybrid memory mode;
 - `"memory_estimates"`: Memory estimates (in bytes) for host and device memory required for the chosen memory mode.
 
-The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
+The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_matching"`, `"scale_row"`, `"scale_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
-The data parameters `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_row"` and `"perm_col"` are available but not yet functional.
+The data parameters `"perm_matching"`, `"scale_row"`, and `"scale_col"` require matching to be enabled (the configuration parameter `"use_matching"` must be set to `1`).
 """
 function cudss_get end
 
-function cudss_get(solver::Union{CudssSolver,CudssBatchedSolver}, parameter::String)
+function cudss_get(solver::AbstractCudssSolver, parameter::String)
   if parameter ∈ CUDSS_CONFIG_PARAMETERS
     cudss_get(solver.config, parameter)
   elseif parameter ∈ CUDSS_DATA_PARAMETERS
-    cudss_get(solver.data, parameter)
+    cudss_get(solver.matrix, solver.data, parameter)
   else
     throw(ArgumentError("Unknown data or config parameter $parameter."))
   end
 end
 
-function cudss_get(data::CudssData, parameter::String)
+function cudss_get(matrix::AbstractCudssMatrix{T}, data::CudssData, parameter::String) where T <: BlasFloat
   (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
+  is_vector_parameter = true
+  R = real(T)
   if (parameter == "user_perm") || (parameter == "comm")
     throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
-  end
-  if (parameter == "perm_reorder_row") || (parameter == "perm_reorder_col") ||
-     (parameter == "perm_row") || (parameter == "perm_col") || (parameter == "diag") ||
-     (parameter == "perm_matching") || (parameter == "scale_row") || (parameter == "scale_col")
-    throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
-  end
-  if parameter == "memory_estimates"
+  elseif (parameter == "perm_reorder_row") || (parameter == "perm_row")
+    val = zeros(Cint, matrix.nrows)
+  elseif (parameter == "perm_reorder_col") || (parameter == "perm_col") || (parameter == "perm_matching")
+    val = zeros(Cint, matrix.ncols)
+  elseif (parameter == "scale_row")
+    val = zeros(R, matrix.nrows)
+  elseif (parameter == "scale_col")
+    val = zeros(R, matrix.ncols)
+  elseif parameter == "diag"
+    val = zeros(T, matrix.nrows)
+  elseif parameter == "memory_estimates"
     val = zeros(Int64, 16)
   else
+    is_vector_parameter = false
     type = CUDSS_TYPES[parameter]
     val = Ref{type}()
   end
   nbytes = sizeof(val)
   cudssDataGet(data.handle, data.data, parameter, val, nbytes, data.nbytes_written)
-  parameter_value = (parameter == "memory_estimates") ? val : val[]
+  parameter_value = is_vector_parameter ? val : val[]
   return parameter_value
 end
 
