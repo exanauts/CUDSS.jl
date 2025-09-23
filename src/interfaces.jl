@@ -219,12 +219,12 @@ function cudss_set(data::CudssData, parameter::String, value)
   if parameter == "info"
     val = Ref{Cint}(value)
     nbytes = sizeof(val)
-    cudssDataSet(data.handle, data, parameter, val, nbytes)
+    cudssDataSet(data.handle, data.data, parameter, val, nbytes)
   else
     (parameter == "user_perm") || throw(ArgumentError("Only the data parameters \"info\" and \"user_perm\" can be set."))
     (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
     nbytes = sizeof(value)
-    cudssDataSet(data.handle, data, parameter, value, nbytes)
+    cudssDataSet(data.handle, data.data, parameter, value, nbytes)
   end
 end
 
@@ -233,7 +233,7 @@ function cudss_set(config::CudssConfig, parameter::String, value)
   type = CUDSS_TYPES[parameter]
   val = Ref{type}(value)
   nbytes = sizeof(val)
-  cudssConfigSet(config, parameter, val, nbytes)
+  cudssConfigSet(config.config, parameter, val, nbytes)
 end
 
 """
@@ -311,7 +311,7 @@ function cudss_get(data::CudssData, parameter::String)
     val = Ref{type}()
   end
   nbytes = sizeof(val)
-  cudssDataGet(solver.data.handle, data, parameter, val, nbytes, data.nbytes_written)
+  cudssDataGet(data.handle, data.data, parameter, val, nbytes, data.nbytes_written)
   parameter_value = (parameter == "memory_estimates") ? val : val[]
   return parameter_value
 end
@@ -321,7 +321,7 @@ function cudss_get(config::CudssConfig, parameter::String)
   type = CUDSS_TYPES[parameter]
   val = Ref{type}()
   nbytes = sizeof(val)
-  cudssConfigGet(config, parameter, val, nbytes, config.nbytes_written)
+  cudssConfigGet(config.config, parameter, val, nbytes, config.nbytes_written)
   return val[]
 end
 
