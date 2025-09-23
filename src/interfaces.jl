@@ -311,8 +311,7 @@ function cudss_get(data::CudssData, parameter::String)
     val = Ref{type}()
   end
   nbytes = sizeof(val)
-  nbytes_written = Ref{Csize_t}()
-  cudssDataGet(handle(), data, parameter, val, nbytes, nbytes_written)
+  cudssDataGet(solver.data.handle, data, parameter, val, nbytes, data.nbytes_written)
   parameter_value = (parameter == "memory_estimates") ? val : val[]
   return parameter_value
 end
@@ -322,8 +321,7 @@ function cudss_get(config::CudssConfig, parameter::String)
   type = CUDSS_TYPES[parameter]
   val = Ref{type}()
   nbytes = sizeof(val)
-  nbytes_written = Ref{Csize_t}()
-  cudssConfigGet(config, parameter, val, nbytes, nbytes_written)
+  cudssConfigGet(config, parameter, val, nbytes, config.nbytes_written)
   return val[]
 end
 
