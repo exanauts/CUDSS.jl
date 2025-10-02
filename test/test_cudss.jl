@@ -1,5 +1,5 @@
 function cudss_version()
-  @test CUDSS.version() >= v"0.6.0"
+  @test CUDSS.version() >= v"0.7.0"
 end
 
 function cudss_dense()
