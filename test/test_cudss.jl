@@ -814,6 +814,8 @@ function hybrid_mode()
         res = hybrid_ldlt(T, A_cpu, x_cpu, b_cpu, uplo)
         if T == ComplexF64
           @test_broken res ≤ √eps(R)
+        else
+          @test res ≤ √eps(R)
         end
       end
     end
