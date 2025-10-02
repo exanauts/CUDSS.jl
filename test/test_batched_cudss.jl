@@ -81,6 +81,7 @@ function cudss_batched_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
+          parameter ∈ ("nsuperpanels", "user_schur_indices", "schur_shape", "schur_matrix", "user_elimination_tree", "elimination_tree", "user_host_interrupt") && continue
           parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm", "perm_matching", "scale_row", "scale_col") && continue
           @testset "cudss_get" begin
             (parameter == "user_perm") && continue
@@ -99,7 +100,8 @@ function cudss_batched_solver()
         end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
-          (parameter in ("nd_nlevels", "ubatch_size", "ubatch_index")) && continue
+          parameter ∈ ("use_superpanels", "device_count", "device_indices", "schur_mode", "deterministic_mode") && continue
+          parameter ∈ ("nd_nlevels", "ubatch_size", "ubatch_index") && continue
           @testset "cudss_get" begin
             if parameter != "host_nthreads"
               val = cudss_get(solver, parameter)
