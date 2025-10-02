@@ -13,7 +13,7 @@ const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_a
                                  "hybrid_device_memory_limit", "use_cuda_register_memory", "host_nthreads",
                                  "hybrid_execute_mode", "pivot_epsilon_alg", "nd_nlevels", "ubatch_size",
                                  "ubatch_index", "use_superpanels", "device_count", "device_indices",
-                                 "schur_mode" "deterministic_mode")
+                                 "schur_mode", "deterministic_mode")
 
 const CUDSS_TYPES = Dict{String, Type}(
     # data type
@@ -36,7 +36,7 @@ const CUDSS_TYPES = Dict{String, Type}(
     "nsuperpanels" => Cint,
     "user_schur_indices" => Cint,
     "schur_shape" => Tuple{Int64, Int64, Int64},
-    "schur_matrix" => cudssMatrix_t
+    "schur_matrix" => cudssMatrix_t,
     "user_elimination_tree" => Vector{Cint},
     "elimination_tree" => Vector{Cint},
     "user_host_interrupt" => Vector{Cint},
