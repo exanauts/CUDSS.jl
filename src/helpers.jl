@@ -279,7 +279,7 @@ mutable struct CudssConfig
         cudssConfigCreate(config_ref)
         ref_cint = Ref{Cint}()
         ref_int64 = Ref{Int64}()
-        ref_float64 = Ref{Int64}()
+        ref_float64 = Ref{Float64}()
         ref_algo = Ref{cudssAlgType_t}()
         ref_pivot = Ref{cudssPivotType_t}()
         nbytes_written = Ref{Csize_t}()
