@@ -258,7 +258,7 @@ function cudss_set(solver::AbstractCudssSolver, parameter::String, value)
   return
 end
 
-function cudss_set_config(solver::AbstractCudssSolver, parameter::String, value)
+function cudss_set_data(solver::AbstractCudssSolver, parameter::String, value)
   if parameter == "info"
     solver.ref_cint[] = value
     cudssDataSet(solver.data.handle, solver.data, parameter, solver.ref_cint, Csize_t(4))
@@ -280,7 +280,7 @@ function cudss_set_config(solver::AbstractCudssSolver, parameter::String, value)
   return
 end
 
-function cudss_set_data(solver::AbstractCudssSolver, parameter::String, value)
+function cudss_set_config(solver::AbstractCudssSolver, parameter::String, value)
   if parameter == "reordering_alg" || parameter == "factorization_alg" || parameter == "solve_alg" ||
      parameter == "matching_alg" || parameter == "pivot_epsilon_alg"
     solver.ref_algo[] = value
