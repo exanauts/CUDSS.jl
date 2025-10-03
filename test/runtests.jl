@@ -52,8 +52,8 @@ include("test_batched_cudss.jl")
     small_matrices()
   end
 
-  @testset "Hybrid mode" begin
-    hybrid_mode()
+  @testset "Hybrid memory mode" begin
+    hybrid_memory_mode()
   end
 
   @testset "Refactorization Cholesky" begin
@@ -75,8 +75,8 @@ end
     cudss_batched_execution()
   end
 
-  @testset "Hybrid mode -- batched" begin
-    hybrid_batched_mode()
+  @testset "Hybrid memory mode -- batched" begin
+    batched_hybrid_memory_mode()
   end
 
   @testset "Refactorization Cholesky -- batched" begin

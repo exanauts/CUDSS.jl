@@ -130,7 +130,7 @@ The available configuration parameters are:
 - `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
 - `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
-- `"hybrid_mode"`: Hybrid memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"hybrid_memory_mode"`: Hybrid memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
 - `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
 - `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
 - `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;
@@ -262,7 +262,7 @@ The available configuration parameters are:
 - `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
 - `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
-- `"hybrid_mode"`: Hybrid memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
+- `"hybrid_memory_mode"`: Hybrid memory mode -- `0` (default = device-only) or `1` (hybrid = host/device);
 - `"hybrid_device_memory_limit"`: User-defined device memory limit (number of bytes) for the hybrid memory mode;
 - `"use_cuda_register_memory"`: A flag to enable (`1`) or disable (`0`) usage of `cudaHostRegister()` by the hybrid memory mode;
 - `"host_nthreads"`: Number of threads to be used by cuDSS in multi-threaded mode;

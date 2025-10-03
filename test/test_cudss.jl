@@ -119,7 +119,7 @@ function cudss_solver()
               (parameter == "pivot_epsilon_alg") && cudss_set(solver, parameter, algo)
             end
             for flag in (0, 1)
-              (parameter == "hybrid_mode") && cudss_set(solver, parameter, flag)
+              (parameter == "hybrid_memory_mode") && cudss_set(solver, parameter, flag)
               (parameter == "hybrid_execute_mode") && cudss_set(solver, parameter, flag)
               (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
             end
@@ -723,14 +723,14 @@ function small_matrices()
   end
 end
 
-function hybrid_mode()
+function hybrid_memory_mode()
   function hybrid_lu(T, A_cpu, x_cpu, b_cpu)
     A_gpu = CuSparseMatrixCSR(A_cpu)
     x_gpu = CuVector(x_cpu)
     b_gpu = CuVector(b_cpu)
 
     solver = CudssSolver(A_gpu, "G", 'F')
-    cudss_set(solver, "hybrid_mode", 1)
+    cudss_set(solver, "hybrid_memory_mode", 1)
 
     cudss("analysis", solver, x_gpu, b_gpu)
     nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")
@@ -756,7 +756,7 @@ function hybrid_mode()
 
     structure = T <: Real ? "S" : "H"
     solver = CudssSolver(A_gpu, structure, uplo)
-    cudss_set(solver, "hybrid_mode", 1)
+    cudss_set(solver, "hybrid_memory_mode", 1)
 
     cudss("analysis", solver, x_gpu, b_gpu)
     nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")
@@ -782,7 +782,7 @@ function hybrid_mode()
 
     structure = T <: Real ? "SPD" : "HPD"
     solver = CudssSolver(A_gpu, structure, uplo)
-    cudss_set(solver, "hybrid_mode", 1)
+    cudss_set(solver, "hybrid_memory_mode", 1)
 
     cudss("analysis", solver, x_gpu, b_gpu)
     nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")

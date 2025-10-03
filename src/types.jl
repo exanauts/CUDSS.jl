@@ -9,7 +9,7 @@ const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reo
 
 const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "use_matching",
                                  "matching_alg", "solve_mode", "ir_n_steps", "ir_tol", "pivot_type",
-                                 "pivot_threshold", "pivot_epsilon", "max_lu_nnz", "hybrid_mode",
+                                 "pivot_threshold", "pivot_epsilon", "max_lu_nnz", "hybrid_memory_mode",
                                  "hybrid_device_memory_limit", "use_cuda_register_memory", "host_nthreads",
                                  "hybrid_execute_mode", "pivot_epsilon_alg", "nd_nlevels", "ubatch_size",
                                  "ubatch_index", "use_superpanels", "device_count", "device_indices",
@@ -53,7 +53,7 @@ const CUDSS_TYPES = Dict{String, Type}(
     "pivot_threshold" => Float64,
     "pivot_epsilon" => Float64,
     "max_lu_nnz" => Int64,
-    "hybrid_mode" => Cint,
+    "hybrid_memory_mode" => Cint,
     "hybrid_device_memory_limit" => Int64,
     "use_cuda_register_memory" => Cint,
     "host_nthreads" => Cint,
@@ -96,7 +96,7 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_PIVOT_EPSILON
     elseif config == "max_lu_nnz"
         return CUDSS_CONFIG_MAX_LU_NNZ
-    elseif config == "hybrid_mode"
+    elseif config == "hybrid_memory_mode"
         return CUDSS_CONFIG_HYBRID_MODE
     elseif config == "hybrid_device_memory_limit"
         return CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT
