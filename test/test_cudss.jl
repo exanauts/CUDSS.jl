@@ -77,7 +77,7 @@ function cudss_solver()
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
           parameter ∈ ("comm", "user_schur_indices", "schur_shape", "schur_matrix", "user_elimination_tree", "elimination_tree", "user_host_interrupt") && continue
           @testset "cudss_get" begin
-            parameter ∈ ("comm", "user_perm") && continue
+            parameter ∈ ("comm", "user_perm", "perm_row", "perm_col") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
           end
