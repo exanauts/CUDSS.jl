@@ -75,14 +75,14 @@ function cudss_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-          parameter ∈ ("nsuperpanels", "user_schur_indices", "schur_shape", "schur_matrix", "user_elimination_tree", "elimination_tree", "user_host_interrupt") && continue
+          parameter ∈ ("comm", "user_schur_indices", "schur_shape", "schur_matrix", "user_elimination_tree", "elimination_tree", "user_host_interrupt") && continue
           @testset "cudss_get" begin
-            parameter ∈ ("comm", "user_perm", "perm_row", "perm_col") && continue
+            parameter ∈ ("comm", "user_perm") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
             val = cudss_get(solver, parameter)
           end
           @testset "cudss_set" begin
-            parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm", "perm_matching", "scale_row", "scale_col") && continue
+            parameter ∈ ("nsuperpanels", "perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "perm_matching", "scale_row", "scale_col") && continue
             if parameter == "user_perm"
               perm_cpu = Cint[i for i=n:-1:1]
               cudss_set(solver, parameter, perm_cpu)
@@ -94,15 +94,14 @@ function cudss_solver()
         end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
-          parameter ∈ ("use_superpanels", "device_count", "device_indices", "schur_mode", "deterministic_mode") && continue
-          parameter ∈ ("nd_nlevels", "ubatch_size", "ubatch_index") && continue
+          parameter ∈ ("device_indices", "nd_nlevels", "ubatch_size", "ubatch_index") && continue
           @testset "cudss_get" begin
             if parameter != "host_nthreads"
               val = cudss_get(solver, parameter)
             end
           end
           @testset "cudss_set" begin
-            (parameter == "use_matching") && cudss_set(solver, parameter, 1)
+            (parameter == "device_count") && cudss_set(solver, parameter, 1)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
@@ -119,8 +118,12 @@ function cudss_solver()
               (parameter == "pivot_epsilon_alg") && cudss_set(solver, parameter, algo)
             end
             for flag in (0, 1)
+              (parameter == "schur_mode") && cudss_set(solver, parameter, flag)
+              (parameter == "deterministic_mode") && cudss_set(solver, parameter, flag)
               (parameter == "hybrid_memory_mode") && cudss_set(solver, parameter, flag)
               (parameter == "hybrid_execute_mode") && cudss_set(solver, parameter, flag)
+              (parameter == "use_superpanels") && cudss_set(solver, parameter, flag)
+              (parameter == "use_matching") && cudss_set(solver, parameter, flag)
               (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
             end
             for pivoting in ('C', 'R', 'N')

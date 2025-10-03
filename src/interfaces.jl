@@ -357,10 +357,12 @@ function _cudss_get(matrix::AbstractCudssMatrix{T}, data::CudssData, parameter::
     return data.ref_matrix[]
   elseif parameter == "perm_reorder_row" || parameter == "perm_row"
     val = zeros(Cint, matrix.nrows)
+    nbytes = sizeof(val)
     cudssDataGet(data.handle, data.data, parameter, val, Csize_t(nbytes), data.nbytes_written)
     return val
   elseif parameter == "perm_reorder_col" || parameter == "perm_col" || parameter == "perm_matching"
     val = zeros(Cint, matrix.ncols)
+    nbytes = sizeof(val)
     cudssDataGet(data.handle, data.data, parameter, val, Csize_t(nbytes), data.nbytes_written)
     return val
   elseif parameter == "diag"
