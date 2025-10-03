@@ -138,12 +138,21 @@ The available configuration parameters are:
 - `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
 - `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
 - `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
-- `"ubatch_index"`: Use `-1` (default) to process all matrices in the uniform batch, or a 0-based index to process a single matrix during the factorization or solve phase.
+- `"ubatch_index"`: Use `-1` (default) to process all matrices in the uniform batch, or a 0-based index to process a single matrix during the factorization or solve phase;
+- `"use_superpanels"`: Use superpanel optimization -- `1` (default = enabled) or `0` (disabled);
+- `"device_count"`: Device count in case of multiple device;
+- `"device_indices"`: A list of device indices as an integer array;
+- `"schur_mode"`: Schur complement mode -- `0` (default = disabled) or `1` (enabled);
+- `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled).
 
 The available data parameters are:
 - `"info"`: Device-side error information;
 - `"user_perm"`: User permutation to be used instead of running the reordering algorithms;
-- `"comm"`: Communicator for Multi-GPU multi-node mode.
+- `"comm"`: Communicator for Multi-GPU multi-node mode;
+- `"user_elimination_tree"`: User provided elimination tree information, which is used instead of running the reordering algorithm;
+- `"user_schur_indices"`: User-provided Schur complement indices. The provided buffer should be an integer array of size `n`, where `n` is the dimension of the matrix. The values should be equal to `1` for the rows / columns which are part of the Schur complement and `0` for the rest;
+- `"user_host_interrupt"`: User-provided host interrupt pointer;
+- `"schur_matrix"`: Schur complement matrix as a `cudssMatrix_t` object.
 
 The data parameter `"info"` must be restored to `0` if a Cholesky factorization fails
 due to indefiniteness and refactorization is performed on an updated matrix.
@@ -261,13 +270,18 @@ The available configuration parameters are:
 - `"pivot_epsilon_alg"`: Algorithm for the pivot epsilon calculation;
 - `"nd_nlevels"`: Minimum number of levels for the nested dissection reordering;
 - `"ubatch_size"`: The number of matrices in a uniform batch of systems to be processed by cuDSS;
-- `"ubatch_index"`: Use `-1` (default) to process all matrices in the uniform batch, or a 0-based index to process a single matrix during the factorization or solve phase.
+- `"ubatch_index"`: Use `-1` (default) to process all matrices in the uniform batch, or a 0-based index to process a single matrix during the factorization or solve phase;
+- `"use_superpanels"`: Use superpanel optimization -- `1` (default = enabled) or `0` (disabled);
+- `"device_count"`: Device count in case of multiple device;
+- `"device_indices"`: A list of device indices as an integer array;
+- `"schur_mode"`: Schur complement mode -- `0` (default = disabled) or `1` (enabled);
+- `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled).
 
 The available data parameters are:
 - `"info"`: Device-side error information;
 - `"lu_nnz"`: Number of non-zero entries in LU factors;
 - `"npivots"`: Number of pivots encountered during factorization;
-- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric and hermitian indefinite matrices;
+- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric / hermitian indefinite matrices;
 - `"perm_reorder_row"`: Reordering permutation for the rows;
 - `"perm_reorder_col"`: Reordering permutation for the columns;
 - `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
@@ -277,7 +291,10 @@ The available data parameters are:
 - `"scale_col"`: A vector of scaling factors applied to the columns of the factorized matrix;
 - `"diag"`: Diagonal of the factorized matrix;
 - `"hybrid_device_memory_min"`: Minimal amount of device memory (number of bytes) required in the hybrid memory mode;
-- `"memory_estimates"`: Memory estimates (in bytes) for host and device memory required for the chosen memory mode.
+- `"memory_estimates"`: Memory estimates (in bytes) for host and device memory required for the chosen memory mode;
+- `"nsuperpanels"`: Number of superpanels in the matrix;
+- `"schur_shape"`: Shape of the Schur complement matrix as a triplet (nrows, ncols, nnz);
+- `"elimination_tree"`: User provided elimination tree information, which is used instead of running the reordering algorithm. It must be used in combination with `"user_perm"` to have an effect.
 
 The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_matching"`, `"scale_row"`, `"scale_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
@@ -343,8 +360,19 @@ end
 
 The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
-The available phases are `"reordering"`, `"symbolic_factorization"`, `"analysis"`, `"factorization"`, `"refactorization"` and `"solve"`.
-The phases `"solve_fwd"`, `"solve_diag"` and `"solve_bwd"` are available but not yet functional.
+The available phases are:
+- `"reordering"`: Reordering;
+- `"symbolic_factorization"`: Symbolic factorization;
+- `"analysis"`: Reordering and symbolic factorization combined;
+- `"factorization"`: Numerical factorization;
+- `"refactorization"`: Numerical re-factorization;
+- `"solve_fwd_perm"`: Applying reordering permutation to the right hand side before the forward substitution;
+- `"solve_fwd"`: Forward substitution sub-step of the solving phase, including the local permutation due to partial pivoting;
+- `"solve_diag"`: Diagonal solve sub-step of the solving phase (only needed for symmetric / hermitian indefinite matrices);
+- `"solve_bwd"`: Backward substitution sub-step of the solving phase, including the local permutation due to partial pivoting;
+- `"solve_bwd_perm"`: Applying inverse reordering permutation to the intermediate solution after the backward substitution. If matching (and scaling) is enabled, this phase also includes applying the inverse matching permutation and inverse scaling (as the matching permutation and scalings were used to modify the matrix before the factorization);
+- `"solve_refinement"`: Iterative refinement;
+- `"solve"`: Full solving phase, combining all sub-phases and (optional) iterative refinement.
 """
 function cudss end
 

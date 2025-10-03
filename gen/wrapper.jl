@@ -162,6 +162,9 @@ function main()
     args = get_default_args()
     push!(args, "-I$cudss", "-I$cuda")
 
+    # Clang.jl stumbles without stubbing out this attribute
+    push!(args, "-D__device_builtin__=__attribute__((unused))")
+
     options = load_options(joinpath(@__DIR__, "cudss.toml"))
 
     # create context

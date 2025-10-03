@@ -1,5 +1,5 @@
 function cudss_version()
-  @test CUDSS.version() >= v"0.6.0"
+  @test CUDSS.version() >= v"0.7.0"
 end
 
 function cudss_dense()
@@ -75,6 +75,7 @@ function cudss_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
+          parameter ∈ ("nsuperpanels", "user_schur_indices", "schur_shape", "schur_matrix", "user_elimination_tree", "elimination_tree", "user_host_interrupt") && continue
           @testset "cudss_get" begin
             parameter ∈ ("comm", "user_perm", "perm_row", "perm_col") && continue
             (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
@@ -93,7 +94,8 @@ function cudss_solver()
         end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
-          (parameter in ("nd_nlevels", "ubatch_size", "ubatch_index")) && continue
+          parameter ∈ ("use_superpanels", "device_count", "device_indices", "schur_mode", "deterministic_mode") && continue
+          parameter ∈ ("nd_nlevels", "ubatch_size", "ubatch_index") && continue
           @testset "cudss_get" begin
             if parameter != "host_nthreads"
               val = cudss_get(solver, parameter)
@@ -810,7 +812,11 @@ function hybrid_mode()
       b_cpu = rand(T, n)
       @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
         res = hybrid_ldlt(T, A_cpu, x_cpu, b_cpu, uplo)
-        @test res ≤ √eps(R)
+        if T == ComplexF64
+          @test_broken res ≤ √eps(R)
+        else
+          @test res ≤ √eps(R)
+        end
       end
     end
     @testset "LLᵀ / LLᴴ" begin

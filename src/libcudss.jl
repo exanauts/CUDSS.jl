@@ -1,4 +1,4 @@
-using CEnum
+using CEnum: CEnum, @cenum
 
 # CUDSS uses CUDA runtime objects, which are compatible with our driver usage
 const cudaStream_t = CUstream
@@ -43,6 +43,11 @@ const cudssConfig_t = Ptr{cudssConfig}
     CUDSS_CONFIG_ND_NLEVELS = 18
     CUDSS_CONFIG_UBATCH_SIZE = 19
     CUDSS_CONFIG_UBATCH_INDEX = 20
+    CUDSS_CONFIG_USE_SUPERPANELS = 21
+    CUDSS_CONFIG_DEVICE_COUNT = 22
+    CUDSS_CONFIG_DEVICE_INDICES = 23
+    CUDSS_CONFIG_SCHUR_MODE = 24
+    CUDSS_CONFIG_DETERMINISTIC_MODE = 25
 end
 
 @cenum cudssDataParam_t::UInt32 begin
@@ -62,6 +67,13 @@ end
     CUDSS_DATA_PERM_MATCHING = 13
     CUDSS_DATA_SCALE_ROW = 14
     CUDSS_DATA_SCALE_COL = 15
+    CUDSS_DATA_NSUPERPANELS = 16
+    CUDSS_DATA_USER_SCHUR_INDICES = 17
+    CUDSS_DATA_SCHUR_SHAPE = 18
+    CUDSS_DATA_SCHUR_MATRIX = 19
+    CUDSS_DATA_USER_ELIMINATION_TREE = 20
+    CUDSS_DATA_ELIMINATION_TREE = 21
+    CUDSS_DATA_USER_HOST_INTERRUPT = 22
 end
 
 @cenum cudssPhase_t::UInt32 begin
@@ -70,10 +82,13 @@ end
     CUDSS_PHASE_ANALYSIS = 3
     CUDSS_PHASE_FACTORIZATION = 4
     CUDSS_PHASE_REFACTORIZATION = 8
-    CUDSS_PHASE_SOLVE_FWD = 16
-    CUDSS_PHASE_SOLVE_DIAG = 32
-    CUDSS_PHASE_SOLVE_BWD = 64
-    CUDSS_PHASE_SOLVE = 112
+    CUDSS_PHASE_SOLVE_FWD_PERM = 16
+    CUDSS_PHASE_SOLVE_FWD = 32
+    CUDSS_PHASE_SOLVE_DIAG = 64
+    CUDSS_PHASE_SOLVE_BWD = 128
+    CUDSS_PHASE_SOLVE_BWD_PERM = 256
+    CUDSS_PHASE_SOLVE_REFINEMENT = 512
+    CUDSS_PHASE_SOLVE = 1008
 end
 
 @cenum cudssStatus_t::UInt32 begin
@@ -221,6 +236,12 @@ end
 @checked function cudssCreate(handle)
     initialize_context()
     @gcsafe_ccall libcudss.cudssCreate(handle::Ptr{cudssHandle_t})::cudssStatus_t
+end
+
+@checked function cudssCreateMg(handle_pt, device_count, device_indices)
+    initialize_context()
+    @gcsafe_ccall libcudss.cudssCreateMg(handle_pt::Ptr{cudssHandle_t}, device_count::Cint,
+                                         device_indices::Ptr{Cint})::cudssStatus_t
 end
 
 @checked function cudssDestroy(handle)
