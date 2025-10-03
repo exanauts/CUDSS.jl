@@ -12,10 +12,11 @@ on:
 
 jobs:
   test-gpu:
-    runs-on: [cuda]
+    runs-on: [moonshot]
     strategy:
       matrix:
         julia-version: ['1.10', '1.11']
+        cuda-version: ['12.9']
         julia-arch: [x64]
 
     steps:
@@ -25,6 +26,7 @@ jobs:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.julia-arch }}
       - uses: julia-actions/julia-buildpkg@latest
+      - run: julia --project=. -e 'using CUDA; CUDA.set_runtime_version!(v"${{ matrix.cuda-version }}")'
       - uses: julia-actions/julia-runtest@latest
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v2
