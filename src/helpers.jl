@@ -225,13 +225,23 @@ Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.
 mutable struct CudssData
     handle::cudssHandle_t
     data::cudssData_t
+    ref_cint::Base.RefValue{Cint}
+    ref_int64::Base.RefValue{Int64}
+    ref_inertia::Base.RefValue{Tuple{Cint,Cint}}
+    ref_schur::Base.RefValue{Tuple{Int64,Int64,Int64}}
+    ref_matrix::Base.RefValue{cudssMatrix_t}
     nbytes_written::Base.RefValue{Csize_t}
 
     function CudssData(cudss_handle::cudssHandle_t)
         data_ref = Ref{cudssData_t}()
         cudssDataCreate(cudss_handle, data_ref)
+        ref_cint = Ref{Cint}()
+        ref_int64 = Ref{Int64}()
+        ref_inertia = Ref{Tuple{Cint,Cint}}()
+        ref_schur = Ref{Tuple{Int64,Int64,Int64}}()
+        ref_matrix = Ref{cudssMatrix_t}()
         nbytes_written = Ref{Csize_t}()
-        obj = new(cudss_handle, data_ref[], nbytes_written)
+        obj = new(cudss_handle, data_ref[], ref_cint, ref_int64, ref_inertia, ref_schur, ref_matrix, nbytes_written)
         finalizer(cudssDataDestroy, obj)
         obj
     end
@@ -245,7 +255,7 @@ end
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
 
 function cudssDataDestroy(data::CudssData)
-    cudssDataDestroy(data.handle, data)
+    cudssDataDestroy(data.handle, data.data)
 end
 
 ## Configuration
@@ -257,13 +267,23 @@ end
 """
 mutable struct CudssConfig
     config::cudssConfig_t
+    ref_cint::Base.RefValue{Cint}
+    ref_int64::Base.RefValue{Int64}
+    ref_float64::Base.RefValue{Float64}
+    ref_algo::Base.RefValue{cudssAlgType_t}
+    ref_pivot::Base.RefValue{cudssPivotType_t}
     nbytes_written::Base.RefValue{Csize_t}
 
     function CudssConfig()
         config_ref = Ref{cudssConfig_t}()
         cudssConfigCreate(config_ref)
+        ref_cint = Ref{Cint}()
+        ref_int64 = Ref{Int64}()
+        ref_float64 = Ref{Float64}()
+        ref_algo = Ref{cudssAlgType_t}()
+        ref_pivot = Ref{cudssPivotType_t}()
         nbytes_written = Ref{Csize_t}()
-        obj = new(config_ref[], nbytes_written)
+        obj = new(config_ref[], ref_cint, ref_int64, ref_float64, ref_algo, ref_pivot, nbytes_written)
         finalizer(cudssConfigDestroy, obj)
         obj
     end

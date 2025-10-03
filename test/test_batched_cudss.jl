@@ -100,15 +100,14 @@ function cudss_batched_solver()
         end
 
         @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
-          parameter ∈ ("use_superpanels", "device_count", "device_indices", "schur_mode", "deterministic_mode") && continue
-          parameter ∈ ("nd_nlevels", "ubatch_size", "ubatch_index") && continue
+          parameter ∈ ("device_indices", "nd_nlevels", "ubatch_size", "ubatch_index") && continue
           @testset "cudss_get" begin
             if parameter != "host_nthreads"
               val = cudss_get(solver, parameter)
             end
           end
           @testset "cudss_set" begin
-            (parameter == "use_matching") && cudss_set(solver, parameter, 1)
+            (parameter == "device_count") && cudss_set(solver, parameter, 1)
             (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
             (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
             (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
@@ -123,7 +122,11 @@ function cudss_batched_solver()
               (parameter == "solve_alg") && cudss_set(solver, parameter, algo)
             end
             for flag in (0, 1)
+              (parameter == "schur_mode") && cudss_set(solver, parameter, flag)
+              (parameter == "deterministic_mode") && cudss_set(solver, parameter, flag)
               (parameter == "hybrid_memory_mode") && cudss_set(solver, parameter, flag)
+              (parameter == "use_superpanels") && cudss_set(solver, parameter, flag)
+              (parameter == "use_matching") && cudss_set(solver, parameter, flag)
               (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
             end
             for pivoting in ('C', 'R', 'N')

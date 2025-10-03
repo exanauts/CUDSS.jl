@@ -101,12 +101,10 @@ end
 
 """
     cudss_set(solver::CudssSolver, parameter::String, value)
+    cudss_set(solver::CudssBatchedSolver, parameter::String, value)
     cudss_set(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
     cudss_set(solver::CudssSolver{T}, rowPtr::CuVector{Cint}, colVal::CuVector{Cint}, nzVal::CuVector{T})
-    cudss_set(solver::CudssBatchedSolver, parameter::String, value)
     cudss_set(solver::CudssBatchedSolver{T}, A::Vector{CuSparseMatrixCSR{T,Cint}})
-    cudss_set(config::CudssConfig, parameter::String, value)
-    cudss_set(data::CudssData, parameter::String, value)
     cudss_set(matrix::CudssMatrix{T}, b::CuVector{T})
     cudss_set(matrix::CudssMatrix{T}, B::CuMatrix{T})
     cudss_set(matrix::CudssMatrix{T}, A::CuSparseMatrixCSR{T,Cint})
@@ -212,37 +210,66 @@ function cudss_set(solver::CudssBatchedSolver{T}, A::Vector{CuSparseMatrixCSR{T,
   cudss_set(solver.matrix, A)
 end
 
-function cudss_set(solver::Union{CudssSolver,CudssBatchedSolver}, parameter::String, value)
+function cudss_set(solver::AbstractCudssSolver, parameter::String, value)
   if parameter ∈ CUDSS_CONFIG_PARAMETERS
-    cudss_set(solver.config, parameter, value)
+    _cudss_set(solver.config, parameter, value)
   elseif parameter ∈ CUDSS_DATA_PARAMETERS
-    cudss_set(solver.data, parameter, value)
+    _cudss_set(solver.data, parameter, value)
   else
-    throw(ArgumentError("Unknown data or config parameter $parameter."))
+    throw(ArgumentError("Unknown data or config parameter \"$parameter\"."))
   end
+  return
 end
 
-function cudss_set(data::CudssData, parameter::String, value)
-  (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
-  (parameter == "comm") && throw(ArgumentError("The data parameter \"$parameter\" is not supported by CUDSS.jl."))
+function _cudss_set(data::CudssData, parameter::String, value)
   if parameter == "info"
-    val = Ref{Cint}(value)
-    nbytes = sizeof(val)
-    cudssDataSet(data.handle, data.data, parameter, val, nbytes)
-  else
-    (parameter == "user_perm") || throw(ArgumentError("Only the data parameters \"info\" and \"user_perm\" can be set."))
-    (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The permutation is neither a Vector{Cint} nor a CuVector{Cint}."))
+    data.ref_cint[] = value
+    cudssDataSet(data.handle, data.data, parameter, data.ref_cint, Csize_t(4))
+  elseif parameter == "user_perm" || parameter == "user_schur_indices"
+    (value isa Vector{Cint} || value isa CuVector{Cint}) || throw(ArgumentError("The vector is neither a Vector{Cint} nor a CuVector{Cint}."))
     nbytes = sizeof(value)
-    cudssDataSet(data.handle, data.data, parameter, value, nbytes)
+    cudssDataSet(data.handle, data.data, parameter, value, Csize_t(nbytes))
+  elseif parameter == "lu_nnz" || parameter == "npivots" || parameter == "inertia" || parameter == "perm_reorder_row" ||
+         parameter == "perm_reorder_col" || parameter == "perm_row" || parameter == "perm_col" || parameter == "diag" ||
+         parameter == "hybrid_device_memory_min" || parameter == "memory_estimates" || parameter == "perm_matching" ||
+         parameter == "scale_row" || parameter == "scale_col" || parameter == "nsuperpanels" || parameter == "schur_shape" ||
+         parameter == "schur_matrix" || parameter == "elimination_tree"
+    throw(ArgumentError("The data parameter \"$parameter\" can't be set."))
+  elseif parameter == "comm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt"
+    throw(ArgumentError("The data parameter \"$parameter\" is not yet supported by CUDSS.jl."))
+  else
+    throw(ArgumentError("Unknown data parameter \"$parameter\"."))
   end
+  return
 end
 
-function cudss_set(config::CudssConfig, parameter::String, value)
-  (parameter ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $parameter."))
-  type = CUDSS_TYPES[parameter]
-  val = Ref{type}(value)
-  nbytes = sizeof(val)
-  cudssConfigSet(config.config, parameter, val, nbytes)
+function _cudss_set(config::CudssConfig, parameter::String, value)
+  if parameter == "reordering_alg" || parameter == "factorization_alg" || parameter == "solve_alg" ||
+     parameter == "matching_alg" || parameter == "pivot_epsilon_alg"
+    config.ref_algo[] = value
+    cudssConfigSet(config.config, parameter, config.ref_algo, Csize_t(4))
+  elseif parameter == "pivot_type"
+    config.ref_pivot[] = value
+    cudssConfigSet(config.config, parameter, config.ref_pivot, Csize_t(4))
+  elseif parameter == "ir_tol" || parameter == "pivot_threshold" || parameter == "pivot_epsilon"
+    config.ref_float64[] = value
+    cudssConfigSet(config.config, parameter, config.ref_float64, Csize_t(8))
+  elseif parameter == "max_lu_nnz" || parameter == "hybrid_device_memory_limit"
+    config.ref_int64[] = value
+    cudssConfigSet(config.config, parameter, config.ref_int64, Csize_t(8))
+  elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" || parameter == "solve_mode" ||
+         parameter == "deterministic_mode" || parameter == "schur_mode" || parameter == "use_cuda_register_memory" ||
+         parameter == "use_matching" || parameter == "use_superpanels" || parameter == "ir_n_steps" ||
+         parameter == "host_nthreads" || parameter == "device_count" || parameter == "nd_nlevels" ||
+         parameter == "ubatch_size" || parameter == "ubatch_index"
+    config.ref_cint[] = value
+    cudssConfigSet(config.config, parameter, config.ref_cint, Csize_t(4))
+  elseif parameter == "device_indices"
+    throw(ArgumentError("The config parameter \"device_indices\" is not supported by CUDSS.jl."))
+  else
+    throw(ArgumentError("Unknown config parameter \"$parameter\"."))
+  end
+  return
 end
 
 """
@@ -304,50 +331,93 @@ function cudss_get end
 
 function cudss_get(solver::AbstractCudssSolver, parameter::String)
   if parameter ∈ CUDSS_CONFIG_PARAMETERS
-    cudss_get(solver.config, parameter)
+    _cudss_get(solver.config, parameter)
   elseif parameter ∈ CUDSS_DATA_PARAMETERS
-    cudss_get(solver.matrix, solver.data, parameter)
+    _cudss_get(solver.matrix, solver.data, parameter)
   else
-    throw(ArgumentError("Unknown data or config parameter $parameter."))
+    throw(ArgumentError("Unknown data or config parameter \"$parameter\"."))
   end
 end
 
-function cudss_get(matrix::AbstractCudssMatrix{T}, data::CudssData, parameter::String) where T <: BlasFloat
-  (parameter ∈ CUDSS_DATA_PARAMETERS) || throw(ArgumentError("Unknown data parameter $parameter."))
-  is_vector_parameter = true
-  R = real(T)
-  if (parameter == "user_perm") || (parameter == "comm")
-    throw(ArgumentError("The data parameter \"$parameter\" cannot be retrieved."))
-  elseif (parameter == "perm_reorder_row") || (parameter == "perm_row")
+function _cudss_get(matrix::AbstractCudssMatrix{T}, data::CudssData, parameter::String) where T <: BlasFloat
+  if parameter == "info" || parameter == "nsuperpanels" || parameter == "npivots"
+    cudssDataGet(data.handle, data.data, parameter, data.ref_cint, Csize_t(4), data.nbytes_written)
+    return data.ref_cint[]
+  elseif parameter == "lu_nnz" || parameter == "hybrid_device_memory_min"
+    cudssDataGet(data.handle, data.data, parameter, data.ref_int64, Csize_t(8), data.nbytes_written)
+    return data.ref_int64[]
+  elseif parameter == "inertia"
+    cudssDataGet(data.handle, data.data, parameter, data.ref_inertia, Csize_t(8), data.nbytes_written)
+    return data.ref_inertia[]
+  elseif parameter == "schur_shape"
+    cudssDataGet(data.handle, data.data, parameter, data.ref_schur, Csize_t(24), data.nbytes_written)
+    return data.ref_schur[]
+  elseif parameter == "schur_matrix"
+    cudssDataGet(data.handle, data.data, parameter, data.ref_matrix, Csize_t(8), data.nbytes_written)
+    return data.ref_matrix[]
+  elseif parameter == "perm_reorder_row" || parameter == "perm_row"
     val = zeros(Cint, matrix.nrows)
-  elseif (parameter == "perm_reorder_col") || (parameter == "perm_col") || (parameter == "perm_matching")
+    nbytes = sizeof(val)
+    cudssDataGet(data.handle, data.data, parameter, val, Csize_t(nbytes), data.nbytes_written)
+    return val
+  elseif parameter == "perm_reorder_col" || parameter == "perm_col" || parameter == "perm_matching"
     val = zeros(Cint, matrix.ncols)
-  elseif (parameter == "scale_row")
-    val = zeros(R, matrix.nrows)
-  elseif (parameter == "scale_col")
-    val = zeros(R, matrix.ncols)
+    nbytes = sizeof(val)
+    cudssDataGet(data.handle, data.data, parameter, val, Csize_t(nbytes), data.nbytes_written)
+    return val
   elseif parameter == "diag"
     val = zeros(T, matrix.nrows)
+    nbytes = sizeof(val)
+    cudssDataGet(data.handle, data.data, parameter, val, Csize_t(nbytes), data.nbytes_written)
+    return val
   elseif parameter == "memory_estimates"
     val = zeros(Int64, 16)
+    cudssDataGet(data.handle, data.data, parameter, val, Csize_t(128), data.nbytes_written)
+    return val
+  elseif parameter == "scale_row"
+    val = zeros(T |> real, matrix.nrows)
+    nbytes = sizeof(val)
+    cudssDataGet(data.handle, data.data, parameter, val, Csize_t(nbytes), data.nbytes_written)
+    return val
+  elseif parameter == "scale_col"
+    val = zeros(T |> real, matrix.ncols)
+    nbytes = sizeof(val)
+    cudssDataGet(data.handle, data.data, parameter, val, Csize_t(nbytes), data.nbytes_written)
+    return val
+  elseif parameter == "user_perm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt" ||
+         parameter == "user_schur_indices" || parameter == "comm" || parameter == "elimination_tree"
+    throw(ArgumentError("The data parameter \"$parameter\" can't be retrieved."))
   else
-    is_vector_parameter = false
-    type = CUDSS_TYPES[parameter]
-    val = Ref{type}()
+    throw(ArgumentError("Unknown data parameter \"$parameter\"."))
   end
-  nbytes = sizeof(val)
-  cudssDataGet(data.handle, data.data, parameter, val, nbytes, data.nbytes_written)
-  parameter_value = is_vector_parameter ? val : val[]
-  return parameter_value
 end
 
-function cudss_get(config::CudssConfig, parameter::String)
-  (parameter ∈ CUDSS_CONFIG_PARAMETERS) || throw(ArgumentError("Unknown config parameter $parameter."))
-  type = CUDSS_TYPES[parameter]
-  val = Ref{type}()
-  nbytes = sizeof(val)
-  cudssConfigGet(config.config, parameter, val, nbytes, config.nbytes_written)
-  return val[]
+function _cudss_get(config::CudssConfig, parameter::String)
+  if parameter == "reordering_alg" || parameter == "factorization_alg" || parameter == "solve_alg" ||
+     parameter == "matching_alg" || parameter == "pivot_epsilon_alg"
+    cudssConfigGet(config.config, parameter, config.ref_algo, Csize_t(4), config.nbytes_written)
+    return config.ref_algo[]
+  elseif parameter == "pivot_type"
+    cudssConfigGet(config.config, parameter, config.ref_pivot, Csize_t(4), config.nbytes_written)
+    return config.ref_pivot[]
+  elseif parameter == "ir_tol" || parameter == "pivot_threshold" || parameter == "pivot_epsilon"
+    cudssConfigGet(config.config, parameter, config.ref_float64, Csize_t(8), config.nbytes_written)
+    return config.ref_float64[]
+  elseif parameter == "max_lu_nnz" || parameter == "hybrid_device_memory_limit"
+    cudssConfigGet(config.config, parameter, config.ref_int64, Csize_t(8), config.nbytes_written)
+    return config.ref_int64[]
+  elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" || parameter == "solve_mode" ||
+         parameter == "deterministic_mode" || parameter == "schur_mode" || parameter == "use_cuda_register_memory" ||
+         parameter == "use_matching" || parameter == "use_superpanels" || parameter == "ir_n_steps" ||
+         parameter == "host_nthreads" || parameter == "device_count" || parameter == "nd_nlevels" ||
+         parameter == "ubatch_size" || parameter == "ubatch_index"
+    cudssConfigGet(config.config, parameter, config.ref_cint, Csize_t(4), config.nbytes_written)
+    return config.ref_cint[]
+  elseif parameter == "device_indices"
+    throw(ArgumentError("The config parameter \"device_indices\" is not supported by CUDSS.jl."))
+  else
+    throw(ArgumentError("Unknown config parameter \"$parameter\"."))
+  end
 end
 
 """
