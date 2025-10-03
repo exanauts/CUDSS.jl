@@ -348,7 +348,7 @@ function _cudss_get(matrix::AbstractCudssMatrix{T}, data::CudssData, parameter::
     return data.ref_int64[]
   elseif parameter == "inertia"
     cudssDataGet(data.handle, data.data, parameter, data.ref_inertia, Csize_t(8), data.nbytes_written)
-    return data_ref_inertia[]
+    return data.ref_inertia[]
   elseif parameter == "schur_shape"
     cudssDataGet(data.handle, data.data, parameter, data.ref_schur, Csize_t(24), data.nbytes_written)
     return data.ref_schur[]
