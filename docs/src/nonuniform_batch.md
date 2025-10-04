@@ -42,7 +42,7 @@ for i = 1:nbatch
     d_gpu = rand(T, n) |> CuVector
     batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
 end
-cudss_set(solver, batch_A_gpu)
+cudss_update(solver, batch_A_gpu)
 
 for i = 1:nbatch
     c_cpu = rand(T, n)
@@ -104,7 +104,7 @@ for i = 1:nbatch
     batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
     batch_A_cpu[i] = batch_A_cpu[i] + Diagonal(d_cpu)
 end
-cudss_set(solver, batch_A_gpu)
+cudss_update(solver, batch_A_gpu)
 
 for i = 1:nbatch
     C_cpu = rand(T, n, p)
@@ -166,7 +166,7 @@ for i = 1:nbatch
     batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
     batch_A_cpu[i] = batch_A_cpu[i] + Diagonal(d_cpu)
 end
-cudss_set(solver, batch_A_gpu)
+cudss_update(solver, batch_A_gpu)
 
 for i = 1:nbatch
     C_cpu = rand(T, n, p)

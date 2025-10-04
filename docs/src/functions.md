@@ -6,6 +6,12 @@
 cudss
 ```
 
+## cudss_update
+
+```@docs
+cudss_update
+```
+
 ## cudss_set
 
 ```@docs
