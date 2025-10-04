@@ -1,4 +1,4 @@
-export CudssSolver, CudssBatchedSolver, cudss, cudss_set, cudss_get
+export CudssSolver, CudssBatchedSolver, cudss, cudss_set, cudss_get, cudss_update
 
 """
     solver = CudssSolver(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char; index::Char='O')
@@ -137,20 +137,79 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
 end
 
 """
-    cudss_set(solver::CudssSolver, parameter::String, value)
-    cudss_set(solver::CudssBatchedSolver, parameter::String, value)
-    cudss_set(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
-    cudss_set(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T})
-    cudss_set(solver::CudssBatchedSolver{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}})
-    cudss_set(matrix::CudssMatrix{T}, b::CuVector{T})
-    cudss_set(matrix::CudssMatrix{T}, B::CuMatrix{T})
-    cudss_set(matrix::CudssMatrix{T,INT}, A::CuSparseMatrixCSR{T,INT})
-    cudss_set(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T})
-    cudss_set(matrix::CudssBatchedMatrix{T}, b::Vector{CuVector{T}})
-    cudss_set(matrix::CudssBatchedMatrix{T}, B::Vector{CuMatrix{T}})
-    cudss_set(matrix::CudssBatchedMatrix{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}})
+    cudss_update(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
+    cudss_update(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T})
+    cudss_update(solver::CudssBatchedSolver{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}})
+    cudss_update(matrix::CudssMatrix{T}, b::CuVector{T})
+    cudss_update(matrix::CudssMatrix{T}, B::CuMatrix{T})
+    cudss_update(matrix::CudssMatrix{T,INT}, A::CuSparseMatrixCSR{T,INT})
+    cudss_update(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T})
+    cudss_update(matrix::CudssBatchedMatrix{T}, b::Vector{CuVector{T}})
+    cudss_update(matrix::CudssBatchedMatrix{T}, B::Vector{CuMatrix{T}})
+    cudss_update(matrix::CudssBatchedMatrix{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}})
 
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
+
+Update the contents of a `CudssMatrix` -- `CudssBatchedMatrix` or `CudssSolver` -- `CudssBatchedSolver` with new numerical values.
+"""
+function cudss_update end
+
+function cudss_update(matrix::CudssMatrix{T}, b::CuVector{T}) where T <: BlasFloat
+  cudssMatrixSetValues(matrix, b)
+end
+
+function cudss_update(matrix::CudssMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
+  cudssMatrixSetValues(matrix, B)
+end
+
+function cudss_update(matrix::CudssMatrix{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: BlasFloat, INT <: CudssInt}
+  cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
+end
+
+function cudss_update(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}) where {T <: BlasFloat, INT <: CudssInt}
+  cudssMatrixSetCsrPointers(matrix, rowPtr, CU_NULL, colVal, nzVal)
+end
+
+function cudss_update(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: BlasFloat, INT <: CudssInt}
+  cudss_update(solver.matrix, A)
+end
+
+function cudss_update(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}) where {T <: BlasFloat, INT <: CudssInt}
+  cudss_update(solver.matrix, rowPtr, colVal, nzVal)
+end
+
+function cudss_update(matrix::CudssBatchedMatrix{T}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
+  Mptrs = unsafe_cudss_batch(b)
+  copyto!(matrix.Mptrs, Mptrs)
+  cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
+  unsafe_free!(Mptrs)
+end
+
+function cudss_update(matrix::CudssBatchedMatrix{T}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
+  Mptrs = unsafe_cudss_batch(B)
+  copyto!(matrix.Mptrs, Mptrs)
+  cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
+  unsafe_free!(Mptrs)
+end
+
+function cudss_update(matrix::CudssBatchedMatrix{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}}) where {T <: BlasFloat, INT <: CudssInt}
+  rowPtrs, colVals, nzVals = unsafe_cudss_batch(A)
+  copyto!(matrix.Mptrs[1], rowPtrs)
+  copyto!(matrix.Mptrs[2], colVals)
+  copyto!(matrix.Mptrs[3], nzVals)
+  cudssMatrixSetBatchCsrPointers(matrix, matrix.Mptrs[1], CUPTR_C_NULL, matrix.Mptrs[2], matrix.Mptrs[3])
+  unsafe_free!(rowPtrs)
+  unsafe_free!(colVals)
+  unsafe_free!(nzVals)
+end
+
+function cudss_update(solver::CudssBatchedSolver{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}}) where {T <: BlasFloat, INT <: CudssInt}
+  cudss_update(solver.matrix, A)
+end
+
+"""
+    cudss_set(solver::CudssSolver, parameter::String, value)
+    cudss_set(solver::CudssBatchedSolver, parameter::String, value)
 
 The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
@@ -193,59 +252,6 @@ The data parameter `"info"` must be restored to `0` if a Cholesky factorization 
 due to indefiniteness and refactorization is performed on an updated matrix.
 """
 function cudss_set end
-
-function cudss_set(matrix::CudssMatrix{T}, b::CuVector{T}) where T <: BlasFloat
-  cudssMatrixSetValues(matrix, b)
-end
-
-function cudss_set(matrix::CudssMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
-  cudssMatrixSetValues(matrix, B)
-end
-
-function cudss_set(matrix::CudssMatrix{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: BlasFloat, INT <: CudssInt}
-  cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
-end
-
-function cudss_set(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}) where {T <: BlasFloat, INT <: CudssInt}
-  cudssMatrixSetCsrPointers(matrix, rowPtr, CU_NULL, colVal, nzVal)
-end
-
-function cudss_set(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: BlasFloat, INT <: CudssInt}
-  cudss_set(solver.matrix, A)
-end
-
-function cudss_set(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}) where {T <: BlasFloat, INT <: CudssInt}
-  cudss_set(solver.matrix, rowPtr, colVal, nzVal)
-end
-
-function cudss_set(matrix::CudssBatchedMatrix{T}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
-  Mptrs = unsafe_cudss_batch(b)
-  copyto!(matrix.Mptrs, Mptrs)
-  cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
-  unsafe_free!(Mptrs)
-end
-
-function cudss_set(matrix::CudssBatchedMatrix{T}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
-  Mptrs = unsafe_cudss_batch(B)
-  copyto!(matrix.Mptrs, Mptrs)
-  cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
-  unsafe_free!(Mptrs)
-end
-
-function cudss_set(matrix::CudssBatchedMatrix{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}}) where {T <: BlasFloat, INT <: CudssInt}
-  rowPtrs, colVals, nzVals = unsafe_cudss_batch(A)
-  copyto!(matrix.Mptrs[1], rowPtrs)
-  copyto!(matrix.Mptrs[2], colVals)
-  copyto!(matrix.Mptrs[3], nzVals)
-  cudssMatrixSetBatchCsrPointers(matrix, matrix.Mptrs[1], CUPTR_C_NULL, matrix.Mptrs[2], matrix.Mptrs[3])
-  unsafe_free!(rowPtrs)
-  unsafe_free!(colVals)
-  unsafe_free!(nzVals)
-end
-
-function cudss_set(solver::CudssBatchedSolver{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}}) where {T <: BlasFloat, INT <: CudssInt}
-  cudss_set(solver.matrix, A)
-end
 
 function cudss_set(solver::AbstractCudssSolver, parameter::String, value)
   if parameter ∈ CUDSS_CONFIG_PARAMETERS

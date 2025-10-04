@@ -12,7 +12,7 @@ function cudss_batched_dense()
 
       A_cpu2 = rand(T, n)
       A_gpu2 = [CuVector(A_cpu2)]
-      cudss_set(matrix, A_gpu2)
+      cudss_update(matrix, A_gpu2)
     end
 
     @testset "CuMatrix" begin
@@ -25,7 +25,7 @@ function cudss_batched_dense()
 
       A_cpu2 = rand(T, n, p)
       A_gpu2 = [CuMatrix(A_cpu2)]
-      cudss_set(matrix, A_gpu2)
+      cudss_update(matrix, A_gpu2)
     end
   end
 end
@@ -46,7 +46,7 @@ function cudss_batched_sparse()
         A_cpu2 = sprand(T, n, n, 1.0)
         A_cpu2 = A_cpu2 + A_cpu2'
         A_gpu2 = [CuSparseMatrixCSR(A_cpu2)]
-        cudss_set(matrix, A_gpu2)
+        cudss_update(matrix, A_gpu2)
       end
     end
   end
@@ -169,7 +169,7 @@ function cudss_batched_execution()
         # In-place LU
         d_gpu = [rand(T, n[i]) |> CuVector for i = 1:7]
         A_gpu = [A_gpu[i] + Diagonal(d_gpu[i]) for i = 1:7]
-        cudss_set(solver, A_gpu)
+        cudss_update(solver, A_gpu)
 
         c_cpu = [rand(T, n[i]) for i = 1:7]
         c_gpu = CuVector.(c_cpu)
@@ -213,7 +213,7 @@ function cudss_batched_execution()
           # In-place LDLᵀ / LDLᴴ
           d_gpu = [rand(R, n[i]) |> CuVector for i = 1:7]
           A_gpu = [A_gpu[i] + Diagonal(d_gpu[i]) for i = 1:7]
-          cudss_set(solver, A_gpu)
+          cudss_update(solver, A_gpu)
 
           C_cpu = [rand(T, n[i], p[i]) for i = 1:7]
           C_gpu = CuMatrix.(C_cpu)
@@ -258,7 +258,7 @@ function cudss_batched_execution()
           # In-place LLᵀ / LLᴴ
           d_gpu = [rand(R, n[i]) |> CuVector for i = 1:7]
           A_gpu = [A_gpu[i] + Diagonal(d_gpu[i]) for i = 1:7]
-          cudss_set(solver, A_gpu)
+          cudss_update(solver, A_gpu)
 
           C_cpu = [rand(T, n[i], p[i]) for i = 1:7]
           C_gpu = CuMatrix.(C_cpu)
@@ -421,7 +421,7 @@ function refactorization_batched_cholesky()
       batch_A_gpu[i] = batch_A_gpu[i] + 21 * I
       batch_A_cpu[i] = batch_A_cpu[i] + 21 * I
     end
-    cudss_set(solver, batch_A_gpu)
+    cudss_update(solver, batch_A_gpu)
 
     cudss("refactorization", solver, batch_X_gpu, batch_B_gpu)
     cudss("solve", solver, batch_X_gpu, batch_B_gpu)

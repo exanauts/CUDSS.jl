@@ -33,11 +33,11 @@ cudss_bλ_gpu = CudssMatrix(T, n; nbatch)
 bλ_gpu = CuVector{T}([1.0, 2.0, 3.0,
                       4.0, 5.0, 6.0,
                       7.0, 8.0, 9.0])
-cudss_set(cudss_bλ_gpu, bλ_gpu)
+cudss_update(cudss_bλ_gpu, bλ_gpu)
 
 cudss_xλ_gpu = CudssMatrix(T, n; nbatch)
 xλ_gpu = CuVector{T}(undef, n * nbatch)
-cudss_set(cudss_xλ_gpu, xλ_gpu)
+cudss_update(cudss_xλ_gpu, xλ_gpu)
 
 # Constructor for uniform batch of systems
 solver = CudssSolver(rowPtr, colVal, nzVal, "G", 'F')
@@ -66,7 +66,7 @@ new_nzVal = CuVector{T}([1+Λ[1], 3, 4, 5+Λ[1], 2, 6, 2+Λ[1],
                          1+Λ[2], 3, 4, 5+Λ[2], 2, 6, 2+Λ[2],
                          1+Λ[3], 3, 4, 5+Λ[3], 2, 6, 2+Λ[3]])
 
-cudss_set(solver, rowPtr, colVal, new_nzVal)
+cudss_update(solver, rowPtr, colVal, new_nzVal)
 cudss("refactorization", solver, cudss_xλ_gpu, cudss_bλ_gpu)
 cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu)
 
@@ -103,11 +103,11 @@ nzVal = CuVector{T}([4, 3, 1+im, 2-im, 5, 1, 1+im, 2,
 cudss_Bs_gpu = CudssMatrix(T, n, nrhs; nbatch)
 Bs_gpu = CuVector{T}([ 7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im,
                       13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im])
-cudss_set(cudss_Bs_gpu, Bs_gpu)
+cudss_update(cudss_Bs_gpu, Bs_gpu)
 
 cudss_Xs_gpu = CudssMatrix(T, n, nrhs; nbatch)
 Xs_gpu = CuVector{T}(undef, n * nrhs * nbatch)
-cudss_set(cudss_Xs_gpu, Xs_gpu)
+cudss_update(cudss_Xs_gpu, Xs_gpu)
 
 # Constructor for uniform batch of systems
 solver = CudssSolver(rowPtr, colVal, nzVal, "H", 'L')
@@ -134,12 +134,12 @@ Rs_gpu
 
 new_nzVal = CuVector{T}([-4, -3,  1-im, -2+im, -5, -1, -1-im, -2,
                          -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
-cudss_set(solver, rowPtr, colVal, new_nzVal)
+cudss_update(solver, rowPtr, colVal, new_nzVal)
 cudss("refactorization", solver, cudss_Xs_gpu, cudss_Bs_gpu)
 
 new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im,
                            7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
-cudss_set(cudss_Bs_gpu, new_Bs_gpu)
+cudss_update(cudss_Bs_gpu, new_Bs_gpu)
 cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
 
 Rs_gpu = rand(R, nbatch)
@@ -177,11 +177,11 @@ nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
 cudss_bs_gpu = CudssMatrix(T, n; nbatch)
 bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,
                       13, 15, 29, 8, 14])
-cudss_set(cudss_bs_gpu, bs_gpu)
+cudss_update(cudss_bs_gpu, bs_gpu)
 
 cudss_xs_gpu = CudssMatrix(T, n; nbatch)
 xs_gpu = CuVector{T}(undef, n * nbatch)
-cudss_set(cudss_xs_gpu, xs_gpu)
+cudss_update(cudss_xs_gpu, xs_gpu)
 
 # Constructor for uniform batch of systems
 solver = CudssSolver(rowPtr, colVal, nzVal, "SPD", 'U')
@@ -208,7 +208,7 @@ rs_gpu
 
 new_nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
                          6, 3, 9, 3, 18, 6, 12, 24])
-cudss_set(solver, rowPtr, colVal, new_nzVal)
+cudss_update(solver, rowPtr, colVal, new_nzVal)
 cudss("refactorization", solver, cudss_xs_gpu, cudss_bs_gpu)
 cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
 

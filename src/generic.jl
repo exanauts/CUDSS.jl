@@ -30,7 +30,7 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
-  cudss_set(solver, A)
+  cudss_update(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
   cudss("refactorization", solver, x, b)
@@ -77,7 +77,7 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
-  cudss_set(solver, A)
+  cudss_update(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
   cudss("refactorization", solver, x, b)
@@ -124,7 +124,7 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
-  cudss_set(solver, A)
+  cudss_update(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
   cudss("refactorization", solver, x, b)
