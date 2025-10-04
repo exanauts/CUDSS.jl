@@ -256,13 +256,13 @@ end
 # matrix format type
 
 function Base.convert(::Type{cudssMatrixFormat_t}, format::String)
-    if format == "DENSE"
+    if format == "dense"
         return CUDSS_MFORMAT_DENSE
-    elseif format == "CSR"
+    elseif format == "csr"
         return CUDSS_MFORMAT_CSR
-    elseif format == "BATCH"
+    elseif format == "batch"
         return CUDSS_MFORMAT_BATCH
-    elseif format == "DISTRIBUTED"
+    elseif format == "distributed"
         return CUDSS_MFORMAT_DISTRIBUTED
     else
         throw(ArgumentError("Unknown format $format"))

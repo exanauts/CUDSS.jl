@@ -1,8 +1,8 @@
 """
-    solver = lu(A::CuSparseMatrixCSR{T,Cint})
+    solver = lu(A::CuSparseMatrixCSR{T,INT})
 
 Compute the LU factorization of a sparse matrix `A` on an NVIDIA GPU.
-The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 
 #### Input argument
 
@@ -12,7 +12,7 @@ The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 * `solver`: an opaque structure [`CudssSolver`](@ref) that stores the factors of the LU decomposition.
 """
-function LinearAlgebra.lu(A::CuSparseMatrixCSR{T,Cint}; check = false) where T <: BlasFloat
+function LinearAlgebra.lu(A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   solver = CudssSolver(A, "G", 'F')
   x = CudssMatrix(T, n)
@@ -23,12 +23,12 @@ function LinearAlgebra.lu(A::CuSparseMatrixCSR{T,Cint}; check = false) where T <
 end
 
 """
-    solver = lu!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
+    solver = lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
 
 Compute the LU factorization of a sparse matrix `A` on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
-The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 """
-function LinearAlgebra.lu!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}; check = false) where T <: BlasFloat
+function LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   cudss_set(solver, A)
   x = CudssMatrix(T, n)
@@ -38,10 +38,10 @@ function LinearAlgebra.lu!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint};
 end
 
 """
-    solver = ldlt(A::CuSparseMatrixCSR{T,Cint}; view::Char='F')
+    solver = ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F')
 
 Compute the LDLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU.
-The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 
 #### Input argument
 
@@ -55,7 +55,7 @@ The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 * `solver`: Opaque structure [`CudssSolver`](@ref) that stores the factors of the LDLᴴ decomposition.
 """
-function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,Cint}; view::Char='F', check = false) where T <: BlasFloat
+function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   structure = T <: Real ? "S" : "H"
   solver = CudssSolver(A, structure, view)
@@ -66,16 +66,16 @@ function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,Cint}; view::Char='F', check 
   return solver
 end
 
-LinearAlgebra.ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T,Cint}}; check = false) where T <: BlasReal = LinearAlgebra.ldlt(A.data, view=A.uplo)
-LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T,Cint}}; check = false) where T <: BlasFloat = LinearAlgebra.ldlt(A.data, view=A.uplo)
+LinearAlgebra.ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasReal, INT <: CudssInt} = LinearAlgebra.ldlt(A.data, view=A.uplo)
+LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasFloat, INT <: CudssInt} = LinearAlgebra.ldlt(A.data, view=A.uplo)
 
 """
-    solver = ldlt!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
+    solver = ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
 
 Compute the LDLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
-The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 """
-function LinearAlgebra.ldlt!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}; check = false) where T <: BlasFloat
+function LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   cudss_set(solver, A)
   x = CudssMatrix(T, n)
@@ -85,10 +85,10 @@ function LinearAlgebra.ldlt!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint
 end
 
 """
-    solver = cholesky(A::CuSparseMatrixCSR{T,Cint}; view::Char='F')
+    solver = cholesky(A::CuSparseMatrixCSR{T,INT}; view::Char='F')
 
 Compute the LLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU.
-The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 
 #### Input argument
 
@@ -102,7 +102,7 @@ The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
 
 * `solver`: Opaque structure [`CudssSolver`](@ref) that stores the factors of the LLᴴ decomposition.
 """
-function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,Cint}; view::Char='F', check = false) where T <: BlasFloat
+function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   structure = T <: Real ? "SPD" : "HPD"
   solver = CudssSolver(A, structure, view)
@@ -113,16 +113,16 @@ function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,Cint}; view::Char='F', ch
   return solver
 end
 
-LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T,Cint}}; check = false) where T <: BlasReal = LinearAlgebra.cholesky(A.data, view=A.uplo)
-LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T,Cint}}; check = false) where T <: BlasFloat = LinearAlgebra.cholesky(A.data, view=A.uplo)
+LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasReal, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, view=A.uplo)
+LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasFloat, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, view=A.uplo)
 
 """
-    solver = cholesky!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint})
+    solver = cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
 
 Compute the LLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
-The type `T` can be `Float32`, `Float64`, `ComplexF32` or `ComplexF64`.
+The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 """
-function LinearAlgebra.cholesky!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}; check = false) where T <: BlasFloat
+function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   cudss_set(solver, A)
   x = CudssMatrix(T, n)

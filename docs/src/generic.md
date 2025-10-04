@@ -3,8 +3,8 @@
 ## LLᵀ and LLᴴ
 
 ```@docs
-    LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,Cint}; view::Char='F') where T <: LinearAlgebra.BlasFloat
-    LinearAlgebra.cholesky!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: LinearAlgebra.BlasFloat
+LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}; view::Char='F') where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
+LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
 ```
 
 ```julia
@@ -55,8 +55,8 @@ F = cholesky(H_gpu)
 ## LDLᵀ and LDLᴴ
 
 ```@docs
-    LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,Cint}; view::Char='F') where T <: LinearAlgebra.BlasFloat
-    LinearAlgebra.ldlt!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: LinearAlgebra.BlasFloat
+LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F') where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
+LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
 ```
 
 ```julia
@@ -107,8 +107,8 @@ F = ldlt(S_gpu)
 ## LU
 
 ```@docs
-    LinearAlgebra.lu(A::CuSparseMatrixCSR{T,Cint}) where T <: LinearAlgebra.BlasFloat
-    LinearAlgebra.lu!(solver::CudssSolver{T}, A::CuSparseMatrixCSR{T,Cint}) where T <: LinearAlgebra.BlasFloat
+LinearAlgebra.lu(A::CuSparseMatrixCSR{T,INT}) where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
+LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
 ```
 
 ```julia
