@@ -207,24 +207,20 @@ using SparseArrays
 T = Float64
 n = 5
 
+# A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
+#     [A₂₁ A₂₂]             [0 5]        [0 3 0]
+#
+# A₂₁ = [0 6] and A₂₂ = [8 0 0 ]
+#       [7 0]           [0 9 1 ]
+#       [0 0]           [0 1 10]
+#
+# The matrix A and the Schur complement S = A₂₂ − A₂₁(A₁₁)⁻¹A₁₂ are:
+#
 #     [4 0 1 0 2 ]
-#     [0 5 0 3 0 ]
-# A = [0 6 8 0 0 ]
-#     [7 0 0 9 1 ]
+#     [0 5 0 3 0 ]          [ 8    -3.6  0  ]
+# A = [0 6 8 0 0 ]  and S = [-1.75  9   -2.5]
+#     [7 0 0 9 1 ]          [ 0     1    10 ]
 #     [0 0 0 1 10]
-#
-# A = [A_11 A_12] where A_11 = [4 0], A_12 = [1 0 2]
-#     [A_21 A_22]              [0 5]         [0 3 0]
-#
-# A_21 = [0 6] and A_22 = [8 0 0 ]
-#        [7 0]            [0 9 1 ]
-#        [0 0]            [0 1 10]
-#
-# The Schur complement for the block A_22 is:
-#
-#      [ 8    -1.5  0 ]
-# S =  [-0.25  3    1 ]
-#      [ 0     1    10]
 
 rows = [1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5]
 cols = [1, 3, 5, 2, 4, 2, 3, 1, 4, 5, 4, 5]
@@ -239,20 +235,21 @@ solver = CudssSolver(A_gpu, "G", 'F')
 # Enable the Schur complement computation
 cudss_set(solver, "schur_mode", 1)
 
-# Rows and columns for the Schur complement (block A_22)
+# Rows and columns for the Schur complement of the block A₂₂
 schur_indices = Cint[0, 0, 1, 1, 1]
 cudss_set(solver, "user_schur_indices", schur_indices)
 
-cudss("analysis", solver, x_gpu, b_gpu)
-
-# Recover the shape of the Schur complement
-(nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape)
-
 # Compute the Schur complement
+cudss("analysis", solver, x_gpu, b_gpu)
 cudss("factorization", solver, x_gpu, b_gpu)
 
-S_gpu = CuMatrix{Float64}(undef, nrows, ncols)
+# Recover the shape of the Schur complement
+(nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape")
+
+# Storage for the Schur complement
+S_gpu = CuMatrix{Float64}(undef, nrows_S, ncols_S)
 cudss_matrix = CudssMatrix(S_gpu)
-cudss_set(solver, "schur_matrix", S_gpu.matrix)
+
+cudss_set(solver, "schur_matrix", cudss_matrix.matrix)
 cudss_get(solver, "schur_matrix")
 ```
