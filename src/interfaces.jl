@@ -246,7 +246,7 @@ The available data parameters are:
 - `"user_elimination_tree"`: User provided elimination tree information, which is used instead of running the reordering algorithm;
 - `"user_schur_indices"`: User-provided Schur complement indices. The provided buffer should be an integer array of size `n`, where `n` is the dimension of the matrix. The values should be equal to `1` for the rows / columns which are part of the Schur complement and `0` for the rest;
 - `"user_host_interrupt"`: User-provided host interrupt pointer;
-- `"schur_matrix"`: Schur complement matrix as a `cudssMatrix_t` object.
+- `"schur_matrix"`: Schur complement matrix passed as a `cudssMatrix_t` object. It only updates the internal pointer for subsequent calls to [`cudss_get`](@ref)).
 
 The data parameter `"info"` must be restored to `0` if a Cholesky factorization fails
 due to indefiniteness and refactorization is performed on an updated matrix.
@@ -275,8 +275,10 @@ function cudss_set_data(solver::AbstractCudssSolver{T,INT}, parameter::String, v
          parameter == "perm_reorder_col" || parameter == "perm_row" || parameter == "perm_col" || parameter == "diag" ||
          parameter == "hybrid_device_memory_min" || parameter == "memory_estimates" || parameter == "perm_matching" ||
          parameter == "scale_row" || parameter == "scale_col" || parameter == "nsuperpanels" || parameter == "schur_shape" ||
-         parameter == "schur_matrix" || parameter == "elimination_tree"
+         parameter == "elimination_tree"
     throw(ArgumentError("The data parameter \"$parameter\" can't be set."))
+  elseif parameter == "schur_matrix"
+    solver.ref_matrix[] = value
   elseif parameter == "comm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt"
     throw(ArgumentError("The data parameter \"$parameter\" is not yet supported by CUDSS.jl."))
   else
@@ -363,6 +365,7 @@ The available data parameters are:
 - `"memory_estimates"`: Memory estimates (in bytes) for host and device memory required for the chosen memory mode;
 - `"nsuperpanels"`: Number of superpanels in the matrix;
 - `"schur_shape"`: Shape of the Schur complement matrix as a triplet (nrows, ncols, nnz);
+- `"schur_matrix"`: Retrieve the Schur complement matrix;
 - `"elimination_tree"`: User provided elimination tree information, which is used instead of running the reordering algorithm. It must be used in combination with `"user_perm"` to have an effect.
 
 The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_matching"`, `"scale_row"`, `"scale_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
@@ -400,7 +403,7 @@ function cudss_get_data(solver::AbstractCudssSolver{T,INT}, parameter::String) w
     return solver.ref_schur[]
   elseif parameter == "schur_matrix"
     cudssDataGet(solver.data.handle, solver.data, parameter, solver.ref_matrix, 8, solver.nbytes_written)
-    return solver.ref_matrix[]
+    return nothing
   elseif parameter == "perm_reorder_row" || parameter == "perm_row"
     value = zeros(INT, solver.matrix.nrows)
     cudssDataGet(solver.data.handle, solver.data, parameter, value, sizeof(value), solver.nbytes_written)
