@@ -14,6 +14,7 @@ makedocs(
            "Types" => "types.md",
            "Functions" => "functions.md",
            "Generic interface" => "generic.md",
+           "Schur complement" => "schur_complement.md",
            "Uniform batch" => "uniform_batch.md",
            "Non-uniform batch" => "nonuniform_batch.md",
            "Options" => "options.md"]
