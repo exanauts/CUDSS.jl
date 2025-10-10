@@ -267,10 +267,10 @@ cudss("solve_fwd_schur", solver, x_gpu, b_gpu)
 # Compute x₂ with the dense LU of cuSOLVER
 nₛ = 3
 bₛ = b_gpu[n-nₛ+1:n]
-x₂ = S \ bₛ
+x₂ = S_gpu \ bₛ
 
 # Compute x₁ with a partial backward solve
 # x₂ must be store the last nₛ components of x_gpu
-x_gpu[n-nₛ+1:n] .= x2
+x_gpu[n-nₛ+1:n] .= x₂
 cudss("solve_bwd_schur", solver, x_gpu, b_gpu)
 ```
