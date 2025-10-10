@@ -227,9 +227,12 @@ cols = [1, 3, 5, 2, 4, 2, 3, 1, 4, 5, 4, 5]
 vals = [4.0, 1.0, 2.0, 5.0, 3.0, 6.0, 8.0, 7.0, 9.0, 1.0, 1.0, 10.0]
 A_cpu = sparse(rows, cols, vals, n, n)
 
+# Right-hand side such the solution is a vector of ones
+b_cpu = [7.0, 8.0, 14.0, 17.0, 11.0]
+
 A_gpu = CuSparseMatrixCSR(A_cpu)
-x_gpu = CudssMatrix(T, n)
-b_gpu = CudssMatrix(T, n)
+x_gpu = CuVector{Float64}(undef, n)
+b_gpu = CuVector(b_cpu)
 solver = CudssSolver(A_gpu, "G", 'F')
 
 # Enable the Schur complement computation
@@ -243,13 +246,31 @@ cudss_set(solver, "user_schur_indices", schur_indices)
 cudss("analysis", solver, x_gpu, b_gpu)
 cudss("factorization", solver, x_gpu, b_gpu)
 
-# Recover the shape of the Schur complement
+# Dimension of the Schur complement nₛ and the number of nonzeros
 (nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape")
 
 # Storage for the Schur complement
 S_gpu = CuMatrix{Float64}(undef, nrows_S, ncols_S)
 cudss_matrix = CudssMatrix(S_gpu)
 
+# Update the content of S_gpu
 cudss_set(solver, "schur_matrix", cudss_matrix.matrix)
 cudss_get(solver, "schur_matrix")
+
+# [A₁₁ A₁₂] [x₁] = [b₁] ⟺ A₁₁x₁ = b₁ - A₁₂x₂
+# [A₂₁ A₂₂] [x₂]   [b₂]   Sx₂ = b₂ - A₂₁(A₁₁)⁻¹b₁ = bₛ
+
+# Compute bₛ with a partial forward solve
+# bₛ is stored in the last nₛ components of b_gpu
+cudss("solve_fwd_schur", solver, x_gpu, b_gpu)
+
+# Compute x₂ with the dense LU of cuSOLVER
+nₛ = 3
+bₛ = b_gpu[n-nₛ+1:n]
+x₂ = S \ bₛ
+
+# Compute x₁ with a partial backward solve
+# x₂ must be store the last nₛ components of x_gpu
+x_gpu[n-nₛ+1:n] .= x2
+cudss("solve_bwd_schur", solver, x_gpu, b_gpu)
 ```

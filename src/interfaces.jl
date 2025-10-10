@@ -487,6 +487,11 @@ The available phases are:
 - `"solve_bwd_perm"`: Applying inverse reordering permutation to the intermediate solution after the backward substitution. If matching (and scaling) is enabled, this phase also includes applying the inverse matching permutation and inverse scaling (as the matching permutation and scalings were used to modify the matrix before the factorization);
 - `"solve_refinement"`: Iterative refinement;
 - `"solve"`: Full solving phase, combining all sub-phases and (optional) iterative refinement.
+
+When the Schur complement mode is enabled (option `"schur_mode"` set to `1`), a specific combination of phases is required.
+For that reason, we added shorthand phases:
+- `"solve_fwd_schur"`: combines the phases `"solve_fwd_perm"`, `"solve_fwd"`, and `"solve_diag"`;
+- `"solve_bwd_schur"`: combines the phases `"solve_bwd"` and `"solve_bwd_perm"`.
 """
 function cudss end
 

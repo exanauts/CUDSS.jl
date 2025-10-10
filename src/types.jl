@@ -146,8 +146,12 @@ function Base.convert(::Type{cudssPhase_t}, phase::String)
         return CUDSS_PHASE_SOLVE_FWD_PERM
     elseif phase == "solve_fwd"
         return CUDSS_PHASE_SOLVE_FWD
+    elseif phase == "solve_fwd_schur"
+        return CUDSS_PHASE_SOLVE_FWD_PERM | CUDSS_PHASE_SOLVE_FWD | CUDSS_PHASE_SOLVE_DIAG
     elseif phase == "solve_diag"
         return CUDSS_PHASE_SOLVE_DIAG
+    elseif phase == "solve_bwd_schur"
+        CUDSS_PHASE_SOLVE_BWD | CUDSS_PHASE_SOLVE_BWD_PERM
     elseif phase == "solve_bwd"
         return CUDSS_PHASE_SOLVE_BWD
     elseif phase == "solve_bwd_perm"
