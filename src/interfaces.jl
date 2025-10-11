@@ -33,6 +33,7 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
   matrix::CudssMatrix{T,INT}
   config::CudssConfig
   data::CudssData
+  pointer::PtrOrCuPtr{Cvoid}
   ref_cint::Base.RefValue{Cint}
   ref_int64::Base.RefValue{Int64}
   ref_float64::Base.RefValue{Float64}
@@ -41,9 +42,11 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
   ref_algo::Base.RefValue{cudssAlgType_t}
   ref_pivot::Base.RefValue{cudssPivotType_t}
   ref_matrix::Base.RefValue{cudssMatrix_t}
+  nbytes_provided::Csize_t
   nbytes_written::Base.RefValue{Csize_t}
 
   function CudssSolver(matrix::CudssMatrix{T,INT}, config::CudssConfig, data::CudssData) where {T <: BlasFloat, INT <: CudssInt}
+    pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, C_NULL)
     ref_cint = Ref{Cint}()
     ref_int64 = Ref{Int64}()
     ref_float64 = Ref{Float64}()
@@ -52,9 +55,10 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
     ref_algo = Ref{cudssAlgType_t}()
     ref_pivot = Ref{cudssPivotType_t}()
     ref_matrix = Ref{cudssMatrix_t}()
+    nbytes_provided = Csize_t(0)
     nbytes_written = Ref{Csize_t}()
-    return new{T,INT}(matrix, config, data, ref_cint, ref_int64, ref_float64, ref_inertia,
-                      ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_written)
+    return new{T,INT}(matrix, config, data, pointer, ref_cint, ref_int64, ref_float64, ref_inertia,
+                      ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_provided, nbytes_written)
   end
 
   function CudssSolver(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
@@ -103,6 +107,7 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
   matrix::CudssBatchedMatrix{T,INT,M}
   config::CudssConfig
   data::CudssData
+  pointer::PtrOrCuPtr{Cvoid}
   ref_cint::Base.RefValue{Cint}
   ref_int64::Base.RefValue{Int64}
   ref_float64::Base.RefValue{Float64}
@@ -111,9 +116,11 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
   ref_algo::Base.RefValue{cudssAlgType_t}
   ref_pivot::Base.RefValue{cudssPivotType_t}
   ref_matrix::Base.RefValue{cudssMatrix_t}
+  nbytes_provided::Csize_t
   nbytes_written::Base.RefValue{Csize_t}
 
   function CudssBatchedSolver(matrix::CudssBatchedMatrix{T,INT}, config::CudssConfig, data::CudssData) where {T <: BlasFloat, INT <: CudssInt}
+    pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, C_NULL)
     ref_cint = Ref{Cint}()
     ref_int64 = Ref{Int64}()
     ref_float64 = Ref{Float64}()
@@ -122,10 +129,11 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
     ref_algo = Ref{cudssAlgType_t}()
     ref_pivot = Ref{cudssPivotType_t}()
     ref_matrix = Ref{cudssMatrix_t}()
+    nbytes_provided = Csize_t(0)
     nbytes_written = Ref{Csize_t}()
     M = typeof(matrix.Mptrs)
-    return new{T,INT,M}(matrix, config, data, ref_cint, ref_int64, ref_float64, ref_inertia,
-                        ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_written)
+    return new{T,INT,M}(matrix, config, data, pointer, ref_cint, ref_int64, ref_float64, ref_inertia,
+                        ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_provided, nbytes_written)
   end
 
   function CudssBatchedSolver(A::Vector{CuSparseMatrixCSR{T,INT}}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
@@ -246,10 +254,13 @@ The available data parameters are:
 - `"user_elimination_tree"`: User provided elimination tree information, which is used instead of running the reordering algorithm;
 - `"user_schur_indices"`: User-provided Schur complement indices. The provided buffer should be an integer array of size `n`, where `n` is the dimension of the matrix. The values should be equal to `1` for the rows / columns which are part of the Schur complement and `0` for the rest;
 - `"user_host_interrupt"`: User-provided host interrupt pointer;
-- `"schur_matrix"`: Schur complement matrix passed as a `cudssMatrix_t` object. It only updates the internal pointer for subsequent calls to [`cudss_get`](@ref)).
+- `"schur_matrix"`: Schur complement matrix passed as a `cudssMatrix_t` object.
 
 The data parameter `"info"` must be restored to `0` if a Cholesky factorization fails
 due to indefiniteness and refactorization is performed on an updated matrix.
+
+Note that for the data parameters `"perm_reorder_row"`, `"perm_row"`, `"scale_row"`, `"perm_reorder_col"`, `"perm_col"`, `"scale_col"`,
+`"perm_matching"`, `"diag"`, and `"memory_estimates"`, this function only specifies which vector to update for a subsequent call to [`cudss_get`](@ref).
 """
 function cudss_set end
 
@@ -271,16 +282,18 @@ function cudss_set_data(solver::AbstractCudssSolver{T,INT}, parameter::String, v
   elseif parameter == "user_perm" || parameter == "user_schur_indices"
     (value isa Vector{INT} || value isa CuVector{INT}) || throw(ArgumentError("The vector is neither a Vector{$INT} nor a CuVector{$INT}."))
     cudssDataSet(solver.data.handle, solver.data, parameter, value, sizeof(value))
-  elseif parameter == "lu_nnz" || parameter == "npivots" || parameter == "inertia" || parameter == "perm_reorder_row" ||
-         parameter == "perm_reorder_col" || parameter == "perm_row" || parameter == "perm_col" || parameter == "diag" ||
-         parameter == "hybrid_device_memory_min" || parameter == "memory_estimates" || parameter == "perm_matching" ||
-         parameter == "scale_row" || parameter == "scale_col" || parameter == "nsuperpanels" || parameter == "schur_shape" ||
-         parameter == "elimination_tree"
-    throw(ArgumentError("The data parameter \"$parameter\" can't be set."))
   elseif parameter == "schur_matrix"
     solver.ref_matrix[] = value
+  elseif parameter == "perm_reorder_row" || parameter == "perm_row" || parameter == "scale_row" ||
+         parameter == "perm_reorder_col" || parameter == "perm_col" || parameter == "scale_col" ||
+         parameter == "perm_matching" || parameter == "diag" || parameter == "memory_estimates"
+    solver.pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, value)
+    solver.nbytes_provided = sizeof(value)
   elseif parameter == "comm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt"
     throw(ArgumentError("The data parameter \"$parameter\" is not yet supported by CUDSS.jl."))
+  elseif parameter == "lu_nnz" || parameter == "npivots" || parameter == "inertia" || parameter == "hybrid_device_memory_min" ||
+         parameter == "nsuperpanels" || parameter == "schur_shape" || parameter == "elimination_tree"
+    throw(ArgumentError("The data parameter \"$parameter\" can't be set."))
   else
     throw(ArgumentError("Unknown data parameter \"$parameter\"."))
   end
@@ -371,6 +384,9 @@ The available data parameters are:
 The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_matching"`, `"scale_row"`, `"scale_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
 The data parameters `"perm_matching"`, `"scale_row"`, and `"scale_col"` require matching to be enabled (the configuration parameter `"use_matching"` must be set to `1`).
+
+Note that for the data parameters `"perm_reorder_row"`, `"perm_row"`, `"scale_row"`, `"perm_reorder_col"`, `"perm_col"`, `"scale_col"`,
+`"perm_matching"`, `"diag"`, and `"memory_estimates"`, a call to [`cudss_set`](@ref) is required beforehand to specify which vector to update.
 """
 function cudss_get end
 
@@ -404,30 +420,11 @@ function cudss_get_data(solver::AbstractCudssSolver{T,INT}, parameter::String) w
   elseif parameter == "schur_matrix"
     cudssDataGet(solver.data.handle, solver.data, parameter, solver.ref_matrix, 8, solver.nbytes_written)
     return nothing
-  elseif parameter == "perm_reorder_row" || parameter == "perm_row"
-    value = zeros(INT, solver.matrix.nrows)
-    cudssDataGet(solver.data.handle, solver.data, parameter, value, sizeof(value), solver.nbytes_written)
-    return value
-  elseif parameter == "perm_reorder_col" || parameter == "perm_col" || parameter == "perm_matching"
-    value = zeros(INT, solver.matrix.ncols)
-    cudssDataGet(solver.data.handle, solver.data, parameter, value, sizeof(value), solver.nbytes_written)
-    return value
-  elseif parameter == "diag"
-    value = zeros(T, solver.matrix.nrows)
-    cudssDataGet(solver.data.handle, solver.data, parameter, value, sizeof(value), solver.nbytes_written)
-    return value
-  elseif parameter == "memory_estimates"
-    value = zeros(Int64, 16)
-    cudssDataGet(solver.data.handle, solver.data, parameter, value, 128, solver.nbytes_written)
-    return value
-  elseif parameter == "scale_row"
-    value = zeros(T |> real, solver.matrix.nrows)
-    cudssDataGet(solver.data.handle, solver.data, parameter, value, sizeof(value), solver.nbytes_written)
-    return value
-  elseif parameter == "scale_col"
-    value = zeros(T |> real, solver.matrix.ncols)
-    cudssDataGet(solver.data.handle, solver.data, parameter, value, sizeof(value), solver.nbytes_written)
-    return value
+  elseif parameter == "perm_reorder_row" || parameter == "perm_row" || parameter == "scale_row" ||
+         parameter == "perm_reorder_col" || parameter == "perm_col" || parameter == "scale_col" ||
+         parameter == "perm_matching" || parameter == "diag" || parameter == "memory_estimates"
+    cudssDataGet(solver.data.handle, solver.data, parameter, solver.pointer, solver.nbytes_provided, solver.nbytes_written)
+    return nothing
   elseif parameter == "user_perm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt" ||
          parameter == "user_schur_indices" || parameter == "comm" || parameter == "elimination_tree"
     throw(ArgumentError("The data parameter \"$parameter\" can't be retrieved."))

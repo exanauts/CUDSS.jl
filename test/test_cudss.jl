@@ -59,6 +59,7 @@ end
 function cudss_solver()
   n = 20
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
     A_cpu = sprand(T, n, n, 1.0)
     A_cpu = A_cpu * A_cpu' + I
     A_gpu = CuSparseMatrixCSR(A_cpu)
@@ -74,22 +75,35 @@ function cudss_solver()
         cudss("analysis", solver, x_gpu, b_gpu)
         cudss("factorization", solver, x_gpu, b_gpu)
 
+        memory_estimates = Vector{Int64}(undef, 16)
+        buffer_cint = Vector{Cint}(undef, n)
+        buffer_R = Vector{R}(undef, n)
+        buffer_T = Vector{T}(undef, n)
+
         @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
           parameter ∈ ("comm", "user_schur_indices", "schur_shape", "schur_matrix", "user_elimination_tree", "elimination_tree", "user_host_interrupt") && continue
-          @testset "cudss_get" begin
-            parameter ∈ ("comm", "user_perm", "perm_row", "perm_col") && continue
-            (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
-            val = cudss_get(solver, parameter)
-          end
           @testset "cudss_set" begin
-            parameter ∈ ("nsuperpanels", "perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "perm_matching", "scale_row", "scale_col") && continue
+            (parameter == "nsuperpanels") && continue
             if parameter == "user_perm"
               perm_cpu = Cint[i for i=n:-1:1]
               cudss_set(solver, parameter, perm_cpu)
               perm_gpu = CuVector{Cint}(perm_cpu)
               cudss_set(solver, parameter, perm_gpu)
             end
+            if parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "perm_matching")
+              cudss_set(solver, parameter, buffer_cint)
+            end
+            if parameter ∈ ("scale_row", "scale_col")
+              cudss_set(solver, parameter, buffer_R)
+            end
+            (parameter == "diag") && cudss_set(solver, parameter, buffer_T)
+            (parameter == "memory_estimates") && cudss_set(solver, parameter, memory_estimates)
             (parameter == "info") && cudss_set(solver, parameter, 1)
+          end
+          @testset "cudss_get" begin
+            parameter ∈ ("comm", "user_perm", "perm_row", "perm_col") && continue
+            (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
+            val = cudss_get(solver, parameter)
           end
         end
 
