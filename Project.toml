@@ -1,6 +1,6 @@
 name = "CUDSS"
 uuid = "45b445bb-4962-46a0-9369-b4df9d0f772e"
-authors = ["Alexis Montoison <alexis.montoison@polymtl.ca>"]
+authors = ["Alexis Montoison <amontoison@anl.gov>"]
 version = "0.6.0"
 
 [deps]
