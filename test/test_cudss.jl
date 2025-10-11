@@ -76,7 +76,7 @@ function cudss_solver()
         cudss("factorization", solver, x_gpu, b_gpu)
 
         memory_estimates = Vector{Int64}(undef, 16)
-        buffer_cint = Vector{T}(undef, n)
+        buffer_cint = Vector{Cint}(undef, n)
         buffer_R = Vector{R}(undef, n)
         buffer_T = Vector{T}(undef, n)
 
