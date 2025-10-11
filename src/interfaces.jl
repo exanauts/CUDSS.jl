@@ -287,7 +287,7 @@ function cudss_set_data(solver::AbstractCudssSolver{T,INT}, parameter::String, v
   elseif parameter == "perm_reorder_row" || parameter == "perm_row" || parameter == "scale_row" ||
          parameter == "perm_reorder_col" || parameter == "perm_col" || parameter == "scale_col" ||
          parameter == "perm_matching" || parameter == "diag" || parameter == "memory_estimates"
-    solver.pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, value |> pointer)
+    solver.pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, value)
     solver.nbytes_provided = sizeof(value)
   elseif parameter == "comm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt"
     throw(ArgumentError("The data parameter \"$parameter\" is not yet supported by CUDSS.jl."))
