@@ -462,14 +462,15 @@ function cudss_get_config(solver::AbstractCudssSolver, parameter::String)
 end
 
 """
-    cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T})
-    cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T})
-    cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T})
-    cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{CuVector{T}}, b::Vector{CuVector{T}})
-    cudss(phase::String, solver::CudssBatchedSolver{T}, X::Vector{CuMatrix{T}}, B::Vector{CuMatrix{T}})
-    cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T})
+    cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}; asynchronous::Bool=true)
+    cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}; asynchronous::Bool=true)
+    cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}; asynchronous::Bool=true)
+    cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{CuVector{T}}, b::Vector{CuVector{T}}; asynchronous::Bool=true)
+    cudss(phase::String, solver::CudssBatchedSolver{T}, X::Vector{CuMatrix{T}}, B::Vector{CuMatrix{T}}; asynchronous::Bool=true)
+    cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T}; asynchronous::Bool=true)
 
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`.
+The keyword argument `asynchronous` specifies whether to follow the default asynchronous behavior of cuDSS or to perform an explicit synchronization after the call.
 
 The available phases are:
 - `"reordering"`: Reordering;
@@ -492,42 +493,44 @@ For that reason, we added shorthand phases:
 """
 function cudss end
 
-function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::CudssMatrix{T}; asynchronous::Bool=true) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
+  !asynchronous && CUDA.synchronize()
 end
 
-function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}; asynchronous::Bool=true) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(x)
   rhs = CudssMatrix(b)
-  cudss(phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs; asynchronous)
 end
 
-function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssSolver{T}, X::CuMatrix{T}, B::CuMatrix{T}; asynchronous::Bool=true) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssMatrix(X)
   rhs = CudssMatrix(B)
-  cudss(phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs; asynchronous)
 end
 
-function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T}; asynchronous::Bool=true) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
+  !asynchronous && CUDA.synchronize()
 end
 
-function cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{<:CuVector{T}}, b::Vector{<:CuVector{T}}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{<:CuVector{T}}, b::Vector{<:CuVector{T}}; asynchronous::Bool=true) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssBatchedMatrix(x)
   rhs = CudssBatchedMatrix(b)
-  cudss(phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs; asynchronous)
 end
 
-function cudss(phase::String, solver::CudssBatchedSolver{T}, X::Vector{<:CuMatrix{T}}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
+function cudss(phase::String, solver::CudssBatchedSolver{T}, X::Vector{<:CuMatrix{T}}, B::Vector{<:CuMatrix{T}}; asynchronous::Bool=true) where T <: BlasFloat
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   solution = CudssBatchedMatrix(X)
   rhs = CudssBatchedMatrix(B)
-  cudss(phase, solver, solution, rhs)
+  cudss(phase, solver, solution, rhs; asynchronous)
 end
