@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Schur complement · CUDSS.jl</title><meta name="title" content="Schur complement · CUDSS.jl"/><meta property="og:title" content="Schur complement · CUDSS.jl"/><meta property="twitter:title" content="Schur complement · CUDSS.jl"/><meta name="description" content="Documentation for CUDSS.jl."/><meta property="og:description" content="Documentation for CUDSS.jl."/><meta property="twitter:description" content="Documentation for CUDSS.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">CUDSS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../types/">Types</a></li><li><a class="tocitem" href="../functions/">Functions</a></li><li><a class="tocitem" href="../generic/">Generic interface</a></li><li class="is-active"><a class="tocitem" href>Schur complement</a><ul class="internal"><li><a class="tocitem" href="#Dense-Schur-complement"><span>Dense Schur complement</span></a></li><li><a class="tocitem" href="#Sparse-Schur-complement"><span>Sparse Schur complement</span></a></li></ul></li><li><a class="tocitem" href="../uniform_batch/">Uniform batch</a></li><li><a class="tocitem" href="../nonuniform_batch/">Non-uniform batch</a></li><li><a class="tocitem" href="../options/">Options</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Schur complement</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Schur complement</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl/blob/main/docs/src/schur_complement.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h4 id="Schur-complement"><a class="docs-heading-anchor" href="#Schur-complement">Schur complement</a><a id="Schur-complement-1"></a><a class="docs-heading-anchor-permalink" href="#Schur-complement" title="Permalink"></a></h4><h2 id="Dense-Schur-complement"><a class="docs-heading-anchor" href="#Dense-Schur-complement">Dense Schur complement</a><a id="Dense-Schur-complement-1"></a><a class="docs-heading-anchor-permalink" href="#Dense-Schur-complement" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using LinearAlgebra
+using SparseArrays
+
+T = Float64
+n = 5
+
+# A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
+#     [A₂₁ A₂₂]             [0 5]        [0 3 0]
+#
+# A₂₁ = [0 6] and A₂₂ = [8 0 0 ]
+#       [7 0]           [0 9 1 ]
+#       [0 0]           [0 1 10]
+#
+# The matrix A and the Schur complement S = A₂₂ − A₂₁(A₁₁)⁻¹A₁₂ are:
+#
+#     [4 0 1 0 2 ]
+#     [0 5 0 3 0 ]          [ 8    -3.6  0  ]
+# A = [0 6 8 0 0 ]  and S = [-1.75  9   -2.5]
+#     [7 0 0 9 1 ]          [ 0     1    10 ]
+#     [0 0 0 1 10]
+
+rows = [1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5]
+cols = [1, 3, 5, 2, 4, 2, 3, 1, 4, 5, 4, 5]
+vals = [4.0, 1.0, 2.0, 5.0, 3.0, 6.0, 8.0, 7.0, 9.0, 1.0, 1.0, 10.0]
+A_cpu = sparse(rows, cols, vals, n, n)
+
+# Right-hand side such the solution is a vector of ones
+b_cpu = [7.0, 8.0, 14.0, 17.0, 11.0]
+
+A_gpu = CuSparseMatrixCSR(A_cpu)
+x_gpu = CuVector{Float64}(undef, n)
+b_gpu = CuVector(b_cpu)
+solver = CudssSolver(A_gpu, &quot;G&quot;, &#39;F&#39;)
+
+# Enable the Schur complement computation
+cudss_set(solver, &quot;schur_mode&quot;, 1)
+
+# Rows and columns for the Schur complement of the block A₂₂
+schur_indices = Cint[0, 0, 1, 1, 1]
+cudss_set(solver, &quot;user_schur_indices&quot;, schur_indices)
+
+# Compute the Schur complement
+cudss(&quot;analysis&quot;, solver, x_gpu, b_gpu)
+cudss(&quot;factorization&quot;, solver, x_gpu, b_gpu)
+
+# Dimension of the Schur complement nₛ and the number of nonzeros
+(nrows_S, ncols_S, nnz_S) = cudss_get(solver, &quot;schur_shape&quot;)
+
+# Dense storage for the Schur complement
+S_gpu = CuMatrix{Float64}(undef, nrows_S, ncols_S)
+cudss_matrix = CudssMatrix(S_gpu)
+
+# Update the matrix S_gpu
+cudss_set(solver, &quot;schur_matrix&quot;, cudss_matrix.matrix)
+cudss_get(solver, &quot;schur_matrix&quot;)
+
+# [A₁₁ A₁₂] [x₁] = [b₁] ⟺ A₁₁x₁ = b₁ - A₁₂x₂
+# [A₂₁ A₂₂] [x₂]   [b₂]   Sx₂ = b₂ - A₂₁(A₁₁)⁻¹b₁ = bₛ
+
+# Compute bₛ with a partial forward solve
+# bₛ is stored in the last nₛ components of b_gpu
+cudss(&quot;solve_fwd_schur&quot;, solver, x_gpu, b_gpu)
+
+# Compute x₂ with the dense LU of cuSOLVER
+nₛ = 3
+bₛ = x_gpu[n-nₛ+1:n]
+x₂ = S_gpu \ bₛ
+
+# Compute x₁ with a partial backward solve
+# x₂ must be store the last nₛ components of x_gpu
+x_gpu[n-nₛ+1:n] .= x₂
+cudss(&quot;solve_bwd_schur&quot;, solver, b_gpu, x_gpu)</code></pre><h2 id="Sparse-Schur-complement"><a class="docs-heading-anchor" href="#Sparse-Schur-complement">Sparse Schur complement</a><a id="Sparse-Schur-complement-1"></a><a class="docs-heading-anchor-permalink" href="#Sparse-Schur-complement" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using LinearAlgebra
+using SparseArrays
+
+T = Float64
+n = 5
+
+# A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
+#     [A₂₁ A₂₂]             [0 5]        [0 3 0]
+#
+# A₂₁ = [0 6] and A₂₂ = [8 0 0 ]
+#       [7 0]           [0 9 1 ]
+#       [0 0]           [0 1 10]
+#
+# The matrix A and the Schur complement S = A₂₂ − A₂₁(A₁₁)⁻¹A₁₂ are:
+#
+#     [4 0 1 0 2 ]
+#     [0 5 0 3 0 ]          [ 8    -3.6  0  ]
+# A = [0 6 8 0 0 ]  and S = [-1.75  9   -2.5]
+#     [7 0 0 9 1 ]          [ 0     1    10 ]
+#     [0 0 0 1 10]
+
+rows = [1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5]
+cols = [1, 3, 5, 2, 4, 2, 3, 1, 4, 5, 4, 5]
+vals = [4.0, 1.0, 2.0, 5.0, 3.0, 6.0, 8.0, 7.0, 9.0, 1.0, 1.0, 10.0]
+A_cpu = sparse(rows, cols, vals, n, n)
+
+# Right-hand side such the solution is a vector of ones
+b_cpu = [7.0, 8.0, 14.0, 17.0, 11.0]
+
+A_gpu = CuSparseMatrixCSR(A_cpu)
+x_gpu = CuVector{Float64}(undef, n)
+b_gpu = CuVector(b_cpu)
+solver = CudssSolver(A_gpu, &quot;G&quot;, &#39;F&#39;)
+
+# Enable the Schur complement computation
+cudss_set(solver, &quot;schur_mode&quot;, 1)
+
+# Rows and columns for the Schur complement of the block A₂₂
+schur_indices = Cint[0, 0, 1, 1, 1]
+cudss_set(solver, &quot;user_schur_indices&quot;, schur_indices)
+
+# Compute the Schur complement
+cudss(&quot;analysis&quot;, solver, x_gpu, b_gpu)
+cudss(&quot;factorization&quot;, solver, x_gpu, b_gpu)
+
+# Dimension of the Schur complement nₛ and the number of nonzeros
+(nrows_S, ncols_S, nnz_S) = cudss_get(solver, &quot;schur_shape&quot;)
+
+# Sparse storage for the Schur complement
+rowPtr = CuVector{Cint}(undef, nrows_S+1)
+colVal = CuVector{Cint}(undef, nnz_S)
+nzVal = CuVector{T}(undef, nnz_S)
+cudss_matrix = CudssMatrix(rowPtr, colVal, nzVal, &quot;G&quot;, &#39;F&#39;)
+
+# Update the vectors rowPtr, colVal and nzVal
+cudss_set(solver, &quot;schur_matrix&quot;, cudss_matrix.matrix)
+cudss_get(solver, &quot;schur_matrix&quot;)
+
+# Schur complement stored as a CuSparseMatrixCSR
+dim_S = (nrows_S, ncols_S)
+S_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nzVal, dim_S)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../generic/">« Generic interface</a><a class="docs-footer-nextpage" href="../uniform_batch/">Uniform batch »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Monday 20 October 2025 15:21">Monday 20 October 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
