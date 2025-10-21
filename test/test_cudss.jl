@@ -294,15 +294,22 @@ function cudss_generic()
     @testset "Unsymmetric -- Non-Hermitian" begin
       A_cpu = sprand(T, n, n, 0.02) + I
       b_cpu = rand(T, n)
+      x_cpu = zeros(T, n)
 
       A_gpu = CuSparseMatrixCSR(A_cpu)
       b_gpu = CuVector(b_cpu)
 
-      @testset "ldiv!" begin
-        x_cpu = zeros(T, n)
+      @testset "lu!" begin
+        solver = CudssSolver(A_gpu, "G", 'F')
         x_gpu = CuVector(x_cpu)
+        cudss("analysis", solver, x_gpu, b_gpu)
+        solver = lu!(solver, A_gpu)
+        @test !solver.fresh_factorization
+      end
 
+      @testset "ldiv!" begin
         solver = lu(A_gpu)
+        x_gpu = CuVector(x_cpu)
         ldiv!(x_gpu, solver, b_gpu)
         r_gpu = b_gpu - A_gpu * x_gpu
         @test norm(r_gpu) ≤ √eps(R)
@@ -334,17 +341,25 @@ function cudss_generic()
         A_cpu = sprand(T, n, n, 0.01) + I
         A_cpu = A_cpu + A_cpu'
         B_cpu = rand(T, n, p)
+        X_cpu = rand(T, n, p)
 
         (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
         (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
         (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
         B_gpu = CuMatrix(B_cpu)
 
-        @testset "ldiv!" begin
-          X_cpu = zeros(T, n, p)
+        @testset "ldlt!" begin
+          structure = T <: Real ? "S" : "H"
+          solver = CudssSolver(A_gpu, structure, view)
           X_gpu = CuMatrix(X_cpu)
+          cudss("analysis", solver, X_gpu, B_gpu)
+          solver = ldlt!(solver, A_gpu)
+          @test !solver.fresh_factorization
+        end
 
+        @testset "ldiv!" begin
           solver = ldlt(A_gpu; view)
+          X_gpu = CuMatrix(X_cpu)
           ldiv!(X_gpu, solver, B_gpu)
           R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)
@@ -383,17 +398,25 @@ function cudss_generic()
         A_cpu = sprand(T, n, n, 0.01)
         A_cpu = A_cpu * A_cpu' + I
         B_cpu = rand(T, n, p)
+        X_cpu = zeros(T, n, p)
 
         (view == 'L') && (A_gpu = CuSparseMatrixCSR(A_cpu |> tril))
         (view == 'U') && (A_gpu = CuSparseMatrixCSR(A_cpu |> triu))
         (view == 'F') && (A_gpu = CuSparseMatrixCSR(A_cpu))
         B_gpu = CuMatrix(B_cpu)
 
-        @testset "ldiv!" begin
-          X_cpu = zeros(T, n, p)
+        @testset "cholesky!" begin
+          structure = T <: Real ? "SPD" : "HPD"
+          solver = CudssSolver(A_gpu, structure, view)
           X_gpu = CuMatrix(X_cpu)
+          cudss("analysis", solver, X_gpu, B_gpu)
+          solver = cholesky!(solver, A_gpu)
+          @test !solver.fresh_factorization
+        end
 
+        @testset "ldiv!" begin
           solver = cholesky(A_gpu; view)
+          X_gpu = CuMatrix(X_cpu)
           ldiv!(X_gpu, solver, B_gpu)
           R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
           @test norm(R_gpu) ≤ √eps(R)

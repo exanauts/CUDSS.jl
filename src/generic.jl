@@ -33,7 +33,11 @@ function LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,IN
   cudss_update(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
-  cudss("refactorization", solver, x, b)
+  if solver.fresh_factorization
+    cudss("factorization", solver, x, b)
+  else
+    cudss("refactorization", solver, x, b)
+  end
   return solver
 end
 
@@ -80,7 +84,11 @@ function LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,
   cudss_update(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
-  cudss("refactorization", solver, x, b)
+  if solver.fresh_factorization
+    cudss("factorization", solver, x, b)
+  else
+    cudss("refactorization", solver, x, b)
+  end
   return solver
 end
 
@@ -127,7 +135,11 @@ function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCS
   cudss_update(solver, A)
   x = CudssMatrix(T, n)
   b = CudssMatrix(T, n)
-  cudss("refactorization", solver, x, b)
+  if solver.fresh_factorization
+    cudss("factorization", solver, x, b)
+  else
+    cudss("refactorization", solver, x, b)
+  end
   return solver
 end
 

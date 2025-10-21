@@ -33,6 +33,7 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
   matrix::CudssMatrix{T,INT}
   config::CudssConfig
   data::CudssData
+  fresh_factorization::Bool
   pointer::PtrOrCuPtr{Cvoid}
   ref_cint::Base.RefValue{Cint}
   ref_int64::Base.RefValue{Int64}
@@ -46,6 +47,7 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
   nbytes_written::Base.RefValue{Csize_t}
 
   function CudssSolver(matrix::CudssMatrix{T,INT}, config::CudssConfig, data::CudssData) where {T <: BlasFloat, INT <: CudssInt}
+    fresh_factorization = true
     pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, C_NULL)
     ref_cint = Ref{Cint}()
     ref_int64 = Ref{Int64}()
@@ -57,8 +59,8 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
     ref_matrix = Ref{cudssMatrix_t}()
     nbytes_provided = Csize_t(0)
     nbytes_written = Ref{Csize_t}()
-    return new{T,INT}(matrix, config, data, pointer, ref_cint, ref_int64, ref_float64, ref_inertia,
-                      ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_provided, nbytes_written)
+    return new{T,INT}(matrix, config, data, fresh_factorization, pointer, ref_cint, ref_int64, ref_float64,
+                      ref_inertia, ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_provided, nbytes_written)
   end
 
   function CudssSolver(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
@@ -107,6 +109,7 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
   matrix::CudssBatchedMatrix{T,INT,M}
   config::CudssConfig
   data::CudssData
+  fresh_factorization::Bool
   pointer::PtrOrCuPtr{Cvoid}
   ref_cint::Base.RefValue{Cint}
   ref_int64::Base.RefValue{Int64}
@@ -120,6 +123,7 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
   nbytes_written::Base.RefValue{Csize_t}
 
   function CudssBatchedSolver(matrix::CudssBatchedMatrix{T,INT}, config::CudssConfig, data::CudssData) where {T <: BlasFloat, INT <: CudssInt}
+    fresh_factorization = true
     pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, C_NULL)
     ref_cint = Ref{Cint}()
     ref_int64 = Ref{Int64}()
@@ -132,8 +136,8 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
     nbytes_provided = Csize_t(0)
     nbytes_written = Ref{Csize_t}()
     M = typeof(matrix.Mptrs)
-    return new{T,INT,M}(matrix, config, data, pointer, ref_cint, ref_int64, ref_float64, ref_inertia,
-                        ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_provided, nbytes_written)
+    return new{T,INT,M}(matrix, config, data, fresh_factorization, pointer, ref_cint, ref_int64, ref_float64,
+                        ref_inertia, ref_schur, ref_algo, ref_pivot, ref_matrix, nbytes_provided, nbytes_written)
   end
 
   function CudssBatchedSolver(A::Vector{CuSparseMatrixCSR{T,INT}}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
@@ -498,6 +502,9 @@ function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::Cuds
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
   !asynchronous && CUDA.synchronize()
+  if (phase == "factorization") && solver.fresh_factorization
+    solver.fresh_factorization = false
+  end
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}; asynchronous::Bool=true) where T <: BlasFloat
@@ -519,6 +526,9 @@ function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatr
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
   !asynchronous && CUDA.synchronize()
+  if (phase == "factorization") && solver.fresh_factorization
+    solver.fresh_factorization = false
+  end
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{<:CuVector{T}}, b::Vector{<:CuVector{T}}; asynchronous::Bool=true) where T <: BlasFloat
