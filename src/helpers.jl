@@ -1,5 +1,5 @@
 # cuDSS helper functions
-export CudssMatrix, CudssBatchedMatrix, CudssHandle, CudssData, CudssConfig
+export CudssMatrix, CudssBatchedMatrix, CudssData, CudssConfig
 
 ## Matrix
 
@@ -216,36 +216,18 @@ end
 
 Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.matrix
 
-## Handle
-
-"""
-    handle = CudssHandle()
-    handle = CudssHandle(device_count::Integer, device_indices::Vector{Cint})
-
-The function `CudssHandle` initializes a cuDSS library handle (`cudssHandle_t`), which encapsulates the cuDSS library context.
-When called without arguments, the cuDSS context is associated with the current CUDA device.
-To initialize a cuDSS handle for multiple devices, specify the number of CUDA devices using `device_count` and provide their indices in `device_indices` (starting from 0).
-"""
-function CudssHandle()
-    handle = Ref{cudssHandle_t}()
-    cudssCreate(handle)
-    handle[]
-end
-
-function CudssHandle(device_count::Integer, device_indices::Vector{Cint})
-    @assert device_count == length(device_indices)
-    handle = Ref{cudssHandle_t}()
-    cudssCreateMg(handle, Cint(device_count), device_indices)
-    handle[]
-end
-
 ## Data
 
 """
     data = CudssData()
+    data = CudssData(device_indices::Vector{Cint})
     data = CudssData(cudss_handle::cudssHandle_t)
 
 `CudssData` holds internal data (e.g., LU factors arrays).
+
+When called without arguments, the data is initialized for the current CUDA device.
+To prepare data for multiple devices, provide their indices in `device_indices` (starting from 0).
+Alternatively, you can create a `CudssData` object directly from an existing `cudssHandle_t` returned by `CUDSS.handle()` or `CUDSS.mg_handle(device_indices)`.
 """
 mutable struct CudssData
     handle::cudssHandle_t
@@ -263,6 +245,11 @@ mutable struct CudssData
         cudss_handle = handle()
         CudssData(cudss_handle)
     end
+
+    function CudssData(device_indices::Vector{Cint})
+        cudss_handle = mg_handle(device_indices)
+        CudssData(cudss_handle)
+    end
 end
 
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
@@ -275,11 +262,13 @@ end
 
 """
     config = CudssConfig()
-    config = CudssConfig(device_count::Integer, device_indices::Vector{Cint})
+    config = CudssConfig(device_indices::Vector{Cint})
 
-`CudssConfig` stores configuration settings for the solver.
+`CudssConfig` stores configuration parameters for the solver.
 
-To configure the solver for multiple devices, specify the total number of CUDA devices with `device_count`, and provide their indices in `device_indices` (starting from 0).
+When called without arguments, the configuration is initialized for the current CUDA device.
+To configure the solver for multiple devices, provide their indices in `device_indices` (starting from 0).
+This can also be done directly with [`cudss_set`](@ref) by specifying both `"device_count"` and `"device_indices"`.
 """
 mutable struct CudssConfig
     config::cudssConfig_t
@@ -292,9 +281,9 @@ mutable struct CudssConfig
         obj
     end
 
-    function CudssConfig(device_count::Integer, device_indices::Vector{Cint})
-        @assert device_count == length(device_indices)
+    function CudssConfig(device_indices::Vector{Cint})
         config = CudssConfig()
+        device_count = length(device_indices)
         cudssConfigSet(config, "device_count", Ref{Cint}(device_count), 4)
         cudssConfigSet(config, "device_indices", device_indices, 4 * device_count)
         return config
