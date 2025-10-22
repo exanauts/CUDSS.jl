@@ -6,6 +6,12 @@ function cudssCreate()
     handle[]
 end
 
+function cudssCreateMg(device_count, device_indices)
+    handle = Ref{cudssHandle_t}()
+    cudssCreateMg(handle, device_count, device_indices)
+    handle[]
+end
+
 function cudssGetProperty(property::libraryPropertyType)
   value_ref = Ref{Cint}()
   cudssGetProperty(property, value_ref)
