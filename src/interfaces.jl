@@ -280,7 +280,7 @@ function cudss_set_data(solver::AbstractCudssSolver{T,INT}, parameter::String, v
     solver.ref_cint[] = value
     cudssDataSet(solver.data.handle, solver.data, parameter, solver.ref_cint, 4)
   elseif parameter == "user_perm" || parameter == "user_schur_indices"
-    (value isa Vector{INT} || value isa CuVector{INT}) || throw(ArgumentError("The vector is neither a Vector{$INT} nor a CuVector{$INT}."))
+    (value isa Vector{INT} || value isa CuVector{INT}) || throw(ArgumentError("The data parameter \"$parameter\" provided is neither a Vector{$INT} nor a CuVector{$INT}."))
     cudssDataSet(solver.data.handle, solver.data, parameter, value, sizeof(value))
   elseif parameter == "schur_matrix"
     solver.ref_matrix[] = value
@@ -322,7 +322,8 @@ function cudss_set_config(solver::AbstractCudssSolver, parameter::String, value)
     solver.ref_cint[] = value
     cudssConfigSet(solver.config, parameter, solver.ref_cint, 4)
   elseif parameter == "device_indices"
-    throw(ArgumentError("The config parameter \"device_indices\" is not supported by CUDSS.jl."))
+    value isa Vector{Cint} || throw(ArgumentError("The config parameter \"$parameter\" provided is not a Vector{Cint}."))
+    cudssDataSet(solver.config, parameter, value, sizeof(value))
   else
     throw(ArgumentError("Unknown config parameter \"$parameter\"."))
   end
