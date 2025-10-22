@@ -26,7 +26,7 @@ version() = VersionNumber(cudssGetProperty(CUDA.MAJOR_VERSION),
 
 function handle_ctor(ctx)
     context!(ctx) do
-        cudssCreate()
+        CudssHandle()
     end
 end
 function handle_dtor(ctx, handle)

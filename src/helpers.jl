@@ -1,5 +1,5 @@
 # cuDSS helper functions
-export CudssMatrix, CudssBatchedMatrix, CudssData, CudssConfig
+export CudssMatrix, CudssBatchedMatrix, CudssHandle, CudssData, CudssConfig
 
 ## Matrix
 
@@ -216,6 +216,29 @@ end
 
 Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.matrix
 
+## Handle
+
+"""
+    handle = CudssHandle()
+    handle = CudssHandle(device_count::Integer, device_indices::Vector{Cint})
+
+The function `CudssHandle` initializes a cuDSS library handle (`cudssHandle_t`), which encapsulates the cuDSS library context.
+When called without arguments, the cuDSS context is associated with the current CUDA device.
+To initialize a cuDSS handle for multiple devices, specify the number of CUDA devices using `device_count` and provide their indices in `device_indices` (starting from 0).
+"""
+function CudssHandle()
+    handle = Ref{cudssHandle_t}()
+    cudssCreate(handle)
+    handle[]
+end
+
+function CudssHandle(device_count::Integer, device_indices::Vector{Cint})
+    @assert device_count == length(device_indices)
+    handle = Ref{cudssHandle_t}()
+    cudssCreateMg(handle, Cint(device_count), device_indices)
+    handle[]
+end
+
 ## Data
 
 """
@@ -252,8 +275,11 @@ end
 
 """
     config = CudssConfig()
+    config = CudssConfig(device_count::Integer, device_indices::Vector{Cint})
 
 `CudssConfig` stores configuration settings for the solver.
+
+To configure the solver for multiple devices, specify the total number of CUDA devices with `device_count`, and provide their indices in `device_indices` (starting from 0).
 """
 mutable struct CudssConfig
     config::cudssConfig_t
@@ -264,6 +290,14 @@ mutable struct CudssConfig
         obj = new(config_ref[])
         finalizer(cudssConfigDestroy, obj)
         obj
+    end
+
+    function CudssConfig(device_count::Integer, device_indices::Vector{Cint})
+        @assert device_count == length(device_indices)
+        config = CudssConfig()
+        cudssConfigSet(config, "device_count", Ref{Cint}(device_count), 4)
+        cudssConfigSet(config, "device_indices", device_indices, 4 * device_count)
+        return config
     end
 end
 
