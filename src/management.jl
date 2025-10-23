@@ -117,6 +117,9 @@ function mg_handle()
     cuda = CUDA.active_state()
 
     # every task maintains library state per set of devices
+    # Note: Unlike cuSOLVER, cuDSS multi-GPU handles DO support stream setting.
+    # The stream is set on the "primary" device (the current device), and
+    # cuDSS manages internal streams on other devices for data transfers.
     LibraryState = @NamedTuple{handle::cudssHandle_t, stream::CuStream, devices::Vector{Cint}}
     states = get!(task_local_storage(), :CUDSS_MG) do
         Dict{UInt,LibraryState}()
