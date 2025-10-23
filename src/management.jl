@@ -77,51 +77,92 @@ end
 
 ## multi-gpu handles
 
-function mg_handle_ctor(ctx, device_indices)
-    context!(ctx) do
-        CudssHandleMg(device_indices)
-    end
-end
-function mg_handle_dtor(ctx, handle)
-    context!(ctx; skip_destroyed=true) do
-        cudssDestroy(handle)
-    end
+"""
+    devices!(devs::Vector{Cint})
+
+Set the device indices to use for multi-GPU operations in the current task.
+The devices are stored in task-local storage and will be used by subsequent
+calls to `mg_handle()`.
+
+# Example
+```julia
+CUDSS.devices!([Cint(0), Cint(1), Cint(2)])  # Use GPUs 0, 1, 2
+```
+"""
+function devices!(devs::Vector{Cint})
+    task_local_storage(:CUDSS_MG_devices, sort(devs))
+    return
 end
 
-const idle_mg_handles = HandleCache{CuContext,cudssHandle_t}(mg_handle_ctor, mg_handle_dtor)
+"""
+    devices()
 
-function mg_handle(device_indices::Vector{Cint})
+Get the device indices configured for multi-GPU operations in the current task.
+Returns a vector of device indices (as `Cint`). If not configured, defaults to
+using only the first device (device 0).
+"""
+devices() = get!(task_local_storage(), :CUDSS_MG_devices) do
+    # Default: use only first device
+    [Cint(0)]
+end::Vector{Cint}
+
+"""
+    ndevices()
+
+Get the number of devices configured for multi-GPU operations in the current task.
+"""
+ndevices() = length(devices())
+
+function mg_handle()
     cuda = CUDA.active_state()
 
-    # every task maintains library state per device
-    LibraryState = @NamedTuple{handle::cudssHandle_t, stream::CuStream}
+    # every task maintains library state per set of devices
+    LibraryState = @NamedTuple{handle::cudssHandle_t, stream::CuStream, devices::Vector{Cint}}
     states = get!(task_local_storage(), :CUDSS_MG) do
-        Dict{CuContext,LibraryState}()
-    end::Dict{CuContext,LibraryState}
+        Dict{UInt,LibraryState}()
+    end::Dict{UInt,LibraryState}
+
+    # derive a key from the active context and selected devices
+    key = hash(cuda.context)
+    for dev_idx in devices()
+        # hash the device indices to distinguish different MG configurations
+        key = hash(dev_idx, key)
+    end
 
     # get library state
     @noinline function new_state(cuda)
-        new_handle = pop!(idle_mg_handles, cuda.context)
+        dev_indices = devices()
+
+        # multi-GPU handles can't be reused for different device sets
+        # so we create fresh handles rather than pooling
+        new_handle = cudssCreateMg(dev_indices)
 
         finalizer(current_task()) do task
-            push!(idle_mg_handles, cuda.context, new_handle)
+            context!(cuda.context; skip_destroyed=true) do
+                cudssDestroy(new_handle)
+            end
         end
 
         cudssSetStream(new_handle, cuda.stream)
 
-        (; handle=new_handle, cuda.stream)
+        (; handle=new_handle, cuda.stream, devices=dev_indices)
     end
-    state = get!(states, cuda.context) do
+    state = get!(states, key) do
         new_state(cuda)
     end
 
-    # update stream
+    # update stream if changed
     @noinline function update_stream(cuda, state)
         cudssSetStream(state.handle, cuda.stream)
-        (; state.handle, cuda.stream)
+        (; state.handle, cuda.stream, state.devices)
     end
     if state.stream != cuda.stream
-        states[cuda.context] = state = update_stream(cuda, state)
+        states[key] = state = update_stream(cuda, state)
+    end
+
+    # validate devices haven't changed (can't reuse handle if they have)
+    if state.devices != devices()
+        states[key] = state = new_state(cuda)
     end
 
     return state.handle

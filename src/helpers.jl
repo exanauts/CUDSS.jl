@@ -227,7 +227,10 @@ Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.
 
 When called without arguments, the data is initialized for the current CUDA device.
 To prepare data for multiple devices, provide their indices in `device_indices` (starting from 0).
-Alternatively, you can create a `CudssData` object directly from an existing `cudssHandle_t` returned by `CUDSS.handle()` or `CUDSS.mg_handle(device_indices)`.
+Note: When using `device_indices`, you should also call `CUDSS.devices!(device_indices)` to configure
+the task-local device selection before creating the CudssData object.
+Alternatively, you can create a `CudssData` object directly from an existing `cudssHandle_t`
+returned by `CUDSS.handle()` or `CUDSS.mg_handle()`.
 """
 mutable struct CudssData
     handle::cudssHandle_t
@@ -247,7 +250,9 @@ mutable struct CudssData
     end
 
     function CudssData(device_indices::Vector{Cint})
-        cudss_handle = mg_handle(device_indices)
+        # Set the devices for the current task
+        devices!(device_indices)
+        cudss_handle = mg_handle()
         CudssData(cudss_handle)
     end
 end
