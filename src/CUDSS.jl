@@ -23,6 +23,15 @@ abstract type AbstractCudssMatrix{T,INT} end
 abstract type AbstractCudssSolver{T,INT} <: Factorization{T} end
 const CudssInt = Union{Cint, Int64}
 
+# Global flag to track if we're shutting down
+# This prevents finalizers from trying to clean up CUDA resources during shutdown
+const _julia_exiting = Ref{Bool}(false)
+
+# Register an atexit handler to set the flag
+function __init__()
+    atexit(() -> _julia_exiting[] = true)
+end
+
 include("libcudss.jl")
 include("error.jl")
 include("types.jl")

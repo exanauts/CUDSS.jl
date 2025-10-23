@@ -235,11 +235,13 @@ returned by `CUDSS.handle()` or `CUDSS.mg_handle()`.
 mutable struct CudssData
     handle::cudssHandle_t
     data::cudssData_t
+    ctx::CuContext
 
     function CudssData(cudss_handle::cudssHandle_t)
         data_ref = Ref{cudssData_t}()
         cudssDataCreate(cudss_handle, data_ref)
-        obj = new(cudss_handle, data_ref[])
+        ctx = context()
+        obj = new(cudss_handle, data_ref[], ctx)
         finalizer(cudssDataDestroy, obj)
         obj
     end
@@ -260,16 +262,10 @@ end
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
 
 function cudssDataDestroy(data::CudssData)
-    # Protect against context destruction during finalization
-    # This is especially important for multi-GPU handles
-    try
+    _julia_exiting[] && return
+
+    context!(data.ctx; skip_destroyed=true) do
         cudssDataDestroy(data.handle, data.data)
-    catch e
-        # Silently ignore errors during finalization if context is destroyed
-        # This can happen during Julia shutdown with multi-GPU handles
-        if !(e isa CUDSSError || e isa CUDA.CuError)
-            rethrow(e)
-        end
     end
 end
 
@@ -287,12 +283,14 @@ This can also be done directly with [`cudss_set`](@ref) by specifying both `"dev
 """
 mutable struct CudssConfig
     config::cudssConfig_t
+    ctx::CuContext
 
     function CudssConfig()
         config_ref = Ref{cudssConfig_t}()
         cudssConfigCreate(config_ref)
-        obj = new(config_ref[])
-        finalizer(_safe_cudssConfigDestroy, obj)
+        ctx = context()
+        obj = new(config_ref[], ctx)
+        finalizer(cudssConfigDestroy, obj)
         obj
     end
 
@@ -307,14 +305,10 @@ end
 
 Base.unsafe_convert(::Type{cudssConfig_t}, config::CudssConfig) = config.config
 
-function _safe_cudssConfigDestroy(config::CudssConfig)
-    # Protect against context destruction during finalization
-    try
+function cudssConfigDestroy(config::CudssConfig)
+    _julia_exiting[] && return
+
+    context!(config.ctx; skip_destroyed=true) do
         cudssConfigDestroy(config.config)
-    catch e
-        # Silently ignore errors during finalization if context is destroyed
-        if !(e isa CUDSSError || e isa CUDA.CuError)
-            rethrow(e)
-        end
     end
 end
