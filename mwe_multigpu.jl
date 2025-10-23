@@ -3,7 +3,6 @@ using CUDSS
 using LinearAlgebra
 using SparseArrays
 using Adapt
-using BenchmarkTools
 using KernelAbstractions
 
 # Utility functions
@@ -21,14 +20,26 @@ function create_matrix(T, n, density)
 end
 
 function create_multigpu_solver(A::T, device_indices::Vector{Cint}) where {T <: AbstractSparseMatrix}
+    # Important: cuDSS requires all API calls to be made on the primary/default device
+    # Save the current device and ensure we're on device 0 (or the first device in the list)
+    current_device = CUDA.device()
+    primary_device = Int(device_indices[1])
+
+    if CUDA.deviceid(current_device) != primary_device
+        println("Switching to primary device $primary_device for cuDSS multi-GPU initialization")
+        CUDA.device!(primary_device)
+    end
+
     # Configure devices for this task
     CUDSS.devices!(device_indices)
 
     # Create multi-GPU objects
-    data = CudssData(device_indices)
+    # Note: CudssConfig constructor will set device_count and device_indices
     config = CudssConfig(device_indices)
+    data = CudssData(device_indices)
     matrix = CudssMatrix(A, "S", 'F')
     solver = CudssSolver(matrix, config, data)
+
     return solver
 end
 
@@ -80,6 +91,9 @@ density = 0.01  # Sparsity pattern
 println("\n" * "-"^80)
 println("Problem Setup")
 println("-"^80)
+# Ensure matrix is created on the primary device (device 0)
+CUDA.device!(device_indices[1])
+println("Creating matrix on device $(device_indices[1]) (primary device)")
 A = create_matrix(T, n, density)
 
 # Create multi-GPU solver
