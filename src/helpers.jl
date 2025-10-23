@@ -260,7 +260,17 @@ end
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
 
 function cudssDataDestroy(data::CudssData)
-    cudssDataDestroy(data.handle, data.data)
+    # Protect against context destruction during finalization
+    # This is especially important for multi-GPU handles
+    try
+        cudssDataDestroy(data.handle, data.data)
+    catch e
+        # Silently ignore errors during finalization if context is destroyed
+        # This can happen during Julia shutdown with multi-GPU handles
+        if !(e isa CUDSSError || e isa CUDA.CuError)
+            rethrow(e)
+        end
+    end
 end
 
 ## Configuration
@@ -282,7 +292,7 @@ mutable struct CudssConfig
         config_ref = Ref{cudssConfig_t}()
         cudssConfigCreate(config_ref)
         obj = new(config_ref[])
-        finalizer(cudssConfigDestroy, obj)
+        finalizer(_safe_cudssConfigDestroy, obj)
         obj
     end
 
@@ -296,3 +306,15 @@ mutable struct CudssConfig
 end
 
 Base.unsafe_convert(::Type{cudssConfig_t}, config::CudssConfig) = config.config
+
+function _safe_cudssConfigDestroy(config::CudssConfig)
+    # Protect against context destruction during finalization
+    try
+        cudssConfigDestroy(config.config)
+    catch e
+        # Silently ignore errors during finalization if context is destroyed
+        if !(e isa CUDSSError || e isa CUDA.CuError)
+            rethrow(e)
+        end
+    end
+end
