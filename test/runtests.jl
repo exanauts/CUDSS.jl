@@ -113,4 +113,8 @@ end
   @testset "Task Isolation" begin
     cudss_mg_task_isolation()
   end
+
+  @testset "Hybrid Memory Mode" begin
+    cudss_mg_hybrid_memory()
+  end
 end

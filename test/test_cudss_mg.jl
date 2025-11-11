@@ -345,3 +345,81 @@ function cudss_mg_task_isolation()
         @test CUDSS.ndevices() == 1
     end
 end
+
+function cudss_mg_hybrid_memory()
+    if !has_multiple_gpus()
+        @test_skip "Multi-GPU tests require at least 2 CUDA devices"
+        return
+    end
+
+    n = 100
+    device_indices = [Cint(0), Cint(1)]
+    device_count = length(device_indices)
+
+    @testset "Multi-GPU hybrid memory mode: precision = $T" for T in (Float64, ComplexF64)
+        R = real(T)
+
+        # Create SPD/HPD problem
+        A_cpu = sprand(T, n, n, 0.01)
+        A_cpu = A_cpu * A_cpu' + I
+        b_cpu = rand(T, n)
+        x_cpu = zeros(T, n)
+
+        # Move to GPU (device 0)
+        A_gpu = CuSparseMatrixCSR(A_cpu)
+        b_gpu = CuVector(b_cpu)
+        x_gpu = CuVector(x_cpu)
+
+        # Configure for multi-GPU with hybrid mode
+        CUDSS.devices!(device_indices)
+        config = CudssConfig(device_indices)
+        data = CudssData(device_indices)
+
+        # Create solver
+        structure = T <: Real ? "SPD" : "HPD"
+        matrix = CudssMatrix(A_gpu, structure, 'L')
+        solver = CudssSolver(matrix, config, data)
+
+        # Enable hybrid memory mode (use both device and host memory)
+        cudss_set(solver, "hybrid_memory_mode", 1)
+
+        # Perform analysis phase
+        cudss("analysis", solver, x_gpu, b_gpu)
+
+        # Query per-device memory requirements
+        # Following the NVIDIA example pattern: query each device separately
+        default_device = CUDA.device()
+        memory_per_device = Int64[]
+        
+        for dev_idx in device_indices
+            # Switch to this device
+            CUDA.device!(dev_idx)
+            
+            # Query memory requirement for this device
+            nbytes_gpu = cudss_get(solver, "hybrid_device_memory_min")
+            push!(memory_per_device, nbytes_gpu)
+            
+            @test nbytes_gpu isa Int64
+            @test nbytes_gpu >= 0
+        end
+        
+        # Restore default device (cuDSS requires API calls on default device)
+        CUDA.device!(default_device)
+
+        # Optionally set hybrid device memory limit per device
+        # (Using the minimum required memory as the limit)
+        for (i, dev_idx) in enumerate(device_indices)
+            CUDA.device!(dev_idx)
+            cudss_set(solver, "hybrid_device_memory_limit", memory_per_device[i])
+        end
+        CUDA.device!(default_device)
+
+        # Continue with factorization and solve
+        cudss("factorization", solver, x_gpu, b_gpu)
+        cudss("solve", solver, x_gpu, b_gpu)
+
+        # Verify solution
+        r_gpu = b_gpu - A_gpu * x_gpu
+        @test norm(r_gpu) ≤ sqrt(eps(R)) * 100
+    end
+end
