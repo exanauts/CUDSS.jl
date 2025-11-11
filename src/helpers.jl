@@ -235,14 +235,18 @@ returned by `CUDSS.handle()` or `CUDSS.mg_handle()`.
 mutable struct CudssData
     handle::cudssHandle_t
     data::cudssData_t
-    ctx::CuContext
 
     function CudssData(cudss_handle::cudssHandle_t)
         data_ref = Ref{cudssData_t}()
         cudssDataCreate(cudss_handle, data_ref)
-        ctx = context()
-        obj = new(cudss_handle, data_ref[], ctx)
-        finalizer(cudssDataDestroy, obj)
+        cuda = CUDA.active_state()
+        obj = new(cudss_handle, data_ref[])
+        finalizer(obj) do data
+            _julia_exiting[] && return
+            context!(cuda.context; skip_destroyed=true) do
+                cudssDataDestroy(data.handle, data.data)
+            end
+        end
         obj
     end
 
@@ -261,14 +265,6 @@ end
 
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
 
-function cudssDataDestroy(data::CudssData)
-    _julia_exiting[] && return
-
-    context!(data.ctx; skip_destroyed=true) do
-        cudssDataDestroy(data.handle, data.data)
-    end
-end
-
 ## Configuration
 
 """
@@ -283,14 +279,18 @@ This can also be done directly with [`cudss_set`](@ref) by specifying both `"dev
 """
 mutable struct CudssConfig
     config::cudssConfig_t
-    ctx::CuContext
 
     function CudssConfig()
         config_ref = Ref{cudssConfig_t}()
         cudssConfigCreate(config_ref)
-        ctx = context()
-        obj = new(config_ref[], ctx)
-        finalizer(cudssConfigDestroy, obj)
+        cuda = CUDA.active_state()
+        obj = new(config_ref[])
+        finalizer(obj) do config
+            _julia_exiting[] && return
+            context!(cuda.context; skip_destroyed=true) do
+                cudssConfigDestroy(config.config)
+            end
+        end
         obj
     end
 
@@ -304,11 +304,3 @@ mutable struct CudssConfig
 end
 
 Base.unsafe_convert(::Type{cudssConfig_t}, config::CudssConfig) = config.config
-
-function cudssConfigDestroy(config::CudssConfig)
-    _julia_exiting[] && return
-
-    context!(config.ctx; skip_destroyed=true) do
-        cudssConfigDestroy(config.config)
-    end
-end
