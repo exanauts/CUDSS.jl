@@ -14,11 +14,13 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.lu(A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
+  nbatch = length(A.nzVal) ÷ length(A.colVal)
   solver = CudssSolver(A, "G", 'F')
-  x = CudssMatrix(T, n)
-  b = CudssMatrix(T, n)
-  cudss("analysis", solver, x, b)
-  cudss("factorization", solver, x, b)
+  (nbatch > 1) && cudss_set(solver, "ubatch_size", nbatch)
+  x = CudssMatrix(T, n; nbatch)
+  b = CudssMatrix(T, n; nbatch)
+  cudss("analysis", solver, x, b; asynchronous=true)
+  cudss("factorization", solver, x, b; asynchronous=false)
   return solver
 end
 
@@ -30,14 +32,12 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
+  nbatch = length(A.nzVal) ÷ length(A.colVal)
   cudss_update(solver, A)
-  x = CudssMatrix(T, n)
-  b = CudssMatrix(T, n)
-  if solver.fresh_factorization
-    cudss("factorization", solver, x, b)
-  else
-    cudss("refactorization", solver, x, b)
-  end
+  x = CudssMatrix(T, n; nbatch)
+  b = CudssMatrix(T, n; nbatch)
+  phase = solver.fresh_factorization ? "factorization" : "refactorization"
+  cudss(phase, solver, x, b; asynchronous=false)
   return solver
 end
 
@@ -62,11 +62,13 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   structure = T <: Real ? "S" : "H"
+  nbatch = length(A.nzVal) ÷ length(A.colVal)
   solver = CudssSolver(A, structure, view)
-  x = CudssMatrix(T, n)
-  b = CudssMatrix(T, n)
-  cudss("analysis", solver, x, b)
-  cudss("factorization", solver, x, b)
+  (nbatch > 1) && cudss_set(solver, "ubatch_size", nbatch)
+  x = CudssMatrix(T, n; nbatch)
+  b = CudssMatrix(T, n; nbatch)
+  cudss("analysis", solver, x, b; asynchronous=true)
+  cudss("factorization", solver, x, b; asynchronous=false)
   return solver
 end
 
@@ -81,14 +83,12 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
+  nbatch = length(A.nzVal) ÷ length(A.colVal)
   cudss_update(solver, A)
-  x = CudssMatrix(T, n)
-  b = CudssMatrix(T, n)
-  if solver.fresh_factorization
-    cudss("factorization", solver, x, b)
-  else
-    cudss("refactorization", solver, x, b)
-  end
+  x = CudssMatrix(T, n; nbatch)
+  b = CudssMatrix(T, n; nbatch)
+  phase = solver.fresh_factorization ? "factorization" : "refactorization"
+  cudss(phase, solver, x, b; asynchronous=false)
   return solver
 end
 
@@ -112,12 +112,14 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
+  nbatch = length(A.nzVal) ÷ length(A.colVal)
   structure = T <: Real ? "SPD" : "HPD"
   solver = CudssSolver(A, structure, view)
-  x = CudssMatrix(T, n)
-  b = CudssMatrix(T, n)
-  cudss("analysis", solver, x, b)
-  cudss("factorization", solver, x, b)
+  (nbatch > 1) && cudss_set(solver, "ubatch_size", nbatch)
+  x = CudssMatrix(T, n; nbatch)
+  b = CudssMatrix(T, n; nbatch)
+  cudss("analysis", solver, x, b; asynchronous=true)
+  cudss("factorization", solver, x, b; asynchronous=false)
   return solver
 end
 
@@ -132,26 +134,24 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 """
 function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
+  nbatch = length(A.nzVal) ÷ length(A.colVal)
   cudss_update(solver, A)
-  x = CudssMatrix(T, n)
-  b = CudssMatrix(T, n)
-  if solver.fresh_factorization
-    cudss("factorization", solver, x, b)
-  else
-    cudss("refactorization", solver, x, b)
-  end
+  x = CudssMatrix(T, n; nbatch)
+  b = CudssMatrix(T, n; nbatch)
+  phase = solver.fresh_factorization ? "factorization" : "refactorization"
+  cudss(phase, solver, x, b; asynchronous=false)
   return solver
 end
 
 for type in (:CuVector, :CuMatrix)
   @eval begin
     function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
-      cudss("solve", solver, b, b)
+      cudss("solve", solver, b, b; asynchronous=false)
       return b
     end
 
     function LinearAlgebra.ldiv!(x::$type{T}, solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
-      cudss("solve", solver, x, b)
+      cudss("solve", solver, x, b; asynchronous=false)
       return x
     end
 
