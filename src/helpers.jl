@@ -220,9 +220,17 @@ Base.unsafe_convert(::Type{cudssMatrix_t}, matrix::CudssBatchedMatrix) = matrix.
 
 """
     data = CudssData()
+    data = CudssData(device_indices::Vector{Cint})
     data = CudssData(cudss_handle::cudssHandle_t)
 
 `CudssData` holds internal data (e.g., LU factors arrays).
+
+When called without arguments, the data is initialized for the current CUDA device.
+To prepare data for multiple devices, provide their indices in `device_indices` (starting from 0).
+Note: When using `device_indices`, you should also call `CUDSS.devices!(device_indices)` to configure
+the task-local device selection before creating the CudssData object.
+Alternatively, you can create a `CudssData` object directly from an existing `cudssHandle_t`
+returned by `CUDSS.handle()` or `CUDSS.mg_handle()`.
 """
 mutable struct CudssData
     handle::cudssHandle_t
@@ -231,8 +239,14 @@ mutable struct CudssData
     function CudssData(cudss_handle::cudssHandle_t)
         data_ref = Ref{cudssData_t}()
         cudssDataCreate(cudss_handle, data_ref)
+        cuda = CUDA.active_state()
         obj = new(cudss_handle, data_ref[])
-        finalizer(cudssDataDestroy, obj)
+        finalizer(obj) do data
+            _julia_exiting[] && return
+            context!(cuda.context; skip_destroyed=true) do
+                cudssDataDestroy(data.handle, data.data)
+            end
+        end
         obj
     end
 
@@ -240,20 +254,28 @@ mutable struct CudssData
         cudss_handle = handle()
         CudssData(cudss_handle)
     end
+
+    function CudssData(device_indices::Vector{Cint})
+        # Set the devices for the current task
+        devices!(device_indices)
+        cudss_handle = mg_handle()
+        CudssData(cudss_handle)
+    end
 end
 
 Base.unsafe_convert(::Type{cudssData_t}, data::CudssData) = data.data
-
-function cudssDataDestroy(data::CudssData)
-    cudssDataDestroy(data.handle, data.data)
-end
 
 ## Configuration
 
 """
     config = CudssConfig()
+    config = CudssConfig(device_indices::Vector{Cint})
 
-`CudssConfig` stores configuration settings for the solver.
+`CudssConfig` stores configuration parameters for the solver.
+
+When called without arguments, the configuration is initialized for the current CUDA device.
+To configure the solver for multiple devices, provide their indices in `device_indices` (starting from 0).
+This can also be done directly with [`cudss_set`](@ref) by specifying both `"device_count"` and `"device_indices"`.
 """
 mutable struct CudssConfig
     config::cudssConfig_t
@@ -261,9 +283,23 @@ mutable struct CudssConfig
     function CudssConfig()
         config_ref = Ref{cudssConfig_t}()
         cudssConfigCreate(config_ref)
+        cuda = CUDA.active_state()
         obj = new(config_ref[])
-        finalizer(cudssConfigDestroy, obj)
+        finalizer(obj) do config
+            _julia_exiting[] && return
+            context!(cuda.context; skip_destroyed=true) do
+                cudssConfigDestroy(config.config)
+            end
+        end
         obj
+    end
+
+    function CudssConfig(device_indices::Vector{Cint})
+        config = CudssConfig()
+        device_count = length(device_indices)
+        cudssConfigSet(config, "device_count", Ref{Cint}(device_count), 4)
+        cudssConfigSet(config, "device_indices", device_indices, 4 * device_count)
+        return config
     end
 end
 

@@ -475,7 +475,19 @@ end
     cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatrix{T}, B::CudssBatchedMatrix{T}; asynchronous::Bool=true)
 
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`.
-The keyword argument `asynchronous` specifies whether to follow the default asynchronous behavior of cuDSS or to perform an explicit synchronization after the call.
+
+# Synchronization Behavior
+
+The `asynchronous` keyword argument controls synchronization for **single-GPU** operations:
+- `asynchronous=true` (default): Operations return immediately without blocking (asynchronous execution)
+- `asynchronous=false`: Performs stream synchronization (`CUDA.synchronize()`) after the operation
+
+For **multi-GPU** operations (`ndevices() > 1`), synchronization is **always performed automatically**
+using device synchronization (`CUDA.device_synchronize()`) regardless of the `asynchronous` parameter.
+This ensures proper coordination across devices and prevents race conditions. The automatic synchronization
+follows the pattern established by cuSOLVER multi-GPU in CUDA.jl.
+
+# Available Phases
 
 The available phases are:
 - `"reordering"`: Reordering;
@@ -502,7 +514,15 @@ function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::Cuds
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
-  !asynchronous && CUDA.synchronize()
+
+  # For multi-GPU operations, always synchronize to ensure cross-device coordination
+  # For single-GPU, only synchronize if requested
+  if ndevices() > 1
+    CUDA.device_synchronize()
+  elseif !asynchronous
+    CUDA.synchronize()
+  end
+
   if (phase == "factorization") && solver.fresh_factorization
     solver.fresh_factorization = false
   end
@@ -526,7 +546,15 @@ function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatr
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
-  !asynchronous && CUDA.synchronize()
+
+  # For multi-GPU operations, always synchronize to ensure cross-device coordination
+  # For single-GPU, only synchronize if requested
+  if ndevices() > 1
+    CUDA.device_synchronize()
+  elseif !asynchronous
+    CUDA.synchronize()
+  end
+
   if (phase == "factorization") && solver.fresh_factorization
     solver.fresh_factorization = false
   end
