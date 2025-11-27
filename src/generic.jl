@@ -110,7 +110,7 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 
 * `solver`: Opaque structure [`CudssSolver`](@ref) that stores the factors of the LLᴴ decomposition.
 """
-function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check = false) where {T <: BlasFloat, INT <: CudssInt}
+function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}, p::NoPivot=NoPivot(); view::Char='F', check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   nbatch = length(A.nzVal) ÷ length(A.colVal)
   structure = T <: Real ? "SPD" : "HPD"
@@ -123,8 +123,8 @@ function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}; view::Char='F', che
   return solver
 end
 
-LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasReal, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, view=A.uplo)
-LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasFloat, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, view=A.uplo)
+LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}}, p::NoPivot=NoPivot(); check = false) where {T <: BlasReal, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, p; view=A.uplo)
+LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}, p::NoPivot=NoPivot(); check = false) where {T <: BlasFloat, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, p; view=A.uplo)
 
 """
     solver = cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
