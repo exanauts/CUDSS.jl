@@ -6,9 +6,10 @@ function cudssCreate()
     handle[]
 end
 
-function cudssCreateMg(device_count, device_indices)
+function cudssCreateMg(device_indices::Vector{Cint})
     handle = Ref{cudssHandle_t}()
-    cudssCreateMg(handle, device_count, device_indices)
+    device_count = length(device_indices)
+    cudssCreateMg(handle, device_count |> Cint, device_indices)
     handle[]
 end
 
@@ -22,7 +23,7 @@ version() = VersionNumber(cudssGetProperty(CUDA.MAJOR_VERSION),
                           cudssGetProperty(CUDA.MINOR_VERSION),
                           cudssGetProperty(CUDA.PATCH_LEVEL))
 
-## handles
+## single-gpu handles
 
 function handle_ctor(ctx)
     context!(ctx) do
@@ -69,6 +70,102 @@ function handle()
     end
     if state.stream != cuda.stream
         states[cuda.context] = state = update_stream(cuda, state)
+    end
+
+    return state.handle
+end
+
+## multi-gpu handles
+
+"""
+    devices!(devs::Vector{Cint})
+
+Set the device indices to use for multi-GPU operations in the current task.
+The devices are stored in task-local storage and will be used by subsequent
+calls to `mg_handle()`.
+
+# Example
+```julia
+CUDSS.devices!([Cint(0), Cint(1), Cint(2)])  # Use GPUs 0, 1, 2
+```
+"""
+function devices!(devs::Vector{Cint})
+    task_local_storage(:CUDSS_MG_devices, sort(devs))
+    return
+end
+
+"""
+    devices()
+
+Get the device indices configured for multi-GPU operations in the current task.
+Returns a vector of device indices (as `Cint`). If not configured, defaults to
+using only the first device (device 0).
+"""
+devices() = get!(task_local_storage(), :CUDSS_MG_devices) do
+    # Default: use only first device
+    [Cint(0)]
+end::Vector{Cint}
+
+"""
+    ndevices()
+
+Get the number of devices configured for multi-GPU operations in the current task.
+"""
+ndevices() = length(devices())
+
+function mg_handle()
+    cuda = CUDA.active_state()
+
+    # every task maintains library state per set of devices
+    # Note: Unlike cuSOLVER, cuDSS multi-GPU handles DO support stream setting.
+    # The stream is set on the "primary" device (the current device), and
+    # cuDSS manages internal streams on other devices for data transfers.
+    LibraryState = @NamedTuple{handle::cudssHandle_t, stream::CuStream, devices::Vector{Cint}}
+    states = get!(task_local_storage(), :CUDSS_MG) do
+        Dict{UInt,LibraryState}()
+    end::Dict{UInt,LibraryState}
+
+    # derive a key from the active context and selected devices
+    key = hash(cuda.context)
+    for dev_idx in devices()
+        # hash the device indices to distinguish different MG configurations
+        key = hash(dev_idx, key)
+    end
+
+    # get library state
+    @noinline function new_state(cuda)
+        dev_indices = devices()
+
+        # multi-GPU handles can't be reused for different device sets
+        # so we create fresh handles rather than pooling
+        new_handle = cudssCreateMg(dev_indices)
+
+        finalizer(current_task()) do task
+            context!(cuda.context; skip_destroyed=true) do
+                cudssDestroy(new_handle)
+            end
+        end
+
+        cudssSetStream(new_handle, cuda.stream)
+
+        (; handle=new_handle, cuda.stream, devices=dev_indices)
+    end
+    state = get!(states, key) do
+        new_state(cuda)
+    end
+
+    # update stream if changed
+    @noinline function update_stream(cuda, state)
+        cudssSetStream(state.handle, cuda.stream)
+        (; state.handle, cuda.stream, state.devices)
+    end
+    if state.stream != cuda.stream
+        states[key] = state = update_stream(cuda, state)
+    end
+
+    # validate devices haven't changed (can't reuse handle if they have)
+    if state.devices != devices()
+        states[key] = state = new_state(cuda)
     end
 
     return state.handle

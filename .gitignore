@@ -1,3 +1,4 @@
 Manifest.toml
 /LocalPreferences.toml
 docs/build
+.vscode

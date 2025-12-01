@@ -12,6 +12,7 @@ Random.seed!(666)  # Random tests are diabolical
 
 include("test_cudss.jl")
 include("test_batched_cudss.jl")
+include("test_cudss_mg.jl")
 
 @testset "CUDSS" begin
   @testset "version" begin
@@ -81,5 +82,39 @@ end
 
   @testset "Refactorization Cholesky -- batched" begin
     refactorization_batched_cholesky()
+  end
+end
+
+@testset "Multi-GPU CUDSS" begin
+  @testset "Device Management" begin
+    cudss_mg_device_management()
+  end
+
+  @testset "Data Creation" begin
+    cudss_mg_data_creation()
+  end
+
+  @testset "Solver" begin
+    cudss_mg_solver()
+  end
+
+  @testset "Multiple RHS" begin
+    cudss_mg_multiple_rhs()
+  end
+
+  @testset "Refactorization" begin
+    cudss_mg_refactorization()
+  end
+
+  @testset "Views" begin
+    cudss_mg_views()
+  end
+
+  @testset "Task Isolation" begin
+    cudss_mg_task_isolation()
+  end
+
+  @testset "Hybrid Memory Mode" begin
+    cudss_mg_hybrid_memory()
   end
 end
