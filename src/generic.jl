@@ -143,19 +143,29 @@ function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCS
   return solver
 end
 
-for type in (:CuVector, :CuMatrix)
+function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::CudssMatrix{T}) where T <: BlasFloat
+  cudss("solve", solver, b, b; asynchronous=false)
+  return b
+end
+
+function LinearAlgebra.ldiv!(x::CudssMatrix{T}, solver::CudssSolver{T}, b::CudssMatrix{T}) where T <: BlasFloat
+  cudss("solve", solver, x, b; asynchronous=false)
+  return x
+end
+
+for CuStorage in (:CuVector, :CuMatrix)
   @eval begin
-    function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
+    function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::$CuStorage{T}) where T <: BlasFloat
       cudss("solve", solver, b, b; asynchronous=false)
       return b
     end
 
-    function LinearAlgebra.ldiv!(x::$type{T}, solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
+    function LinearAlgebra.ldiv!(x::$CuStorage{T}, solver::CudssSolver{T}, b::$CuStorage{T}) where T <: BlasFloat
       cudss("solve", solver, x, b; asynchronous=false)
       return x
     end
 
-    function Base.:\(solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
+    function Base.:\(solver::CudssSolver{T}, b::$CuStorage{T}) where T <: BlasFloat
       x = similar(b)
       ldiv!(x, solver, b)
       return x
