@@ -11,7 +11,8 @@ import CUDSS: CUDSS_DATA_PARAMETERS, CUDSS_CONFIG_PARAMETERS
 Random.seed!(666)  # Random tests are diabolical
 
 include("test_cudss.jl")
-include("test_batched_cudss.jl")
+include("test_uniform_batch_cudss.jl")
+include("test_nonuniform_batch_cudss.jl")
 
 @testset "CUDSS" begin
   @testset "version" begin
@@ -61,7 +62,21 @@ include("test_batched_cudss.jl")
   end
 end
 
-@testset "Batched CUDSS" begin
+@testset "Uniform batch CUDSS" begin
+  @testset "Uniform batch LU" begin
+    uniform_batch_lu()
+  end
+
+  @testset "Uniform batch LDL" begin
+    uniform_batch_ldlt()
+  end
+
+  @testset "Uniform batch Cholesky" begin
+    uniform_batch_cholesky()
+  end
+end
+
+@testset "Non-uniform batch CUDSS" begin
   @testset "CudssBatchedMatrix" begin
     cudss_batched_dense()
     cudss_batched_sparse()
