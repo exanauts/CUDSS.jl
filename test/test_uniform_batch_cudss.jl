@@ -141,6 +141,7 @@ end
 
 function uniform_batch_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
     n = 5
     nbatch = 2
     nnzA = 8
