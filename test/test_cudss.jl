@@ -320,6 +320,22 @@ function cudss_generic()
         ldiv!(solver, x_gpu)
         r_gpu2 = b_gpu - A_gpu2 * x_gpu
         @test norm(r_gpu2) ≤ √eps(R)
+
+        A_gpu3 = rand(T) * A_gpu
+        lu!(solver, A_gpu3)
+        x_gpu .= b_gpu
+        cudss_x_gpu = CudssMatrix(x_gpu)
+        ldiv!(solver, cudss_x_gpu)
+        r_gpu3 = b_gpu - A_gpu3 * x_gpu
+        @test norm(r_gpu3) ≤ √eps(R)
+
+        A_gpu4 = rand(T) * A_gpu
+        lu!(solver, A_gpu4)
+        cudss_x_gpu = CudssMatrix(x_gpu)
+        cudss_b_gpu = CudssMatrix(b_gpu)
+        ldiv!(cudss_x_gpu, solver, cudss_b_gpu)
+        r_gpu4 = b_gpu - A_gpu4 * x_gpu
+        @test norm(r_gpu4) ≤ √eps(R)
       end
 
       @testset "\\" begin
@@ -367,12 +383,31 @@ function cudss_generic()
           c = rand(R)
           A_cpu2 = c * A_cpu
           A_gpu2 = c * A_gpu
-
           ldlt!(solver, A_gpu2)
           X_gpu .= B_gpu
           ldiv!(solver, X_gpu)
           R_gpu2 = B_gpu - CuSparseMatrixCSR(A_cpu2) * X_gpu
           @test norm(R_gpu2) ≤ √eps(R)
+
+          c = rand(R)
+          A_cpu3 = c * A_cpu
+          A_gpu3 = c * A_gpu
+          ldlt!(solver, A_gpu3)
+          X_gpu .= B_gpu
+          cudss_X_gpu = CudssMatrix(X_gpu)
+          ldiv!(solver, cudss_X_gpu)
+          R_gpu3 = B_gpu - CuSparseMatrixCSR(A_cpu3) * X_gpu
+          @test norm(R_gpu3) ≤ √eps(R)
+
+          c = rand(R)
+          A_cpu4 = c * A_cpu
+          A_gpu4 = c * A_gpu
+          ldlt!(solver, A_gpu4)
+          cudss_X_gpu = CudssMatrix(X_gpu)
+          cudss_B_gpu = CudssMatrix(B_gpu)
+          ldiv!(cudss_X_gpu, solver, cudss_B_gpu)
+          R_gpu4 = B_gpu - CuSparseMatrixCSR(A_cpu4) * X_gpu
+          @test norm(R_gpu4) ≤ √eps(R)
         end
 
         @testset "\\" begin
@@ -424,12 +459,31 @@ function cudss_generic()
           c = rand(R)
           A_cpu2 = c * A_cpu
           A_gpu2 = c * A_gpu
-
           cholesky!(solver, A_gpu2)
           X_gpu .= B_gpu
           ldiv!(solver, X_gpu)
           R_gpu2 = B_gpu - CuSparseMatrixCSR(A_cpu2) * X_gpu
           @test norm(R_gpu2) ≤ √eps(R)
+
+          c = rand(R)
+          A_cpu3 = c * A_cpu
+          A_gpu3 = c * A_gpu
+          cholesky!(solver, A_gpu3)
+          X_gpu .= B_gpu
+          cudss_X_gpu = CudssMatrix(X_gpu)
+          ldiv!(solver, cudss_X_gpu)
+          R_gpu3 = B_gpu - CuSparseMatrixCSR(A_cpu3) * X_gpu
+          @test norm(R_gpu3) ≤ √eps(R)
+
+          c = rand(R)
+          A_cpu4 = c * A_cpu
+          A_gpu4 = c * A_gpu
+          cholesky!(solver, A_gpu4)
+          cudss_X_gpu = CudssMatrix(X_gpu)
+          cudss_B_gpu = CudssMatrix(B_gpu)
+          ldiv!(cudss_X_gpu, solver, cudss_B_gpu)
+          R_gpu4 = B_gpu - CuSparseMatrixCSR(A_cpu4) * X_gpu
+          @test norm(R_gpu4) ≤ √eps(R)
         end
 
         @testset "\\" begin
