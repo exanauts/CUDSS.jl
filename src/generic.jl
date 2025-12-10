@@ -143,22 +143,57 @@ function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCS
   return solver
 end
 
-for type in (:CuVector, :CuMatrix)
-  @eval begin
-    function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
-      cudss("solve", solver, b, b; asynchronous=false)
-      return b
-    end
+function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::CudssMatrix{T}) where T <: BlasFloat
+  @assert solver.matrix.nbatch == b.nbatch
+  @assert solver.matrix.nrows == b.nrows
+  cudss("solve", solver, b, b; asynchronous=false)
+  return b
+end
 
-    function LinearAlgebra.ldiv!(x::$type{T}, solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
-      cudss("solve", solver, x, b; asynchronous=false)
-      return x
-    end
+function LinearAlgebra.ldiv!(x::CudssMatrix{T}, solver::CudssSolver{T}, b::CudssMatrix{T}) where T <: BlasFloat
+  @assert solver.matrix.nbatch == b.nbatch == x.nbatch
+  @assert solver.matrix.nrows == b.nrows == x.nrows
+  @assert b.ncols == x.ncols
+  cudss("solve", solver, x, b; asynchronous=false)
+  return x
+end
 
-    function Base.:\(solver::CudssSolver{T}, b::$type{T}) where T <: BlasFloat
-      x = similar(b)
-      ldiv!(x, solver, b)
-      return x
-    end
+function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::CuArray{T}) where T <: BlasFloat
+  if solver.matrix.nbatch == 1
+    @assert ndims(b) ≤ 2
+    @assert solver.matrix.nrows == size(b, 1)
+    cudss_b = CudssMatrix(b)
+  else
+    @assert ndims(b) ≤ 3
+    p = length(b) ÷ (solver.matrix.nrows * solver.matrix.nbatch)
+    cudss_b = CudssMatrix(T, solver.matrix.nrows, p; nbatch=solver.matrix.nbatch)
+    cudss_update(cudss_b, b)
   end
+  cudss("solve", solver, cudss_b, cudss_b; asynchronous=false)
+  return b
+end
+
+function LinearAlgebra.ldiv!(x::CuArray{T}, solver::CudssSolver{T}, b::CuArray{T}) where T <: BlasFloat
+  @assert size(b) == size(x)
+  if solver.matrix.nbatch == 1
+    @assert ndims(b) ≤ 2
+    @assert solver.matrix.nrows == size(b, 1)
+    cudss_x = CudssMatrix(x)
+    cudss_b = CudssMatrix(b)
+  else
+    @assert ndims(b) ≤ 3
+    p = length(b) ÷ (solver.matrix.nrows * solver.matrix.nbatch)
+    cudss_x = CudssMatrix(T, solver.matrix.nrows, p; nbatch=solver.matrix.nbatch)
+    cudss_b = CudssMatrix(T, solver.matrix.nrows, p; nbatch=solver.matrix.nbatch)
+    cudss_update(cudss_x, x)
+    cudss_update(cudss_b, b)
+  end
+  cudss("solve", solver, cudss_x, cudss_b; asynchronous=false)
+  return x
+end
+
+function Base.:\(solver::CudssSolver{T}, b::CuArray{T}) where T <: BlasFloat
+  x = similar(b)
+  ldiv!(x, solver, b)
+  return x
 end

@@ -37,6 +37,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
     value_type::Type{T}
     index_type::Type{INT}
     matrix::cudssMatrix_t
+    nbatch::Int64
     nrows::Int64
     ncols::Int64
     nz::Int64
@@ -45,7 +46,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         nz = n * nbatch
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, n, 1, n, CU_NULL, T, 'C')
-        obj = new{T,Cint}(T, Cint, matrix_ref[], n, 1, nz)
+        obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, n, 1, nz)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -55,10 +56,10 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
             cudssMatrixCreateDn(matrix_ref, n, m, m, CU_NULL, T, 'R')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], n, m, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, n, m, nz)
         else
             cudssMatrixCreateDn(matrix_ref, m, n, m, CU_NULL, T, 'C')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], m, n, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, m, n, nz)
         end
         finalizer(cudssMatrixDestroy, obj)
         obj
@@ -68,7 +69,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         m = length(b)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, m, 1, m, b, T, 'C')
-        obj = new{T,Cint}(T, Cint, matrix_ref[], m, 1, m)
+        obj = new{T,Cint}(T, Cint, matrix_ref[], 1, m, 1, m)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -79,37 +80,31 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
             cudssMatrixCreateDn(matrix_ref, n, m, m, B, T, 'R')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], n, m, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], 1, n, m, nz)
         else
             cudssMatrixCreateDn(matrix_ref, m, n, m, B, T, 'C')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], m, n, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], 1, m, n, nz)
         end
-        finalizer(cudssMatrixDestroy, obj)
-        obj
-    end
-
-    function CudssMatrix(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
-        m,n = size(A)
-        nz = nnz(A)
-        matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateCsr(matrix_ref, m, n, nz, A.rowPtr, CU_NULL,
-                             A.colVal, A.nzVal, INT, T, structure,
-                             view, index)
-        obj = new{T,INT}(T, INT, matrix_ref[], m, n, nz)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
 
     function CudssMatrix(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
         n = length(rowPtr) - 1
-        nz = length(nzVal)
+        nz_batch = length(colVal)
+        nz_total = length(nzVal)
+        nbatch = nz_total ÷ nz_batch
         matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateCsr(matrix_ref, n, n, length(colVal), rowPtr, CU_NULL,
+        cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
                              colVal, nzVal, INT, T, structure,
                              view, index)
-        obj = new{T,INT}(T, INT, matrix_ref[], n, n, nz)
+        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_total)
         finalizer(cudssMatrixDestroy, obj)
         obj
+    end
+
+   function CudssMatrix(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
+        CudssMatrix(A.rowPtr, A.colVal, A.nzVal, structure, view; index)
     end
 end
 
