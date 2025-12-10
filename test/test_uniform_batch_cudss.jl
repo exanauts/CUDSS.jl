@@ -134,7 +134,7 @@ function generic_uniform_batch_lu()
     lu!(solver, Aλ_gpu)
 
     xλ_gpu .= bλ_gpu
-    ldiv!(xλ_gpu, solver)
+    ldiv!(solver, xλ_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -147,7 +147,7 @@ function generic_uniform_batch_lu()
     @test norm(rλ_gpu) ≤ √eps(R)
 
     xλ2_gpu .= bλ2_gpu
-    ldiv!(xλ2_gpu, solver)
+    ldiv!(solver, xλ2_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -327,7 +327,7 @@ function generic_uniform_batch_ldlt()
     end
 
     Xs_gpu .= Bs_gpu
-    ldiv!(Xs_gpu, solver)
+    ldiv!(solver, Xs_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -343,7 +343,7 @@ function generic_uniform_batch_ldlt()
 
     new_Bs2_gpu = reshape(new_Bs_gpu, n, nrhs, nbatch)
     new_Xs2_gpu = copy(new_Bs2_gpu)
-    ldiv!(Xs2_gpu, solver)
+    ldiv!(solver, Xs2_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -480,7 +480,7 @@ function generic_uniform_batch_cholesky()
     cholesky!(solver, As_gpu)
 
     xs_gpu .= bs_gpu
-    ldiv!(xs_gpu, solver)
+    ldiv!(solver, xs_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -495,7 +495,7 @@ function generic_uniform_batch_cholesky()
     @test norm(rs_gpu) ≤ √eps(R)
 
     xs2_gpu .= bs2_gpu
-    ldiv!(xs2_gpu, solver)
+    ldiv!(solver, xs2_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
