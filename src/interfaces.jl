@@ -154,7 +154,7 @@ end
     cudss_update(solver::CudssBatchedSolver{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}})
     cudss_update(matrix::CudssMatrix{T}, b::CuVector{T})
     cudss_update(matrix::CudssMatrix{T}, B::CuMatrix{T})
-    cudss_update(matrix::CudssMatrix{T}, T::CuArray{T})
+    cudss_update(matrix::CudssMatrix{T}, tensor::CuArray{T})
     cudss_update(matrix::CudssMatrix{T,INT}, A::CuSparseMatrixCSR{T,INT})
     cudss_update(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T})
     cudss_update(matrix::CudssBatchedMatrix{T}, b::Vector{CuVector{T}})
@@ -175,9 +175,9 @@ function cudss_update(matrix::CudssMatrix{T}, B::CuMatrix{T}) where T <: BlasFlo
   cudssMatrixSetValues(matrix, B)
 end
 
-function cudss_update(matrix::CudssMatrix{T}, T::CuArray{T}) where T <: BlasFloat
+function cudss_update(matrix::CudssMatrix{T}, tensor::CuArray{T}) where T <: BlasFloat
   @assert matrix.nbatch > 1
-  cudssMatrixSetValues(matrix, T)
+  cudssMatrixSetValues(matrix, tensor)
 end
 
 function cudss_update(matrix::CudssMatrix{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: BlasFloat, INT <: CudssInt}
