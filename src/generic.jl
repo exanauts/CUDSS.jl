@@ -15,7 +15,7 @@ The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `
 function LinearAlgebra.lu(A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
   n = checksquare(A)
   nbatch = length(A.nzVal) ÷ length(A.colVal)
-  solver = CudssSolver(A.rowPtr, A.colVal, A.nzVal, "G", 'F')
+  solver = CudssSolver(A, "G", 'F')
   (nbatch > 1) && cudss_set(solver, "ubatch_size", nbatch)
   x = CudssMatrix(T, n; nbatch)
   b = CudssMatrix(T, n; nbatch)

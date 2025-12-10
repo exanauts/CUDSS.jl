@@ -89,30 +89,22 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         obj
     end
 
-    function CudssMatrix(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
-        m,n = size(A)
-        nz = nnz(A)
-        nbatch = length(A.nzVal) ÷ length(A.colVal)
+    function CudssMatrix(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
+        n = length(rowPtr) - 1
+        nz_batch = length(colVal)
+        nz_total = length(nzVal)
+        nbatch = nz_total ÷ nz_batch
         matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateCsr(matrix_ref, m, n, nz, A.rowPtr, CU_NULL,
-                             A.colVal, A.nzVal, INT, T, structure,
+        cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
+                             colVal, nzVal, INT, T, structure,
                              view, index)
-        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, m, n, nz)
+        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_total)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
 
-    function CudssMatrix(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
-        n = length(rowPtr) - 1
-        nz = length(nzVal)
-        nbatch = length(nzVal) ÷ length(colVal)
-        matrix_ref = Ref{cudssMatrix_t}()
-        cudssMatrixCreateCsr(matrix_ref, n, n, length(colVal), rowPtr, CU_NULL,
-                             colVal, nzVal, INT, T, structure,
-                             view, index)
-        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz)
-        finalizer(cudssMatrixDestroy, obj)
-        obj
+   function CudssMatrix(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
+        CudssMatrix(A.rowPtr, A.colVal, A.nzVal, structure, view; index)
     end
 end
 
