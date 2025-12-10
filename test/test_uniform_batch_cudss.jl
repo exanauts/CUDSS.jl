@@ -127,10 +127,12 @@ function generic_uniform_batch_lu()
 
     # Refactorize all matrices of the uniform batch
     Λ = [-2.0, -10.0, 30.0]
-    Aλ_gpu.nzVal = CuVector{T}([1+Λ[1], 3, 4, 5+Λ[1], 2, 6, 2+Λ[1],
-                                1+Λ[2], 3, 4, 5+Λ[2], 2, 6, 2+Λ[2],
-                                1+Λ[3], 3, 4, 5+Λ[3], 2, 6, 2+Λ[3]])
+    new_nzVal = CuVector{T}([1+Λ[1], 3, 4, 5+Λ[1], 2, 6, 2+Λ[1],
+                             1+Λ[2], 3, 4, 5+Λ[2], 2, 6, 2+Λ[2],
+                             1+Λ[3], 3, 4, 5+Λ[3], 2, 6, 2+Λ[3]])
+    Aλ_gpu.nzVal = new_nzVal
     lu!(solver, Aλ_gpu)
+
     xλ_gpu .= bλ_gpu
     ldiv!(xλ_gpu, solver)
 
@@ -290,13 +292,30 @@ function generic_uniform_batch_ldlt()
     end
     @test norm(Rs_gpu) ≤ √eps(R)
 
-    if T isa AbstractFloat
-      As_gpu.nzVal = CuVector{T}([-4, -3,  1, -2, -5, -1, -1, -2,
-                                  -2, -3, -1, -1, -6, -4, -2, -8])
-    else
-      As_gpu.nzVal = CuVector{T}([-4, -3,  1-im, -2+im, -5, -1, -1-im, -2,
-                                  -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
+    Bs2_gpu = reshape(Bs_gpu, n, nrhs, nbatch)
+    Xs2_gpu = reshape(Xs_gpu, n, nrhs, nbatch)
+    ldiv!(Xs2_gpu, solver, Bs2_gpu)
+
+    for i = 1:nbatch
+        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
+        A_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nz, (n,n))
+        A_cpu = SparseMatrixCSC(A_gpu)
+        A_gpu = CuSparseMatrixCSR(A_cpu + A_cpu' - Diagonal(A_cpu))
+        B_gpu = Bs2_gpu[:, :, i]
+        X_gpu = Xs2_gpu[:, :, i]
+        R_gpu = B_gpu - A_gpu * X_gpu
+        Rs_gpu[i] = norm(R_gpu)
     end
+    @test norm(Rs_gpu) ≤ √eps(R)
+
+    if T isa AbstractFloat
+      new_nzVal = CuVector{T}([-4, -3,  1, -2, -5, -1, -1, -2,
+                               -2, -3, -1, -1, -6, -4, -2, -8])
+    else
+      new_nzVal = CuVector{T}([-4, -3,  1-im, -2+im, -5, -1, -1-im, -2,
+                               -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
+    end
+    As_gpu.nzVal = new_nzVal
     ldlt!(solver, As_gpu)
 
     if T isa AbstractFloat
@@ -306,6 +325,7 @@ function generic_uniform_batch_ldlt()
       new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im,
                                  7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
     end
+
     Xs_gpu .= Bs_gpu
     ldiv!(Xs_gpu, solver)
 
@@ -316,6 +336,23 @@ function generic_uniform_batch_ldlt()
         A_gpu = CuSparseMatrixCSR(A_cpu + A_cpu' - Diagonal(A_cpu))
         B_gpu = reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
         X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+        R_gpu = B_gpu - A_gpu * X_gpu
+        Rs_gpu[i] = norm(R_gpu)
+    end
+    @test norm(Rs_gpu) ≤ √eps(R)
+  end
+
+    new_Bs2_gpu = reshape(new_Bs_gpu, n, nrhs, nbatch)
+    new_Xs2_gpu = copy(new_Bs2_gpu)
+    ldiv!(Xs2_gpu, solver)
+
+    for i = 1:nbatch
+        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+        A_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nz, (n,n))
+        A_cpu = SparseMatrixCSC(A_gpu)
+        A_gpu = CuSparseMatrixCSR(A_cpu + A_cpu' - Diagonal(A_cpu))
+        B_gpu = new_Bs2_gpu[:, :, i]
+        X_gpu = new_Xs2_gpu[:, :, i]
         R_gpu = B_gpu - A_gpu * X_gpu
         Rs_gpu[i] = norm(R_gpu)
     end
@@ -427,7 +464,7 @@ function generic_uniform_batch_cholesky()
     ldiv!(xs2_gpu, solver, bs2_gpu)
 
     for i = 1:nbatch
-        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
         A_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nz, (n,n))
         A_cpu = SparseMatrixCSC(A_gpu)
         A_gpu = CuSparseMatrixCSR(A_cpu + A_cpu' - Diagonal(A_cpu))
@@ -438,10 +475,13 @@ function generic_uniform_batch_cholesky()
     end
     @test norm(rs_gpu) ≤ √eps(R)
 
-    As_gpu.nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
-                                6, 3, 9, 3, 18, 6, 12, 24])
+    new_nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
+                             6, 3, 9, 3, 18, 6, 12, 24])
+    As_gpu.nzVal = new_nzVal
     cholesky!(solver, As_gpu)
-    ldiv!(xs_gpu, solver, bs_gpu)
+
+    xs_gpu .= bs_gpu
+    ldiv!(xs_gpu, solver)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
