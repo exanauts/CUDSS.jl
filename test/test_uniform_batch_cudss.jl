@@ -340,7 +340,6 @@ function generic_uniform_batch_ldlt()
         Rs_gpu[i] = norm(R_gpu)
     end
     @test norm(Rs_gpu) ≤ √eps(R)
-  end
 
     new_Bs2_gpu = reshape(new_Bs_gpu, n, nrhs, nbatch)
     new_Xs2_gpu = copy(new_Bs2_gpu)
