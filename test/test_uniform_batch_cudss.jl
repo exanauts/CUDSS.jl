@@ -292,8 +292,8 @@ function generic_uniform_batch_ldlt()
     end
     @test norm(Rs_gpu) ≤ √eps(R)
 
-    Bs2_gpu = reshape(Bs_gpu, n, nrhs, nbatch)
-    Xs2_gpu = reshape(Xs_gpu, n, nrhs, nbatch)
+    Bs2_gpu = reshape(copy(Bs_gpu), n, nrhs, nbatch)
+    Xs2_gpu = reshape(copy(Xs_gpu), n, nrhs, nbatch)
     ldiv!(Xs2_gpu, solver, Bs2_gpu)
 
     for i = 1:nbatch
