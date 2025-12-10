@@ -63,19 +63,33 @@ include("test_nonuniform_batch_cudss.jl")
 end
 
 @testset "Uniform batch CUDSS" begin
-  @testset "Uniform batch LU" begin
-    cudss_uniform_batch_lu()
-    generic_uniform_batch_lu()
+  @testset "cuDSS API" begin
+    @testset "Uniform batch LU" begin
+      cudss_uniform_batch_lu()
+    end
+
+    @testset "Uniform batch LDL" begin
+      cudss_uniform_batch_ldlt()
+    end
+
+    @testset "Uniform batch Cholesky" begin
+      cudss_uniform_batch_cholesky()
+    end
   end
 
-  @testset "Uniform batch LDL" begin
-    cudss_uniform_batch_ldlt()
-    generic_uniform_batch_ldlt()
-  end
+  @testset "Generic API" begin
+    @testset "Uniform batch LU" begin
+      generic_uniform_batch_lu()
+    end
 
-  @testset "Uniform batch Cholesky" begin
-    cudss_uniform_batch_cholesky()
-    generic_uniform_batch_cholesky()
+    @testset "Uniform batch LDL" begin
+      cudss_uniform_batch_ldlt()
+      generic_uniform_batch_ldlt()
+    end
+
+    @testset "Uniform batch Cholesky" begin
+      generic_uniform_batch_cholesky()
+    end
   end
 end
 
