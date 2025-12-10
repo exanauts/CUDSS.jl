@@ -267,7 +267,7 @@ function generic_uniform_batch_ldlt()
                            2, 3, 1-im, 1+im, 6, 4, 2-im, 8])
     end
     As_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nzVal, (n,n))
-    solver = ldlt(As_gpu)
+    solver = ldlt(As_gpu; view='L')
 
     if T <: AbstractFloat
       Bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,  -7, -12, -25, -4, -13,
@@ -326,8 +326,8 @@ function generic_uniform_batch_ldlt()
                                  7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
     end
 
-    Xs_gpu .= Bs_gpu
-    ldiv!(solver, Xs_gpu)
+    new_Xs_gpu = copy(new_Bs_gpu)
+    ldiv!(solver, new_Xs_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -335,7 +335,7 @@ function generic_uniform_batch_ldlt()
         A_cpu = SparseMatrixCSC(A_gpu)
         A_gpu = CuSparseMatrixCSR(A_cpu + A_cpu' - Diagonal(A_cpu))
         B_gpu = reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+        X_gpu = reshape(new_Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
         R_gpu = B_gpu - A_gpu * X_gpu
         Rs_gpu[i] = norm(R_gpu)
     end
@@ -343,7 +343,7 @@ function generic_uniform_batch_ldlt()
 
     new_Bs2_gpu = reshape(new_Bs_gpu, n, nrhs, nbatch)
     new_Xs2_gpu = copy(new_Bs2_gpu)
-    ldiv!(solver, Xs2_gpu)
+    ldiv!(solver, new_Xs2_gpu)
 
     for i = 1:nbatch
         nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -434,7 +434,7 @@ function generic_uniform_batch_cholesky()
                          2, 1, 3, 1, 6, 2, 4, 8])
 
     As_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nzVal, (n,n))
-    solver = cholesky(As_gpu)
+    solver = cholesky(As_gpu; view='U')
 
     bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,
                           13, 15, 29, 8, 14])

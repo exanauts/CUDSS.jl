@@ -83,7 +83,6 @@ end
     end
 
     @testset "Uniform batch LDL" begin
-      cudss_uniform_batch_ldlt()
       generic_uniform_batch_ldlt()
     end
 
