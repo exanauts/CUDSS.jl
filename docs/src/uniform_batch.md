@@ -142,7 +142,6 @@ new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-
 cudss_update(cudss_Bs_gpu, new_Bs_gpu)
 cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
 
-Rs_gpu = rand(R, nbatch)
 for i = 1:nbatch
     nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
     A_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nz, (n,n))
@@ -212,7 +211,6 @@ cudss_update(solver, rowPtr, colVal, new_nzVal)
 cudss("refactorization", solver, cudss_xs_gpu, cudss_bs_gpu)
 cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
 
-rs_gpu = rand(T, nbatch)
 for i = 1:nbatch
     nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
     A_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nz, (n,n))

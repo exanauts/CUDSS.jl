@@ -64,15 +64,18 @@ end
 
 @testset "Uniform batch CUDSS" begin
   @testset "Uniform batch LU" begin
-    uniform_batch_lu()
+    cudss_uniform_batch_lu()
+    generic_uniform_batch_lu()
   end
 
   @testset "Uniform batch LDL" begin
-    uniform_batch_ldlt()
+    cudss_uniform_batch_ldlt()
+    generic_uniform_batch_ldlt()
   end
 
   @testset "Uniform batch Cholesky" begin
-    uniform_batch_cholesky()
+    cudss_uniform_batch_cholesky()
+    generic_uniform_batch_cholesky()
   end
 end
 
