@@ -90,7 +90,7 @@ function generic_uniform_batch_lu()
                          1+Λ[3], 3, 4, 5+Λ[3], 2, 6, 2+Λ[3]])
 
     Aλ_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nzVal, (n,n))
-    solver = lu(A_batch)
+    solver = lu(Aλ_gpu)
 
     bλ_gpu = CuVector{T}([1.0, 2.0, 3.0,
                           4.0, 5.0, 6.0,
