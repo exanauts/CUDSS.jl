@@ -259,7 +259,7 @@ function generic_uniform_batch_ldlt()
     nnzA = 8
     rowPtr = CuVector{Cint}([1, 2, 3, 6, 7, 9])
     colVal = CuVector{Cint}([1, 2, 1, 2, 3, 4, 3, 5])
-    if T isa AbstractFloat
+    if T <: AbstractFloat
       nzVal = CuVector{T}([4, 3, 1, 2, 5, 1, 1, 2,
                            2, 3, 1, 1, 6, 4, 2, 8])
     else
@@ -269,7 +269,7 @@ function generic_uniform_batch_ldlt()
     As_gpu = CuSparseMatrixCSR{T,Cint}(rowPtr, colVal, nzVal, (n,n))
     solver = ldlt(As_gpu)
 
-    if T isa AbstractFloat
+    if T <: AbstractFloat
       Bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,  -7, -12, -25, -4, -13,
                             13, 15, 29, 8, 14, -13, -15, -29, -8, -14])
     else
@@ -308,7 +308,7 @@ function generic_uniform_batch_ldlt()
     end
     @test norm(Rs_gpu) ≤ √eps(R)
 
-    if T isa AbstractFloat
+    if T <: AbstractFloat
       new_nzVal = CuVector{T}([-4, -3,  1, -2, -5, -1, -1, -2,
                                -2, -3, -1, -1, -6, -4, -2, -8])
     else
@@ -318,7 +318,7 @@ function generic_uniform_batch_ldlt()
     As_gpu.nzVal = new_nzVal
     ldlt!(solver, As_gpu)
 
-    if T isa AbstractFloat
+    if T <: AbstractFloat
       new_Bs_gpu = CuVector{T}([13, 15, 29, 8, 14, -13, -15, -29, -8, -14,
                                  7, 12, 25, 4, 13,  -7, -12, -25, -4, -13])
     else
