@@ -85,7 +85,7 @@ x_gpu = similar(b_gpu)
 solver = CudssSolver(A_gpu, "S", 'F')
 
 # Use the hybrid mode (host and device memory)
-cudss_set(solver, "hybrid_mode", 1)
+cudss_set(solver, "hybrid_memory_mode", 1)
 
 cudss("analysis", solver, x_gpu, b_gpu)
 
