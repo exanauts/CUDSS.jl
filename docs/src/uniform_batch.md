@@ -1,5 +1,10 @@
 #### Batch factorization of matrices with a common sparsity pattern
 
+The batch factorization of matrices with a common sparsity pattern allows performing the symbolic analysis for a single system and reusing it for the entire batch, which provides a significant speed-up.
+This phase is known to be hard to parallelize and port to the GPU; the reordering step (inside the symbolic analysis) to compute a permutation that reduces fill-in in the factors is performed on the CPU in cuDSS.
+
+The uniform batch solver works similarly to the single-matrix solver: it takes the common sparsity pattern of the batch just as a single matrix would, but the nonzero values of the sparse matrices, the right-hand sides, and the solutions are stored in a strided layout to represent the entire batch.
+
 !!! note
     This functionality requires CUDSS.jl v0.5.3 and above.
 

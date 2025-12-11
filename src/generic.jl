@@ -4,6 +4,10 @@
 Compute the LU factorization of a sparse matrix `A` on an NVIDIA GPU.
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 
+`A` can also represent a batch of sparse matrices with a uniform sparsity pattern.
+The vectors `A.rowPtr` and `A.colVal` are identical to those of a single matrix, but the vector `A.nzVal` is a strided representation of the nonzeros of all matrices.
+We automatically detect whether we have a uniform batch or a single matrix by computing `length(A.nzVal) ÷ length(A.colVal)`.
+
 #### Input argument
 
 * `A`: a sparse square matrix stored in the `CuSparseMatrixCSR` format.
@@ -27,7 +31,7 @@ end
 """
     solver = lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
 
-Compute the LU factorization of a sparse matrix `A` on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
+Compute the LU factorization of a sparse matrix `A` or a uniform batch of sparse matrices on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 """
 function LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
@@ -46,6 +50,10 @@ end
 
 Compute the LDLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU.
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
+
+`A` can also represent a batch of sparse matrices with a uniform sparsity pattern.
+The vectors `A.rowPtr` and `A.colVal` are identical to those of a single matrix, but the vector `A.nzVal` is a strided representation of the nonzeros of all matrices.
+We automatically detect whether we have a uniform batch or a single matrix by computing `length(A.nzVal) ÷ length(A.colVal)`.
 
 #### Input argument
 
@@ -78,7 +86,7 @@ LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}; check = false) wh
 """
     solver = ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
 
-Compute the LDLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
+Compute the LDLᴴ factorization of a sparse matrix `A` or a uniform batch of sparse matrices on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 """
 function LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
@@ -97,6 +105,10 @@ end
 
 Compute the LLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU.
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
+
+`A` can also represent a batch of sparse matrices with a uniform sparsity pattern.
+The vectors `A.rowPtr` and `A.colVal` are identical to those of a single matrix, but the vector `A.nzVal` is a strided representation of the nonzeros of all matrices.
+We automatically detect whether we have a uniform batch or a single matrix by computing `length(A.nzVal) ÷ length(A.colVal)`.
 
 #### Input argument
 
@@ -129,7 +141,7 @@ LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}, p::NoPivot=No
 """
     solver = cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
 
-Compute the LLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
+Compute the LLᴴ factorization of a sparse matrix `A` or a uniform batch of sparse matrices on an NVIDIA GPU, reusing the symbolic factorization stored in `solver`.
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 """
 function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}; check = false) where {T <: BlasFloat, INT <: CudssInt}
