@@ -52,6 +52,7 @@ function cudss_sparse()
           A_cpu2 = A_cpu2 + A_cpu2'
           A_gpu2 = CuSparseMatrixCSR{T,INT}(A_cpu2)
           cudss_update(matrix, A_gpu2)
+        end
       end
     end
   end
