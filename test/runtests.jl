@@ -10,6 +10,22 @@ import CUDSS: CUDSS_DATA_PARAMETERS, CUDSS_CONFIG_PARAMETERS
 
 Random.seed!(666)  # Random tests are diabolical
 
+# Needed for the tests with Int64
+function CuSparseMatrixCSR{T,INT}(A::CuSparseMatrixCSR) where {T,INT}
+  CuSparseMatrixCSR{T,INT}(CuVector{INT}(A.rowPtr), CuVector{INT}(A.colVal), CuVector{T}(A.nzVal), A.dims)
+end
+
+function CuSparseMatrixCSC{T,INT}(A::CuSparseMatrixCSR) where {T,INT}
+  B = CuSparseMatrixCSC(A)
+  CuSparseMatrixCSC{T,INT}(CuVector{INT}(B.colPtr), CuVector{INT}(B.rowVal), CuVector{T}(B.nzVal), A.dims)
+end
+
+function SparseMatrixCSC(A::CuSparseMatrixCSR{T,INT}) where {T,INT}
+  B = CuSparseMatrixCSC{T,INT}(A)
+  C = SparseMatrixCSC(B)
+  convert(SparseMatrixCSC{T,INT}, C)
+end
+
 include("test_cudss.jl")
 include("test_uniform_batch_cudss.jl")
 include("test_nonuniform_batch_cudss.jl")
