@@ -33,7 +33,7 @@ end
 function cudss_batched_sparse()
   n = 20
   @testset "cudss_update -- precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint,) # Int64)
+    @testset "integer = $INT" for INT in (Cint, Int64)
       A_cpu = sprand(T, n, n, 1.0)
       A_cpu = A_cpu + A_cpu'
       A_gpu = [CuSparseMatrixCSR{T,INT}(A_cpu), CuSparseMatrixCSR{T,INT}(A_cpu)]
@@ -58,7 +58,7 @@ function cudss_batched_solver()
   n = 20
   m = 30
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint,) # Int64)
+    @testset "integer = $INT" for INT in (Cint, Int64)
       A_cpu1 = sprand(T, n, n, 1.0)
       A_cpu1 = A_cpu1 * A_cpu1' + I
       A_gpu1 = CuSparseMatrixCSR{T,INT}(A_cpu1)
@@ -147,7 +147,7 @@ function cudss_batched_execution()
   n = [40, 50, 80, 4, 12, 28, 51]
   p = [2, 3, 4, 2, 5, 5, 6]
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint,) # Int64)
+    @testset "integer = $INT" for INT in (Cint, Int64)
       R = real(T)
       @testset "Unsymmetric -- Non-Hermitian" begin
         @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
@@ -357,7 +357,7 @@ function batched_hybrid_memory_mode()
 
   n = [20, 25, 10, 5, 2]
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint,) # Int64)
+    @testset "integer = $INT" for INT in (Cint, Int64)
       R = real(T)
       @testset "LU" begin
         A_cpu = [sprand(T, n[i], n[i], 0.05) + I for i = 1:5]
@@ -396,7 +396,7 @@ end
 
 function refactorization_batched_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint,) # Int64)
+    @testset "integer = $INT" for INT in (Cint, Int64)
       R = real(T)
       n = 100
       p = 4
