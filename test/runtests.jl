@@ -15,13 +15,14 @@ function CuSparseMatrixCSR{T,INT}(A::CuSparseMatrixCSR) where {T,INT}
   CuSparseMatrixCSR{T,INT}(CuVector{INT}(A.rowPtr), CuVector{INT}(A.colVal), CuVector{T}(A.nzVal), A.dims)
 end
 
-function CuSparseMatrixCSC{T,INT}(A::CuSparseMatrixCSR) where {T,INT}
+function CuSparseMatrixCSR{T,INT}(A::SparseMatrixCSC) where {T,INT}
   B = CuSparseMatrixCSC(A)
-  CuSparseMatrixCSC{T,INT}(CuVector{INT}(B.colPtr), CuVector{INT}(B.rowVal), CuVector{T}(B.nzVal), A.dims)
+  C = CuSparseMatrixCSR(B)
+  CuSparseMatrixCSR{T,INT}(CuVector{INT}(C.rowPtr), CuVector{INT}(C.colVal), CuVector{T}(C.nzVal), C.dims)
 end
 
 function SparseMatrixCSC(A::CuSparseMatrixCSR{T,INT}) where {T,INT}
-  B = CuSparseMatrixCSC{T,INT}(A)
+  B = CuSparseMatrixCSC(A)
   C = SparseMatrixCSC(B)
   convert(SparseMatrixCSC{T,INT}, C)
 end
