@@ -21,12 +21,6 @@ function CuSparseMatrixCSR{T,INT}(A::SparseMatrixCSC) where {T,INT}
   CuSparseMatrixCSR{T,INT}(CuVector{INT}(C.rowPtr), CuVector{INT}(C.colVal), CuVector{T}(C.nzVal), C.dims)
 end
 
-function SparseMatrixCSC(A::CuSparseMatrixCSR{T,INT}) where {T,INT}
-  B = CuSparseMatrixCSC(A)
-  C = SparseMatrixCSC(B)
-  convert(SparseMatrixCSC{T,INT}, C)
-end
-
 include("test_cudss.jl")
 include("test_uniform_batch_cudss.jl")
 include("test_nonuniform_batch_cudss.jl")
