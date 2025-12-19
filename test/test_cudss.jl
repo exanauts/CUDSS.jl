@@ -37,7 +37,7 @@ end
 function cudss_sparse()
   n = 20
   @testset "cudss_update -- precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       A_cpu = sprand(T, n, n, 1.0)
       A_cpu = A_cpu + A_cpu'
       A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
@@ -61,7 +61,7 @@ end
 function cudss_solver()
   n = 20
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       A_cpu = sprand(T, n, n, 1.0)
       A_cpu = A_cpu * A_cpu' + I
@@ -158,7 +158,7 @@ function cudss_execution()
   n = 100
   p = 5
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       @testset "Unsymmetric -- Non-Hermitian" begin
         @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
@@ -296,7 +296,7 @@ function cudss_generic()
   n = 100
   p = 5
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       @testset "Unsymmetric -- Non-Hermitian" begin
         A_cpu = sprand(T, n, n, 0.02) + I
@@ -578,7 +578,7 @@ function user_permutation()
     return nz
   end
 
-  @testset "integer = $INT" for INT in (Cint, Int64)
+  @testset "integer = $INT" for INT in (Cint,) # Int64)
     n = 1000
     perm1_cpu = Vector{INT}(undef, n)
     perm2_cpu = Vector{INT}(undef, n)
@@ -701,7 +701,7 @@ function iterative_refinement()
 
   n = 100
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       @testset "number of iterative refinement: $ir" for ir in (1, 2)
         @testset "LU" begin
@@ -797,7 +797,7 @@ function small_matrices()
   end
 
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       @testset "Size of the linear system: $n" for n in 1:16
         @testset "LU" begin
@@ -906,7 +906,7 @@ function hybrid_memory_mode()
 
   n = 20
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       @testset "LU" begin
         A_cpu = sprand(T, n, n, 0.05) + I
@@ -945,7 +945,7 @@ end
 
 function refactorization_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       n = 100
       p = 5

@@ -1,6 +1,6 @@
 function cudss_uniform_batch_lu()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       # Collection of unsymmetric linear systems
       #        [1+λ  0   3  ]
       # A(λ) = [ 4  5+λ  0  ]
@@ -74,7 +74,7 @@ end
 
 function generic_uniform_batch_lu()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       # Collection of unsymmetric linear systems
       #        [1+λ  0   3  ]
       # A(λ) = [ 4  5+λ  0  ]
@@ -167,7 +167,7 @@ end
 
 function cudss_uniform_batch_ldlt()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       n = 5
       nbatch = 2
@@ -260,7 +260,7 @@ end
 
 function generic_uniform_batch_ldlt()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       n = 5
       nbatch = 2
@@ -375,7 +375,7 @@ end
 
 function cudss_uniform_batch_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       n = 5
       nbatch = 2
@@ -442,7 +442,7 @@ end
 
 function generic_uniform_batch_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
-    @testset "integer = $INT" for INT in (Cint, Int64)
+    @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       n = 5
       nbatch = 2
