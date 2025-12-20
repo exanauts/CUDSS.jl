@@ -65,7 +65,7 @@ norm(r_gpu)
 # In-place LU
 d_gpu = rand(T, n) |> CuVector
 A_gpu = A_gpu + Diagonal(d_gpu)
-cudss_set(solver, A_gpu)
+cudss_update(solver, A_gpu)
 
 c_cpu = rand(T, n)
 c_gpu = CuVector(c_cpu)
@@ -110,7 +110,7 @@ norm(R_gpu)
 # In-place LDLᵀ
 d_gpu = rand(R, n) |> CuVector
 A_gpu = A_gpu + Diagonal(d_gpu)
-cudss_set(solver, A_gpu)
+cudss_update(solver, A_gpu)
 
 C_cpu = rand(T, n, p)
 C_gpu = CuMatrix(C_cpu)
@@ -155,7 +155,7 @@ norm(R_gpu)
 # In-place LLᴴ
 d_gpu = rand(R, n) |> CuVector
 A_gpu = A_gpu + Diagonal(d_gpu)
-cudss_set(solver, A_gpu)
+cudss_update(solver, A_gpu)
 
 C_cpu = rand(T, n, p)
 C_gpu = CuMatrix(C_cpu)
