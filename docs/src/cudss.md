@@ -26,8 +26,8 @@ b_gpu = CuVector(b_cpu)
 solver = CudssSolver(A_gpu, "G", 'F')
 
 cudss("analysis", solver, x_gpu, b_gpu)
-cudss("factorization", solver, x_gpu, b_gpu)
-cudss("solve", solver, x_gpu, b_gpu)
+cudss("factorization", solver, x_gpu, b_gpu; asynchronous=false)
+cudss("solve", solver, x_gpu, b_gpu; asynchronous=false)
 
 r_gpu = b_gpu - A_gpu * x_gpu
 norm(r_gpu)
@@ -40,8 +40,8 @@ cudss_update(solver, A_gpu)
 c_cpu = rand(T, n)
 c_gpu = CuVector(c_cpu)
 
-cudss("refactorization", solver, x_gpu, c_gpu)
-cudss("solve", solver, x_gpu, c_gpu)
+cudss("refactorization", solver, x_gpu, c_gpu; asynchronous=false)
+cudss("solve", solver, x_gpu, c_gpu; asynchronous=false)
 
 r_gpu = c_gpu - A_gpu * x_gpu
 norm(r_gpu)
@@ -71,8 +71,8 @@ structure = T <: Real ? "S" : "H"
 solver = CudssSolver(A_gpu, structure, 'L')
 
 cudss("analysis", solver, X_gpu, B_gpu)
-cudss("factorization", solver, X_gpu, B_gpu)
-cudss("solve", solver, X_gpu, B_gpu)
+cudss("factorization", solver, X_gpu, B_gpu; asynchronous=false)
+cudss("solve", solver, X_gpu, B_gpu; asynchronous=false)
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)
@@ -85,8 +85,8 @@ cudss_update(solver, A_gpu)
 C_cpu = rand(T, n, p)
 C_gpu = CuMatrix(C_cpu)
 
-cudss("refactorization", solver, X_gpu, C_gpu)
-cudss("solve", solver, X_gpu, C_gpu)
+cudss("refactorization", solver, X_gpu, C_gpu; asynchronous=false)
+cudss("solve", solver, X_gpu, C_gpu; asynchronous=false)
 
 R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
 norm(R_gpu)
@@ -116,8 +116,8 @@ structure = T <: Real ? "SPD" : "HPD"
 solver = CudssSolver(A_gpu, structure, 'U')
 
 cudss("analysis", solver, X_gpu, B_gpu)
-cudss("factorization", solver, X_gpu, B_gpu)
-cudss("solve", solver, X_gpu, B_gpu)
+cudss("factorization", solver, X_gpu, B_gpu; asynchronous=false)
+cudss("solve", solver, X_gpu, B_gpu; asynchronous=false)
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)
@@ -130,8 +130,8 @@ cudss_update(solver, A_gpu)
 C_cpu = rand(T, n, p)
 C_gpu = CuMatrix(C_cpu)
 
-cudss("refactorization", solver, X_gpu, C_gpu)
-cudss("solve", solver, X_gpu, C_gpu)
+cudss("refactorization", solver, X_gpu, C_gpu; asynchronous=false)
+cudss("solve", solver, X_gpu, C_gpu; asynchronous=false)
 
 R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
 norm(R_gpu)

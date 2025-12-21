@@ -51,8 +51,8 @@ solver = CudssSolver(rowPtr, colVal, nzVal, "G", 'F')
 cudss_set(solver, "ubatch_size", nbatch)
 
 cudss("analysis", solver, cudss_xλ_gpu, cudss_bλ_gpu)
-cudss("factorization", solver, cudss_xλ_gpu, cudss_bλ_gpu)
-cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+cudss("factorization", solver, cudss_xλ_gpu, cudss_bλ_gpu; asynchronous=false)
+cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu; asynchronous=false)
 
 rλ_gpu = rand(R, nbatch)
 for i = 1:nbatch
@@ -72,8 +72,8 @@ new_nzVal = CuVector{T}([1+Λ[1], 3, 4, 5+Λ[1], 2, 6, 2+Λ[1],
                          1+Λ[3], 3, 4, 5+Λ[3], 2, 6, 2+Λ[3]])
 
 cudss_update(solver, rowPtr, colVal, new_nzVal)
-cudss("refactorization", solver, cudss_xλ_gpu, cudss_bλ_gpu)
-cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+cudss("refactorization", solver, cudss_xλ_gpu, cudss_bλ_gpu; asynchronous=false)
+cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu; asynchronous=false)
 
 for i = 1:nbatch
     nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -121,8 +121,8 @@ solver = CudssSolver(rowPtr, colVal, nzVal, "H", 'L')
 cudss_set(solver, "ubatch_size", nbatch)
 
 cudss("analysis", solver, cudss_Xs_gpu, cudss_Bs_gpu)
-cudss("factorization", solver, cudss_Xs_gpu, cudss_Bs_gpu)
-cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+cudss("factorization", solver, cudss_Xs_gpu, cudss_Bs_gpu; asynchronous=false)
+cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu; asynchronous=false)
 
 Rs_gpu = rand(R, nbatch)
 for i = 1:nbatch
@@ -140,12 +140,12 @@ Rs_gpu
 new_nzVal = CuVector{T}([-4, -3,  1-im, -2+im, -5, -1, -1-im, -2,
                          -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
 cudss_update(solver, rowPtr, colVal, new_nzVal)
-cudss("refactorization", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+cudss("refactorization", solver, cudss_Xs_gpu, cudss_Bs_gpu; asynchronous=false)
 
 new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im,
                            7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
 cudss_update(cudss_Bs_gpu, new_Bs_gpu)
-cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu; asynchronous=false)
 
 for i = 1:nbatch
     nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
@@ -194,8 +194,8 @@ solver = CudssSolver(rowPtr, colVal, nzVal, "SPD", 'U')
 cudss_set(solver, "ubatch_size", nbatch)
 
 cudss("analysis", solver, cudss_xs_gpu, cudss_bs_gpu)
-cudss("factorization", solver, cudss_xs_gpu, cudss_bs_gpu)
-cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
+cudss("factorization", solver, cudss_xs_gpu, cudss_bs_gpu; asynchronous=false)
+cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu; asynchronous=false)
 
 rs_gpu = rand(R, nbatch)
 for i = 1:nbatch
@@ -213,8 +213,8 @@ rs_gpu
 new_nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
                          6, 3, 9, 3, 18, 6, 12, 24])
 cudss_update(solver, rowPtr, colVal, new_nzVal)
-cudss("refactorization", solver, cudss_xs_gpu, cudss_bs_gpu)
-cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
+cudss("refactorization", solver, cudss_xs_gpu, cudss_bs_gpu; asynchronous=false)
+cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu; asynchronous=false)
 
 for i = 1:nbatch
     nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]

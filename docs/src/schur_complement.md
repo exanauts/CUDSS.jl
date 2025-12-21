@@ -48,7 +48,7 @@ cudss_set(solver, "user_schur_indices", schur_indices)
 
 # Compute the Schur complement
 cudss("analysis", solver, x_gpu, b_gpu)
-cudss("factorization", solver, x_gpu, b_gpu)
+cudss("factorization", solver, x_gpu, b_gpu; asynchronous=false)
 
 # Dimension of the Schur complement nₛ and the number of nonzeros
 (nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape")
@@ -66,7 +66,7 @@ cudss_get(solver, "schur_matrix")
 
 # Compute bₛ with a partial forward solve
 # bₛ is stored in the last nₛ components of b_gpu
-cudss("solve_fwd_schur", solver, x_gpu, b_gpu)
+cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
 
 # Compute x₂ with the dense LU of cuSOLVER
 nₛ = 3
@@ -76,7 +76,7 @@ x₂ = S_gpu \ bₛ
 # Compute x₁ with a partial backward solve
 # x₂ must be store the last nₛ components of x_gpu
 x_gpu[n-nₛ+1:n] .= x₂
-cudss("solve_bwd_schur", solver, b_gpu, x_gpu)
+cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
 ```
 
 ## Sparse Schur complement
@@ -127,7 +127,7 @@ cudss_set(solver, "user_schur_indices", schur_indices)
 
 # Compute the Schur complement
 cudss("analysis", solver, x_gpu, b_gpu)
-cudss("factorization", solver, x_gpu, b_gpu)
+cudss("factorization", solver, x_gpu, b_gpu; asynchronous=false)
 
 # Dimension of the Schur complement nₛ and the number of nonzeros
 (nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape")
