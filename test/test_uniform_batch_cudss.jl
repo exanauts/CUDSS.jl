@@ -168,92 +168,144 @@ end
 function cudss_uniform_batch_ldlt()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint,) # Int64)
-      R = real(T)
-      n = 5
-      nbatch = 2
-      nrhs = 2
-      nnzA = 8
-      rowPtr = CuVector{INT}([1, 2, 3, 6, 7, 9])
-      colVal = CuVector{INT}([1, 2, 1, 2, 3, 4, 3, 5])
-      if T <: AbstractFloat
-        nzVal = CuVector{T}([4, 3, 1, 2, 5, 1, 1, 2,
-                             2, 3, 1, 1, 6, 4, 2, 8])
-      else
-        nzVal = CuVector{T}([4, 3, 1+im, 2-im, 5, 1, 1+im, 2,
-                             2, 3, 1-im, 1+im, 6, 4, 2-im, 8])
+      @testset "Triangle of the sparse matrix = $uplo" for uplo in ('L', 'U', 'F')
+        R = real(T)
+        n = 5
+        nbatch = 2
+        nrhs = 2
+        if uplo == 'L'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 2, 3, 6, 7, 9])
+          colVal = CuVector{INT}([1, 2, 1, 2, 3, 4, 3, 5])
+          if T <: AbstractFloat
+            nzVal = CuVector{T}([4, 3, 1, 2, 5, 1, 1, 2,
+                                 2, 3, 1, 1, 6, 4, 2, 8])
+          else
+            nzVal = CuVector{T}([4, 3, 1+im, 2-im, 5, 1, 1+im, 2,
+                                 2, 3, 1-im, 1+im, 6, 4, 2-im, 8])
+          end
+        end
+        if uplo == 'U'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 3, 5, 7, 8, 9])
+          colVal = CuVector{INT}([1, 3, 2, 3, 3, 5, 4, 5])
+          if T <: AbstractFloat
+            nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
+                                 2, 1, 3, 1, 6, 2, 4, 8])
+          else
+            nzVal = CuVector{T}([4, 1-im, 3, 2+im, 5, 1-im, 1, 2,
+                                 2, 1+im, 3, 1-im, 6, 2+im, 4, 8])
+          end
+        end
+        if uplo == 'F'
+          nnzA = 11
+          rowPtr = CuVector{INT}([1, 3, 5, 9, 10, 12])
+          colVal = CuVector{INT}([1, 3, 2, 3, 1, 2, 3, 5, 4, 3, 5])
+            if T <: AbstractFloat
+            nzVal = CuVector{T}([4, 1, 3, 2, 1, 2, 5, 1, 1, 1, 2,
+                                 2, 1, 3, 1, 1, 1, 6, 2, 4, 2, 8])
+          else
+            nzVal = CuVector{T}([4, 1-im, 3, 2+im, 1+im, 2-im, 5, 1-im, 1, 1+im, 2,
+                                 2, 1+im, 3, 1-im, 1-im, 1+im, 6, 2+im, 4, 2-im, 8])
+          end
+        end
+
+        cudss_Bs_gpu = CudssMatrix(T, n, nrhs; nbatch)
+        if T <: AbstractFloat
+          Bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,  -7, -12, -25, -4, -13,
+                                13, 15, 29, 8, 14, -13, -15, -29, -8, -14])
+        else
+          Bs_gpu = CuVector{T}([ 7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im,
+                                13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im])
+        end
+        cudss_update(cudss_Bs_gpu, Bs_gpu)
+
+        cudss_Xs_gpu = CudssMatrix(T, n, nrhs; nbatch)
+        Xs_gpu = CuVector{T}(undef, n * nrhs * nbatch)
+        cudss_update(cudss_Xs_gpu, Xs_gpu)
+
+        # Constructor for uniform batch of systems
+        solver = CudssSolver(rowPtr, colVal, nzVal, "H", uplo)
+
+        # Specify that it is a uniform batch of size "nbatch"
+        cudss_set(solver, "ubatch_size", nbatch)
+
+        cudss("analysis", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+        cudss("factorization", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+        cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+
+        Rs_gpu = rand(R, nbatch)
+        for i = 1:nbatch
+          nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          B_gpu = reshape(Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          R_gpu = B_gpu - A_gpu * X_gpu
+          Rs_gpu[i] = norm(R_gpu)
+        end
+        @test norm(Rs_gpu) ≤ √eps(R)
+
+        if uplo == 'L'
+          if T <: AbstractFloat
+            new_nzVal = CuVector{T}([-4, -3, -1, -2, -5, -1, -1, -2,
+                                     -2, -3, -1, -1, -6, -4, -2, -8])
+          else
+            new_nzVal = CuVector{T}([-4, -3, -1-im, -2+im, -5, -1, -1-im, -2,
+                                     -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
+          end
+        end
+        if uplo == 'U'
+          if T <: AbstractFloat
+            new_nzVal = CuVector{T}([-4, -1, -3, -2, -5, -1, -1, -2,
+                                     -2, -1, -3, -1, -6, -2, -4, -8])
+          else
+            new_nzVal = CuVector{T}([-4, -1+im, -3, -2-im, -5, -1+im, -1, -2,
+                                     -2, -1-im, -3, -1+im, -6, -2-im, -4, -8])
+          end
+        end
+        if uplo == 'F'
+          if T <: AbstractFloat
+            new_nzVal = CuVector{T}([-4, -1, -3, -2, -1, -2, -5, -1, -1, -1, -2,
+                                     -2, -1, -3, -1, -1, -1, -6, -2, -4, -2, -8])
+          else
+            new_nzVal = CuVector{T}([-4, -1+im, -3, -2-im, -1-im, -2+im, -5, -1+im, -1, -1-im, -2,
+                                     -2, -1-im, -3, -1+im, -1+im, -1-im, -6, -2-im, -4, -2+im, -8])
+          end
+        end
+
+        cudss_update(solver, rowPtr, colVal, new_nzVal)
+        cudss("refactorization", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+
+        if T <: AbstractFloat
+          new_Bs_gpu = CuVector{T}([13, 15, 29, 8, 14, -13, -15, -29, -8, -14,
+                                     7, 12, 25, 4, 13,  -7, -12, -25, -4, -13])
+        else
+          new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im,
+                                     7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
+        end
+        cudss_update(cudss_Bs_gpu, new_Bs_gpu)
+        cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
+
+        for i = 1:nbatch
+          nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          B_gpu = reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          R_gpu = B_gpu - A_gpu * X_gpu
+          Rs_gpu[i] = norm(R_gpu)
+        end
+        @test norm(Rs_gpu) ≤ √eps(R)
       end
-
-      cudss_Bs_gpu = CudssMatrix(T, n, nrhs; nbatch)
-      if T <: AbstractFloat
-        Bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,  -7, -12, -25, -4, -13,
-                              13, 15, 29, 8, 14, -13, -15, -29, -8, -14])
-      else
-        Bs_gpu = CuVector{T}([ 7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im,
-                              13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im])
-      end
-      cudss_update(cudss_Bs_gpu, Bs_gpu)
-
-      cudss_Xs_gpu = CudssMatrix(T, n, nrhs; nbatch)
-      Xs_gpu = CuVector{T}(undef, n * nrhs * nbatch)
-      cudss_update(cudss_Xs_gpu, Xs_gpu)
-
-      # Constructor for uniform batch of systems
-      solver = CudssSolver(rowPtr, colVal, nzVal, "H", 'L')
-
-      # Specify that it is a uniform batch of size "nbatch"
-      cudss_set(solver, "ubatch_size", nbatch)
-
-      cudss("analysis", solver, cudss_Xs_gpu, cudss_Bs_gpu)
-      cudss("factorization", solver, cudss_Xs_gpu, cudss_Bs_gpu)
-      cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
-
-      Rs_gpu = rand(R, nbatch)
-      for i = 1:nbatch
-        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        B_gpu = reshape(Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        R_gpu = B_gpu - A_gpu * X_gpu
-        Rs_gpu[i] = norm(R_gpu)
-      end
-      @test norm(Rs_gpu) ≤ √eps(R)
-
-      if T <: AbstractFloat
-        new_nzVal = CuVector{T}([-4, -3,  1, -2, -5, -1, -1, -2,
-                                 -2, -3, -1, -1, -6, -4, -2, -8])
-      else
-        new_nzVal = CuVector{T}([-4, -3,  1-im, -2+im, -5, -1, -1-im, -2,
-                                 -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
-      end
-
-      cudss_update(solver, rowPtr, colVal, new_nzVal)
-      cudss("refactorization", solver, cudss_Xs_gpu, cudss_Bs_gpu)
-
-      if T <: AbstractFloat
-        new_Bs_gpu = CuVector{T}([13, 15, 29, 8, 14, -13, -15, -29, -8, -14,
-                                   7, 12, 25, 4, 13,  -7, -12, -25, -4, -13])
-      else
-        new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im,
-                                   7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
-      end
-      cudss_update(cudss_Bs_gpu, new_Bs_gpu)
-      cudss("solve", solver, cudss_Xs_gpu, cudss_Bs_gpu)
-
-      for i = 1:nbatch
-        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        B_gpu = reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        R_gpu = B_gpu - A_gpu * X_gpu
-        Rs_gpu[i] = norm(R_gpu)
-      end
-      @test norm(Rs_gpu) ≤ √eps(R)
     end
   end
 end
@@ -261,114 +313,170 @@ end
 function generic_uniform_batch_ldlt()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint,) # Int64)
-      R = real(T)
-      n = 5
-      nbatch = 2
-      nrhs = 2
-      nnzA = 8
-      rowPtr = CuVector{INT}([1, 2, 3, 6, 7, 9])
-      colVal = CuVector{INT}([1, 2, 1, 2, 3, 4, 3, 5])
-      if T <: AbstractFloat
-        nzVal = CuVector{T}([4, 3, 1, 2, 5, 1, 1, 2,
-                             2, 3, 1, 1, 6, 4, 2, 8])
-      else
-        nzVal = CuVector{T}([4, 3, 1+im, 2-im, 5, 1, 1+im, 2,
-                             2, 3, 1-im, 1+im, 6, 4, 2-im, 8])
+      @testset "Triangle of the sparse matrix = $uplo" for uplo in ('L', 'U', 'F')
+        R = real(T)
+        n = 5
+        nbatch = 2
+        nrhs = 2
+        if uplo == 'L'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 2, 3, 6, 7, 9])
+          colVal = CuVector{INT}([1, 2, 1, 2, 3, 4, 3, 5])
+          if T <: AbstractFloat
+            nzVal = CuVector{T}([4, 3, 1, 2, 5, 1, 1, 2,
+                                 2, 3, 1, 1, 6, 4, 2, 8])
+          else
+            nzVal = CuVector{T}([4, 3, 1+im, 2-im, 5, 1, 1+im, 2,
+                                 2, 3, 1-im, 1+im, 6, 4, 2-im, 8])
+          end
+        end
+        if uplo == 'U'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 3, 5, 7, 8, 9])
+          colVal = CuVector{INT}([1, 3, 2, 3, 3, 5, 4, 5])
+          if T <: AbstractFloat
+            nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
+                                 2, 1, 3, 1, 6, 2, 4, 8])
+          else
+            nzVal = CuVector{T}([4, 1-im, 3, 2+im, 5, 1-im, 1, 2,
+                                 2, 1+im, 3, 1-im, 6, 2+im, 4, 8])
+          end
+        end
+        if uplo == 'F'
+          nnzA = 11
+          rowPtr = CuVector{INT}([1, 3, 5, 9, 10, 12])
+          colVal = CuVector{INT}([1, 3, 2, 3, 1, 2, 3, 5, 4, 3, 5])
+            if T <: AbstractFloat
+            nzVal = CuVector{T}([4, 1, 3, 2, 1, 2, 5, 1, 1, 1, 2,
+                                 2, 1, 3, 1, 1, 1, 6, 2, 4, 2, 8])
+          else
+            nzVal = CuVector{T}([4, 1-im, 3, 2+im, 1+im, 2-im, 5, 1-im, 1, 1+im, 2,
+                                 2, 1+im, 3, 1-im, 1-im, 1+im, 6, 2+im, 4, 2-im, 8])
+          end
+        end
+        As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal, (n,n))
+        solver = ldlt(As_gpu; view=uplo)
+
+        if T <: AbstractFloat
+          Bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,  -7, -12, -25, -4, -13,
+                                13, 15, 29, 8, 14, -13, -15, -29, -8, -14])
+        else
+          Bs_gpu = CuVector{T}([ 7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im,
+                                13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im])
+        end
+        Xs_gpu = CuVector{T}(undef, n * nrhs * nbatch)
+        ldiv!(Xs_gpu, solver, Bs_gpu)
+
+        Rs_gpu = rand(R, nbatch)
+        for i = 1:nbatch
+          nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          B_gpu = reshape(Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          R_gpu = B_gpu - A_gpu * X_gpu
+          Rs_gpu[i] = norm(R_gpu)
+        end
+        @test norm(Rs_gpu) ≤ √eps(R)
+
+        Bs2_gpu = reshape(copy(Bs_gpu), n, nrhs, nbatch)
+        Xs2_gpu = reshape(copy(Xs_gpu), n, nrhs, nbatch)
+        ldiv!(Xs2_gpu, solver, Bs2_gpu)
+
+        for i = 1:nbatch
+          nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          B_gpu = Bs2_gpu[:, :, i]
+          X_gpu = Xs2_gpu[:, :, i]
+          R_gpu = B_gpu - A_gpu * X_gpu
+          Rs_gpu[i] = norm(R_gpu)
+        end
+        @test norm(Rs_gpu) ≤ √eps(R)
+
+        if uplo == 'L'
+          if T <: AbstractFloat
+            new_nzVal = CuVector{T}([-4, -3, -1, -2, -5, -1, -1, -2,
+                                     -2, -3, -1, -1, -6, -4, -2, -8])
+          else
+            new_nzVal = CuVector{T}([-4, -3, -1-im, -2+im, -5, -1, -1-im, -2,
+                                     -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
+          end
+        end
+        if uplo == 'U'
+          if T <: AbstractFloat
+            new_nzVal = CuVector{T}([-4, -1, -3, -2, -5, -1, -1, -2,
+                                     -2, -1, -3, -1, -6, -2, -4, -8])
+          else
+            new_nzVal = CuVector{T}([-4, -1+im, -3, -2-im, -5, -1+im, -1, -2,
+                                     -2, -1-im, -3, -1+im, -6, -2-im, -4, -8])
+          end
+        end
+        if uplo == 'F'
+          if T <: AbstractFloat
+            new_nzVal = CuVector{T}([-4, -1, -3, -2, -1, -2, -5, -1, -1, -1, -2,
+                                     -2, -1, -3, -1, -1, -1, -6, -2, -4, -2, -8])
+          else
+            new_nzVal = CuVector{T}([-4, -1+im, -3, -2-im, -1-im, -2+im, -5, -1+im, -1, -1-im, -2,
+                                     -2, -1-im, -3, -1+im, -1+im, -1-im, -6, -2-im, -4, -2+im, -8])
+          end
+        end
+        As_gpu.nzVal = new_nzVal
+        ldlt!(solver, As_gpu)
+
+        if T <: AbstractFloat
+          new_Bs_gpu = CuVector{T}([13, 15, 29, 8, 14, -13, -15, -29, -8, -14,
+                                     7, 12, 25, 4, 13,  -7, -12, -25, -4, -13])
+        else
+          new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im,
+                                     7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
+        end
+
+        new_Xs_gpu = copy(new_Bs_gpu)
+        ldiv!(solver, new_Xs_gpu)
+
+        for i = 1:nbatch
+          nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          B_gpu = reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          X_gpu = reshape(new_Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
+          R_gpu = B_gpu - A_gpu * X_gpu
+          Rs_gpu[i] = norm(R_gpu)
+        end
+        @test norm(Rs_gpu) ≤ √eps(R)
+
+        new_Bs2_gpu = reshape(new_Bs_gpu, n, nrhs, nbatch)
+        new_Xs2_gpu = copy(new_Bs2_gpu)
+        ldiv!(solver, new_Xs2_gpu)
+
+        for i = 1:nbatch
+          nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          B_gpu = new_Bs2_gpu[:, :, i]
+          X_gpu = new_Xs2_gpu[:, :, i]
+          R_gpu = B_gpu - A_gpu * X_gpu
+          Rs_gpu[i] = norm(R_gpu)
+        end
+        @test norm(Rs_gpu) ≤ √eps(R)
       end
-      As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal, (n,n))
-      solver = ldlt(As_gpu; view='L')
-
-      if T <: AbstractFloat
-        Bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,  -7, -12, -25, -4, -13,
-                              13, 15, 29, 8, 14, -13, -15, -29, -8, -14])
-      else
-        Bs_gpu = CuVector{T}([ 7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im,
-                              13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im])
-      end
-      Xs_gpu = CuVector{T}(undef, n * nrhs * nbatch)
-      ldiv!(Xs_gpu, solver, Bs_gpu)
-
-      Rs_gpu = rand(R, nbatch)
-      for i = 1:nbatch
-        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        B_gpu = reshape(Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        R_gpu = B_gpu - A_gpu * X_gpu
-        Rs_gpu[i] = norm(R_gpu)
-      end
-      @test norm(Rs_gpu) ≤ √eps(R)
-
-      Bs2_gpu = reshape(copy(Bs_gpu), n, nrhs, nbatch)
-      Xs2_gpu = reshape(copy(Xs_gpu), n, nrhs, nbatch)
-      ldiv!(Xs2_gpu, solver, Bs2_gpu)
-
-      for i = 1:nbatch
-        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        B_gpu = Bs2_gpu[:, :, i]
-        X_gpu = Xs2_gpu[:, :, i]
-        R_gpu = B_gpu - A_gpu * X_gpu
-        Rs_gpu[i] = norm(R_gpu)
-      end
-      @test norm(Rs_gpu) ≤ √eps(R)
-
-      if T <: AbstractFloat
-        new_nzVal = CuVector{T}([-4, -3,  1, -2, -5, -1, -1, -2,
-                                 -2, -3, -1, -1, -6, -4, -2, -8])
-      else
-        new_nzVal = CuVector{T}([-4, -3,  1-im, -2+im, -5, -1, -1-im, -2,
-                                 -2, -3, -1+im, -1-im, -6, -4, -2+im, -8])
-      end
-      As_gpu.nzVal = new_nzVal
-      ldlt!(solver, As_gpu)
-
-      if T <: AbstractFloat
-        new_Bs_gpu = CuVector{T}([13, 15, 29, 8, 14, -13, -15, -29, -8, -14,
-                                   7, 12, 25, 4, 13,  -7, -12, -25, -4, -13])
-      else
-        new_Bs_gpu = CuVector{T}([13-im, 15-im, 29-im, 8-im, 14-im, -13-im, -15-im, -29-im, -8-im, -14-im,
-                                   7+im, 12+im, 25+im, 4+im, 13+im,  -7+im, -12+im, -25+im, -4+im, -13+im])
-      end
-
-      new_Xs_gpu = copy(new_Bs_gpu)
-      ldiv!(solver, new_Xs_gpu)
-
-      for i = 1:nbatch
-        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        B_gpu = reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        X_gpu = reshape(new_Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-        R_gpu = B_gpu - A_gpu * X_gpu
-        Rs_gpu[i] = norm(R_gpu)
-      end
-      @test norm(Rs_gpu) ≤ √eps(R)
-
-      new_Bs2_gpu = reshape(new_Bs_gpu, n, nrhs, nbatch)
-      new_Xs2_gpu = copy(new_Bs2_gpu)
-      ldiv!(solver, new_Xs2_gpu)
-
-      for i = 1:nbatch
-        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        B_gpu = new_Bs2_gpu[:, :, i]
-        X_gpu = new_Xs2_gpu[:, :, i]
-        R_gpu = B_gpu - A_gpu * X_gpu
-        Rs_gpu[i] = norm(R_gpu)
-      end
-      @test norm(Rs_gpu) ≤ √eps(R)
     end
   end
 end
@@ -376,66 +484,99 @@ end
 function cudss_uniform_batch_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint,) # Int64)
-      R = real(T)
-      n = 5
-      nbatch = 2
-      nnzA = 8
-      rowPtr = CuVector{INT}([1, 3, 5, 7, 8, 9])
-      colVal = CuVector{INT}([1, 3, 2, 3, 3, 5, 4, 5])
-      nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
-                           2, 1, 3, 1, 6, 2, 4, 8])
+      @testset "Triangle of the sparse matrix = $uplo" for uplo in ('L', 'U', 'F')
+        R = real(T)
+        n = 5
+        nbatch = 2
+        if uplo == 'L'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 2, 3, 6, 7, 9])
+          colVal = CuVector{INT}([1, 2, 1, 2, 3, 4, 3, 5])
+          nzVal = CuVector{T}([4, 3, 1, 2, 5, 1, 1, 2,
+                               2, 3, 1, 1, 6, 2, 4, 8])
+        end
+        if uplo == 'U'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 3, 5, 7, 8, 9])
+          colVal = CuVector{INT}([1, 3, 2, 3, 3, 5, 4, 5])
+          nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
+                               2, 1, 3, 1, 6, 2, 4, 8])
+        end
+        if uplo == 'F'
+          nnzA = 11
+          rowPtr = CuVector{INT}([1, 3, 5, 9, 10, 12])
+          colVal = CuVector{INT}([1, 3, 2, 3, 1, 2, 3, 5, 4, 3, 5])
+          nzVal = CuVector{T}([4, 1, 3, 2, 1, 2, 5, 1, 1, 1, 2,
+                               2, 1, 3, 1, 1, 1, 6, 2, 4, 2, 8])
+        end
 
-      cudss_bs_gpu = CudssMatrix(T, n; nbatch)
-      bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,
-                            13, 15, 29, 8, 14])
-      cudss_update(cudss_bs_gpu, bs_gpu)
+        cudss_bs_gpu = CudssMatrix(T, n; nbatch)
+        bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,
+                              13, 15, 29, 8, 14])
+        cudss_update(cudss_bs_gpu, bs_gpu)
 
-      cudss_xs_gpu = CudssMatrix(T, n; nbatch)
-      xs_gpu = CuVector{T}(undef, n * nbatch)
-      cudss_update(cudss_xs_gpu, xs_gpu)
+        cudss_xs_gpu = CudssMatrix(T, n; nbatch)
+        xs_gpu = CuVector{T}(undef, n * nbatch)
+        cudss_update(cudss_xs_gpu, xs_gpu)
 
-      # Constructor for uniform batch of systems
-      solver = CudssSolver(rowPtr, colVal, nzVal, "SPD", 'U')
+        # Constructor for uniform batch of systems
+        solver = CudssSolver(rowPtr, colVal, nzVal, "HPD", uplo)
 
-      # Specify that it is a uniform batch of size "nbatch"
-      cudss_set(solver, "ubatch_size", nbatch)
+        # Specify that it is a uniform batch of size "nbatch"
+        cudss_set(solver, "ubatch_size", nbatch)
 
-      cudss("analysis", solver, cudss_xs_gpu, cudss_bs_gpu)
-      cudss("factorization", solver, cudss_xs_gpu, cudss_bs_gpu)
-      cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
+        cudss("analysis", solver, cudss_xs_gpu, cudss_bs_gpu)
+        cudss("factorization", solver, cudss_xs_gpu, cudss_bs_gpu)
+        cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
 
-      rs_gpu = rand(R, nbatch)
-      for i = 1:nbatch
-        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        b_gpu = bs_gpu[1 + (i-1) * n : i * n]
-        x_gpu = xs_gpu[1 + (i-1) * n : i * n]
-        r_gpu = b_gpu - A_gpu * x_gpu
-        rs_gpu[i] = norm(r_gpu)
+        rs_gpu = rand(R, nbatch)
+        for i = 1:nbatch
+          nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          b_gpu = bs_gpu[1 + (i-1) * n : i * n]
+          x_gpu = xs_gpu[1 + (i-1) * n : i * n]
+          r_gpu = b_gpu - A_gpu * x_gpu
+          rs_gpu[i] = norm(r_gpu)
+        end
+        @test norm(rs_gpu) ≤ √eps(R)
+
+        if uplo == 'L'
+          new_nzVal = CuVector{T}([8, 6, 2, 4, 10,  2, 2,  4,
+                                   6, 9, 3, 3, 18, 12, 6, 24])
+        end
+        if uplo == 'U'
+          new_nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
+                                   6, 3, 9, 3, 18, 6, 12, 24])
+        end
+        if uplo == 'F'
+          new_nzVal = CuVector{T}([8, 2, 6, 4, 2, 4, 10, 2,  2, 2,  4,
+                                   6, 3, 9, 3, 3, 3, 18, 6, 12, 6, 24])
+        end
+
+        cudss_update(solver, rowPtr, colVal, new_nzVal)
+        cudss("refactorization", solver, cudss_xs_gpu, cudss_bs_gpu)
+        cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
+
+        for i = 1:nbatch
+          nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          b_gpu = bs_gpu[1 + (i-1) * n : i * n]
+          x_gpu = xs_gpu[1 + (i-1) * n : i * n]
+          r_gpu = b_gpu - A_gpu * x_gpu
+          rs_gpu[i] = norm(r_gpu)
+        end
+        @test norm(rs_gpu) ≤ √eps(R)
       end
-      @test norm(rs_gpu) ≤ √eps(R)
-
-      new_nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
-                               6, 3, 9, 3, 18, 6, 12, 24])
-      cudss_update(solver, rowPtr, colVal, new_nzVal)
-      cudss("refactorization", solver, cudss_xs_gpu, cudss_bs_gpu)
-      cudss("solve", solver, cudss_xs_gpu, cudss_bs_gpu)
-
-      for i = 1:nbatch
-        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        b_gpu = bs_gpu[1 + (i-1) * n : i * n]
-        x_gpu = xs_gpu[1 + (i-1) * n : i * n]
-        r_gpu = b_gpu - A_gpu * x_gpu
-        rs_gpu[i] = norm(r_gpu)
-      end
-      @test norm(rs_gpu) ≤ √eps(R)
     end
   end
 end
@@ -443,93 +584,130 @@ end
 function generic_uniform_batch_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint,) # Int64)
-      R = real(T)
-      n = 5
-      nbatch = 2
-      nnzA = 8
-      rowPtr = CuVector{INT}([1, 3, 5, 7, 8, 9])
-      colVal = CuVector{INT}([1, 3, 2, 3, 3, 5, 4, 5])
-      nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
-                           2, 1, 3, 1, 6, 2, 4, 8])
+      @testset "Triangle of the sparse matrix = $uplo" for uplo in ('L', 'U', 'F')
+        R = real(T)
+        n = 5
+        nbatch = 2
+        if uplo == 'L'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 2, 3, 6, 7, 9])
+          colVal = CuVector{INT}([1, 2, 1, 2, 3, 4, 3, 5])
+          nzVal = CuVector{T}([4, 3, 1, 2, 5, 1, 1, 2,
+                               2, 3, 1, 1, 6, 2, 4, 8])
+        end
+        if uplo == 'U'
+          nnzA = 8
+          rowPtr = CuVector{INT}([1, 3, 5, 7, 8, 9])
+          colVal = CuVector{INT}([1, 3, 2, 3, 3, 5, 4, 5])
+          nzVal = CuVector{T}([4, 1, 3, 2, 5, 1, 1, 2,
+                               2, 1, 3, 1, 6, 2, 4, 8])
+        end
+        if uplo == 'F'
+          nnzA = 11
+          rowPtr = CuVector{INT}([1, 3, 5, 9, 10, 12])
+          colVal = CuVector{INT}([1, 3, 2, 3, 1, 2, 3, 5, 4, 3, 5])
+          nzVal = CuVector{T}([4, 1, 3, 2, 1, 2, 5, 1, 1, 1, 2,
+                               2, 1, 3, 1, 1, 1, 6, 2, 4, 2, 8])
+        end
+        As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal, (n,n))
+        solver = cholesky(As_gpu; view=uplo)
 
-      As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal, (n,n))
-      solver = cholesky(As_gpu; view='U')
+        bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,
+                              13, 15, 29, 8, 14])
+        xs_gpu = CuVector{T}(undef, n * nbatch)
+        ldiv!(xs_gpu, solver, bs_gpu)
 
-      bs_gpu = CuVector{T}([ 7, 12, 25, 4, 13,
-                            13, 15, 29, 8, 14])
-      xs_gpu = CuVector{T}(undef, n * nbatch)
-      ldiv!(xs_gpu, solver, bs_gpu)
+        rs_gpu = rand(R, nbatch)
+        for i = 1:nbatch
+          nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          b_gpu = bs_gpu[1 + (i-1) * n : i * n]
+          x_gpu = xs_gpu[1 + (i-1) * n : i * n]
+          r_gpu = b_gpu - A_gpu * x_gpu
+          rs_gpu[i] = norm(r_gpu)
+        end
+        @test norm(rs_gpu) ≤ √eps(R)
 
-      rs_gpu = rand(R, nbatch)
-      for i = 1:nbatch
-        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        b_gpu = bs_gpu[1 + (i-1) * n : i * n]
-        x_gpu = xs_gpu[1 + (i-1) * n : i * n]
-        r_gpu = b_gpu - A_gpu * x_gpu
-        rs_gpu[i] = norm(r_gpu)
+        bs2_gpu = CuMatrix{T}([ 7 13;
+                               12 15;
+                               25 29;
+                                4  8;
+                               13 14])
+        xs2_gpu = CuMatrix{T}(undef, n, nbatch)
+        ldiv!(xs2_gpu, solver, bs2_gpu)
+
+        for i = 1:nbatch
+          nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          b_gpu = bs2_gpu[:, i]
+          x_gpu = xs2_gpu[:, i]
+          r_gpu = b_gpu - A_gpu * x_gpu
+          rs_gpu[i] = norm(r_gpu)
+        end
+        @test norm(rs_gpu) ≤ √eps(R)
+
+        if uplo == 'L'
+          new_nzVal = CuVector{T}([8, 6, 2, 4, 10,  2, 2,  4,
+                                   6, 9, 3, 3, 18, 12, 6, 24])
+        end
+        if uplo == 'U'
+          new_nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
+                                   6, 3, 9, 3, 18, 6, 12, 24])
+        end
+        if uplo == 'F'
+          new_nzVal = CuVector{T}([8, 2, 6, 4, 2, 4, 10, 2,  2, 2,  4,
+                                   6, 3, 9, 3, 3, 3, 18, 6, 12, 6, 24])
+        end
+
+        As_gpu.nzVal = new_nzVal
+        cholesky!(solver, As_gpu)
+
+        xs_gpu .= bs_gpu
+        ldiv!(solver, xs_gpu)
+
+        for i = 1:nbatch
+          nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR(A_cpu)
+          b_gpu = bs_gpu[1 + (i-1) * n : i * n]
+          x_gpu = xs_gpu[1 + (i-1) * n : i * n]
+          r_gpu = b_gpu - A_gpu * x_gpu
+          rs_gpu[i] = norm(r_gpu)
+        end
+        @test norm(rs_gpu) ≤ √eps(R)
+
+        xs2_gpu .= bs2_gpu
+        ldiv!(solver, xs2_gpu)
+
+        for i = 1:nbatch
+          nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
+          A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+          A_cpu = SparseMatrixCSC(A_gpu)
+          if (uplo == 'L' || uplo == 'U')
+            A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
+          end
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          b_gpu = bs2_gpu[:, i]
+          x_gpu = xs2_gpu[:, i]
+          r_gpu = b_gpu - A_gpu * x_gpu
+          rs_gpu[i] = norm(r_gpu)
+        end
+        @test norm(rs_gpu) ≤ √eps(R)
       end
-      @test norm(rs_gpu) ≤ √eps(R)
-
-      bs2_gpu = CuMatrix{T}([ 7 13;
-                             12 15;
-                             25 29;
-                              4  8;
-                             13 14])
-      xs2_gpu = CuMatrix{T}(undef, n, nbatch)
-      ldiv!(xs2_gpu, solver, bs2_gpu)
-
-      for i = 1:nbatch
-        nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        b_gpu = bs2_gpu[:, i]
-        x_gpu = xs2_gpu[:, i]
-        r_gpu = b_gpu - A_gpu * x_gpu
-        rs_gpu[i] = norm(r_gpu)
-      end
-      @test norm(rs_gpu) ≤ √eps(R)
-
-      new_nzVal = CuVector{T}([8, 2, 6, 4, 10, 2,  2,  4,
-                               6, 3, 9, 3, 18, 6, 12, 24])
-      As_gpu.nzVal = new_nzVal
-      cholesky!(solver, As_gpu)
-
-      xs_gpu .= bs_gpu
-      ldiv!(solver, xs_gpu)
-
-      for i = 1:nbatch
-        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_gpu = CuSparseMatrixCSR(A_cpu + A_cpu' - Diagonal(A_cpu))
-        b_gpu = bs_gpu[1 + (i-1) * n : i * n]
-        x_gpu = xs_gpu[1 + (i-1) * n : i * n]
-        r_gpu = b_gpu - A_gpu * x_gpu
-        rs_gpu[i] = norm(r_gpu)
-      end
-      @test norm(rs_gpu) ≤ √eps(R)
-
-      xs2_gpu .= bs2_gpu
-      ldiv!(solver, xs2_gpu)
-
-      for i = 1:nbatch
-        nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-        A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-        A_cpu = SparseMatrixCSC(A_gpu)
-        A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
-        A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-        b_gpu = bs2_gpu[:, i]
-        x_gpu = xs2_gpu[:, i]
-        r_gpu = b_gpu - A_gpu * x_gpu
-        rs_gpu[i] = norm(r_gpu)
-      end
-      @test norm(rs_gpu) ≤ √eps(R)
     end
   end
 end
