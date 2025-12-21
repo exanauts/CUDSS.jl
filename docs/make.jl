@@ -13,6 +13,7 @@ makedocs(
   pages = ["Home" => "index.md",
            "Types" => "types.md",
            "Functions" => "functions.md",
+           "cuDSS interface" => "cudss.md",
            "Generic interface" => "generic.md",
            "Schur complement" => "schur_complement.md",
            "Uniform batch" => "uniform_batch.md",
