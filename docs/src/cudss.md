@@ -47,7 +47,7 @@ r_gpu = c_gpu - A_gpu * x_gpu
 norm(r_gpu)
 ```
 
-## Batch LDLᵀ and LDLᴴ
+## LDLᵀ and LDLᴴ
 
 ```julia
 using CUDA, CUDA.CUSPARSE
@@ -92,7 +92,7 @@ R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
 norm(R_gpu)
 ```
 
-## Batch LLᵀ and LLᴴ
+## LLᵀ and LLᴴ
 
 ```julia
 using CUDA, CUDA.CUSPARSE
