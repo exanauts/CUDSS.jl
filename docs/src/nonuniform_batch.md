@@ -31,8 +31,8 @@ end
 solver = CudssBatchedSolver(batch_A_gpu, "G", 'F')
 
 cudss("analysis", solver, batch_x_gpu, batch_b_gpu)
-cudss("factorization", solver, batch_x_gpu, batch_b_gpu)
-cudss("solve", solver, batch_x_gpu, batch_b_gpu)
+cudss("factorization", solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+cudss("solve", solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
 
 batch_r_gpu = batch_b_gpu .- batch_A_gpu .* batch_x_gpu
 norm.(batch_r_gpu)
@@ -50,8 +50,8 @@ for i = 1:nbatch
     batch_b_gpu[i] = c_gpu
 end
 
-cudss("refactorization", solver, batch_x_gpu, batch_b_gpu)
-cudss("solve", solver, batch_x_gpu, batch_b_gpu)
+cudss("refactorization", solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+cudss("solve", solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
 
 batch_r_gpu = batch_b_gpu .- batch_A_gpu .* batch_x_gpu
 norm.(batch_r_gpu)
@@ -91,8 +91,8 @@ structure = T <: Real ? "S" : "H"
 solver = CudssBatchedSolver(batch_A_gpu, structure, 'L')
 
 cudss("analysis", solver, batch_X_gpu, batch_B_gpu)
-cudss("factorization", solver, batch_X_gpu, batch_B_gpu)
-cudss("solve", solver, batch_X_gpu, batch_B_gpu)
+cudss("factorization", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss("solve", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)
@@ -112,8 +112,8 @@ for i = 1:nbatch
     batch_B_gpu[i] = C_gpu
 end
 
-cudss("refactorization", solver, batch_X_gpu, batch_B_gpu)
-cudss("solve", solver, batch_X_gpu, batch_B_gpu)
+cudss("refactorization", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss("solve", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)
@@ -153,8 +153,8 @@ structure = T <: Real ? "SPD" : "HPD"
 solver = CudssBatchedSolver(batch_A_gpu, structure, 'U')
 
 cudss("analysis", solver, batch_X_gpu, batch_B_gpu)
-cudss("factorization", solver, batch_X_gpu, batch_B_gpu)
-cudss("solve", solver, batch_X_gpu, batch_B_gpu)
+cudss("factorization", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss("solve", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)
@@ -174,8 +174,8 @@ for i = 1:nbatch
     batch_B_gpu[i] = C_gpu
 end
 
-cudss("refactorization", solver, batch_X_gpu, batch_B_gpu)
-cudss("solve", solver, batch_X_gpu, batch_B_gpu)
+cudss("refactorization", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss("solve", solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)
