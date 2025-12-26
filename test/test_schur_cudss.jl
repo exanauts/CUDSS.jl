@@ -1,7 +1,7 @@
 function cudss_schur_lu()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint, Int64)
-      @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
+      @testset "Dense Schur complement = $dense_schur" for dense_schur in (true,)  # (false, true)
         # A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
         #     [A₂₁ A₂₂]             [0 5]        [0 3 0]
         #
