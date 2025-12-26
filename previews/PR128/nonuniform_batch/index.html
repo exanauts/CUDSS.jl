@@ -24,8 +24,8 @@ end
 solver = CudssBatchedSolver(batch_A_gpu, &quot;G&quot;, &#39;F&#39;)
 
 cudss(&quot;analysis&quot;, solver, batch_x_gpu, batch_b_gpu)
-cudss(&quot;factorization&quot;, solver, batch_x_gpu, batch_b_gpu)
-cudss(&quot;solve&quot;, solver, batch_x_gpu, batch_b_gpu)
+cudss(&quot;factorization&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
 
 batch_r_gpu = batch_b_gpu .- batch_A_gpu .* batch_x_gpu
 norm.(batch_r_gpu)
@@ -43,8 +43,8 @@ for i = 1:nbatch
     batch_b_gpu[i] = c_gpu
 end
 
-cudss(&quot;refactorization&quot;, solver, batch_x_gpu, batch_b_gpu)
-cudss(&quot;solve&quot;, solver, batch_x_gpu, batch_b_gpu)
+cudss(&quot;refactorization&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
 
 batch_r_gpu = batch_b_gpu .- batch_A_gpu .* batch_x_gpu
 norm.(batch_r_gpu)</code></pre><h2 id="Batch-LDLᵀ-and-LDLᴴ"><a class="docs-heading-anchor" href="#Batch-LDLᵀ-and-LDLᴴ">Batch LDLᵀ and LDLᴴ</a><a id="Batch-LDLᵀ-and-LDLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-LDLᵀ-and-LDLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
@@ -78,8 +78,8 @@ structure = T &lt;: Real ? &quot;S&quot; : &quot;H&quot;
 solver = CudssBatchedSolver(batch_A_gpu, structure, &#39;L&#39;)
 
 cudss(&quot;analysis&quot;, solver, batch_X_gpu, batch_B_gpu)
-cudss(&quot;factorization&quot;, solver, batch_X_gpu, batch_B_gpu)
-cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu)
+cudss(&quot;factorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)
@@ -99,8 +99,8 @@ for i = 1:nbatch
     batch_B_gpu[i] = C_gpu
 end
 
-cudss(&quot;refactorization&quot;, solver, batch_X_gpu, batch_B_gpu)
-cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu)
+cudss(&quot;refactorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)</code></pre><h2 id="Batch-LLᵀ-and-LLᴴ"><a class="docs-heading-anchor" href="#Batch-LLᵀ-and-LLᴴ">Batch LLᵀ and LLᴴ</a><a id="Batch-LLᵀ-and-LLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-LLᵀ-and-LLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
@@ -134,8 +134,8 @@ structure = T &lt;: Real ? &quot;SPD&quot; : &quot;HPD&quot;
 solver = CudssBatchedSolver(batch_A_gpu, structure, &#39;U&#39;)
 
 cudss(&quot;analysis&quot;, solver, batch_X_gpu, batch_B_gpu)
-cudss(&quot;factorization&quot;, solver, batch_X_gpu, batch_B_gpu)
-cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu)
+cudss(&quot;factorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
 norm.(batch_R_gpu)
@@ -155,8 +155,8 @@ for i = 1:nbatch
     batch_B_gpu[i] = C_gpu
 end
 
-cudss(&quot;refactorization&quot;, solver, batch_X_gpu, batch_B_gpu)
-cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu)
+cudss(&quot;refactorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
 
 batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
-norm.(batch_R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../uniform_batch/">« Uniform batch</a><a class="docs-footer-nextpage" href="../options/">Options »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Sunday 21 December 2025 05:39">Sunday 21 December 2025</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+norm.(batch_R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../uniform_batch/">« Uniform batch</a><a class="docs-footer-nextpage" href="../options/">Options »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 26 December 2025 08:14">Friday 26 December 2025</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

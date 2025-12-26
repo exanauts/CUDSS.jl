@@ -16,8 +16,8 @@ b_gpu = CuVector(b_cpu)
 solver = CudssSolver(A_gpu, &quot;G&quot;, &#39;F&#39;)
 
 cudss(&quot;analysis&quot;, solver, x_gpu, b_gpu)
-cudss(&quot;factorization&quot;, solver, x_gpu, b_gpu)
-cudss(&quot;solve&quot;, solver, x_gpu, b_gpu)
+cudss(&quot;factorization&quot;, solver, x_gpu, b_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, x_gpu, b_gpu; asynchronous=false)
 
 r_gpu = b_gpu - A_gpu * x_gpu
 norm(r_gpu)
@@ -30,8 +30,8 @@ cudss_update(solver, A_gpu)
 c_cpu = rand(T, n)
 c_gpu = CuVector(c_cpu)
 
-cudss(&quot;refactorization&quot;, solver, x_gpu, c_gpu)
-cudss(&quot;solve&quot;, solver, x_gpu, c_gpu)
+cudss(&quot;refactorization&quot;, solver, x_gpu, c_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, x_gpu, c_gpu; asynchronous=false)
 
 r_gpu = c_gpu - A_gpu * x_gpu
 norm(r_gpu)</code></pre><h2 id="LDLᵀ-and-LDLᴴ"><a class="docs-heading-anchor" href="#LDLᵀ-and-LDLᴴ">LDLᵀ and LDLᴴ</a><a id="LDLᵀ-and-LDLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#LDLᵀ-and-LDLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
@@ -55,8 +55,8 @@ structure = T &lt;: Real ? &quot;S&quot; : &quot;H&quot;
 solver = CudssSolver(A_gpu, structure, &#39;L&#39;)
 
 cudss(&quot;analysis&quot;, solver, X_gpu, B_gpu)
-cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu)
-cudss(&quot;solve&quot;, solver, X_gpu, B_gpu)
+cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, B_gpu; asynchronous=false)
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)
@@ -69,8 +69,8 @@ cudss_update(solver, A_gpu)
 C_cpu = rand(T, n, p)
 C_gpu = CuMatrix(C_cpu)
 
-cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu)
-cudss(&quot;solve&quot;, solver, X_gpu, C_gpu)
+cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, C_gpu; asynchronous=false)
 
 R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
 norm(R_gpu)</code></pre><h2 id="LLᵀ-and-LLᴴ"><a class="docs-heading-anchor" href="#LLᵀ-and-LLᴴ">LLᵀ and LLᴴ</a><a id="LLᵀ-and-LLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#LLᵀ-and-LLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
@@ -94,8 +94,8 @@ structure = T &lt;: Real ? &quot;SPD&quot; : &quot;HPD&quot;
 solver = CudssSolver(A_gpu, structure, &#39;U&#39;)
 
 cudss(&quot;analysis&quot;, solver, X_gpu, B_gpu)
-cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu)
-cudss(&quot;solve&quot;, solver, X_gpu, B_gpu)
+cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, B_gpu; asynchronous=false)
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)
@@ -108,8 +108,8 @@ cudss_update(solver, A_gpu)
 C_cpu = rand(T, n, p)
 C_gpu = CuMatrix(C_cpu)
 
-cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu)
-cudss(&quot;solve&quot;, solver, X_gpu, C_gpu)
+cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, C_gpu; asynchronous=false)
 
 R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
-norm(R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../functions/">« Functions</a><a class="docs-footer-nextpage" href="../generic/">Generic interface »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Sunday 21 December 2025 05:39">Sunday 21 December 2025</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+norm(R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../functions/">« Functions</a><a class="docs-footer-nextpage" href="../generic/">Generic interface »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 26 December 2025 08:14">Friday 26 December 2025</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
