@@ -499,7 +499,7 @@ The available phases are:
 
 When the Schur complement mode is enabled (option `"schur_mode"` set to `1`), a specific combination of phases is required.
 For that reason, we added shorthand phases:
-- `"solve_fwd_schur"`: combines the phases `"solve_fwd_perm"`, `"solve_fwd"`, and `"solve_diag"`;
+- `"solve_fwd_schur"`: combines the phases `"solve_fwd_perm"` and `"solve_fwd"`;
 - `"solve_bwd_schur"`: combines the phases `"solve_bwd"` and `"solve_bwd_perm"`.
 """
 function cudss end
@@ -512,6 +512,7 @@ function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::Cuds
   if (phase == "factorization") && solver.fresh_factorization
     solver.fresh_factorization = false
   end
+  return nothing
 end
 
 function cudss(phase::String, solver::CudssSolver{T}, x::CuVector{T}, b::CuVector{T}; asynchronous::Bool=true) where T <: BlasFloat
@@ -536,6 +537,7 @@ function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatr
   if (phase == "factorization") && solver.fresh_factorization
     solver.fresh_factorization = false
   end
+  return nothing
 end
 
 function cudss(phase::String, solver::CudssBatchedSolver{T}, x::Vector{<:CuVector{T}}, b::Vector{<:CuVector{T}}; asynchronous::Bool=true) where T <: BlasFloat
