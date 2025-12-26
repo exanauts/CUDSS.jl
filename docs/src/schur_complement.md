@@ -10,7 +10,7 @@ using SparseArrays
 
 T = Float64
 n = 5
-dense_schur = true
+dense_schur = false
 
 # A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
 #     [A₂₁ A₂₂]             [0 5]        [0 3 0]
@@ -35,7 +35,7 @@ A_cpu = sparse(rows, cols, vals, n, n)
 # Right-hand side such the solution is a vector of ones
 b_cpu = T[7.0, 8.0, 14.0, 17.0, 11.0]
 
-A_gpu = CuSparseMatrixCSR{T,Cint}(A_cpu)
+A_gpu = CuSparseMatrixCSR(A_cpu)
 x_gpu = CuVector{T}(undef, n)
 b_gpu = CuVector{T}(b_cpu)
 solver = CudssSolver(A_gpu, "G", 'F')
@@ -87,7 +87,7 @@ using SparseArrays
 
 T = Float64
 n = 5
-dense_schur = false
+dense_schur = true
 
 # A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
 #     [A₂₁ A₂₂]             [0 2]        [0 3 0]
@@ -107,7 +107,7 @@ dense_schur = false
 rows = Cint[1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5]
 cols = Cint[1, 3, 5, 2, 4, 1, 3, 2, 4, 5, 1, 4, 5]
 vals = T[4.0, 1.0, 2.0, 2.0, 3.0, 1.0, 3.0, 3.0, 2.0, 1.0, 2.0, 1.0, 2.0]
-A_cpu = sparse(rows, cols, vals, 5, 5) |> tril
+A_cpu = sparse(rows, cols, vals, n, n) |> tril
 
 # Right-hand side such the solution is a vector of ones
 b_cpu = T[7.0, 5.0, 4.0, 6.0, 5.0]
@@ -165,7 +165,7 @@ using SparseArrays
 
 T = Float64
 n = 5
-dense_schur = false
+dense_schur = true
 
 # A = [A₁₁ A₁₂] where A₁₁ = [2.5  1 ], A₁₂ = [1 0 0]
 #     [A₂₁ A₂₂]             [ 1  2.5]        [0 1 0]
@@ -225,7 +225,7 @@ else
   S_nzVal = CuVector{T}(undef, nnz_S)
   dim_S = (nrows_S, ncols_S)
   S_gpu = CuSparseMatrixCSR(S_rowPtr, S_colVal, S_nzVal, dim_S)
-  S_cudss_sparse = CudssMatrix(S_gpu, structure, uplo)
+  S_cudss_sparse = CudssMatrix(S_gpu, structure, 'U')
 
   # Update the sparse matrix S_gpu
   cudss_set(solver, "schur_matrix", S_cudss_sparse.matrix)

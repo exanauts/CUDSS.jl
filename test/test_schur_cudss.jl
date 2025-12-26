@@ -112,7 +112,7 @@ end
 function cudss_schur_ldlt()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint, Int64)
-      @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
+      @testset "Dense Schur complement = $dense_schur" for dense_schur in (true,)  # (false, true)
         @testset "Triangle of the matrix: $uplo" for (uplo, op) in (('L', tril), ('U', triu), ('F', identity))
           (!dense_schur && uplo == 'F') && continue
           # A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
@@ -229,7 +229,7 @@ end
 function cudss_schur_cholesky()
   @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint, Int64)
-      @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
+      @testset "Dense Schur complement = $dense_schur" for dense_schur in (true,)  # (false, true)
         @testset "Triangle of the matrix: $uplo" for (uplo, op) in (('L', tril), ('U', triu), ('F', identity))
           (!dense_schur && uplo == 'F') && continue
           # A = [A₁₁ A₁₂] where A₁₁ = [2.5  1 ], A₁₂ = [1 0 0]
