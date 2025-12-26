@@ -1,7 +1,7 @@
 function cudss_schur_lu()
   @testset "precision = $T" for T in (Float32, Float64,)  # ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint,)  # Int64)
-      @testset "Dense Schur complement = $dense_schur" for dense_schur in (true,)  # (false, true)
+      @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
         # A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
         #     [A₂₁ A₂₂]             [0 5]        [0 3 0]
         #
@@ -112,7 +112,7 @@ end
 function cudss_schur_ldlt()
   @testset "precision = $T" for T in (Float32, Float64,)  # ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint,)  # Int64)
-      @testset "Dense Schur complement = $dense_schur" for dense_schur in (true,)  # (false, true)
+      @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
         @testset "Triangle of the matrix: $uplo" for (uplo, op) in (('L', tril), ('U', triu), ('F', identity))
           (!dense_schur && uplo == 'F') && continue
           # A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
@@ -172,6 +172,9 @@ function cudss_schur_ldlt()
             cudss_get(solver, "schur_matrix")
             @test Matrix(S_gpu) ≈ S_cpu
           else
+            # Maximum number of nonzeros in one triangle of the Schur complement
+            nnz_S = min(nnz_S, nrows_S * (nrows_S + 1) ÷ 2)
+
             # Sparse storage for the Schur complement
             S_rowPtr = CuVector{INT}(undef, nrows_S+1)
             S_colVal = CuVector{INT}(undef, nnz_S)
@@ -229,7 +232,7 @@ end
 function cudss_schur_cholesky()
   @testset "precision = $T" for T in (Float32, Float64,)  # ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint,)  # Int64)
-      @testset "Dense Schur complement = $dense_schur" for dense_schur in (true,)  # (false, true)
+      @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
         @testset "Triangle of the matrix: $uplo" for (uplo, op) in (('L', tril), ('U', triu), ('F', identity))
           (!dense_schur && uplo == 'F') && continue
           # A = [A₁₁ A₁₂] where A₁₁ = [2.5  1 ], A₁₂ = [1 0 0]
@@ -289,6 +292,9 @@ function cudss_schur_cholesky()
             cudss_get(solver, "schur_matrix")
             @test Matrix(S_gpu) ≈ S_cpu
           else
+            # Maximum number of nonzeros in one triangle of the Schur complement
+            nnz_S = min(nnz_S, nrows_S * (nrows_S + 1) ÷ 2)
+
             # Sparse storage for the Schur complement
             S_rowPtr = CuVector{INT}(undef, nrows_S+1)
             S_colVal = CuVector{INT}(undef, nnz_S)

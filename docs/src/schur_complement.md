@@ -141,6 +141,9 @@ if dense_schur
   cudss_set(solver, "schur_matrix", S_cudss_dense.matrix)
   cudss_get(solver, "schur_matrix")
 else
+  # Maximum number of nonzeros in one triangle of the Schur complement
+  nnz_S = min(nnz_S, nrows_S * (nrows_S + 1) ÷ 2)
+
   # Sparse storage for the Schur complement
   S_rowPtr = CuVector{Cint}(undef, nrows_S+1)
   S_colVal = CuVector{Cint}(undef, nnz_S)
@@ -219,6 +222,9 @@ if dense_schur
   cudss_set(solver, "schur_matrix", S_cudss_dense.matrix)
   cudss_get(solver, "schur_matrix")
 else
+  # Maximum number of nonzeros in one triangle of the Schur complement
+  nnz_S = min(nnz_S, nrows_S * (nrows_S + 1) ÷ 2)
+
   # Sparse storage for the Schur complement
   S_rowPtr = CuVector{Cint}(undef, nrows_S+1)
   S_colVal = CuVector{Cint}(undef, nnz_S)
