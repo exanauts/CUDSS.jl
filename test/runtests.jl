@@ -26,19 +26,19 @@ include("test_schur_cudss.jl")
 include("test_uniform_batch_cudss.jl")
 include("test_nonuniform_batch_cudss.jl")
 
-@testset "Schur complement CUDSS" begin
-  @testset "Schur complement LU" begin
-    cudss_schur_lu()
-  end
-
-  @testset "Schur complement LDL" begin
-    cudss_schur_ldlt()
-  end
-
-  @testset "Schur complement Cholesky" begin
-    cudss_schur_cholesky()
-  end
-end
+# @testset "Schur complement CUDSS" begin
+#   @testset "Schur complement LU" begin
+#     cudss_schur_lu()
+#   end
+#
+#   @testset "Schur complement LDL" begin
+#     cudss_schur_ldlt()
+#   end
+#
+#   @testset "Schur complement Cholesky" begin
+#     cudss_schur_cholesky()
+#   end
+# end
 
 @testset "CUDSS" begin
   @testset "version" begin

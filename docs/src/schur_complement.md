@@ -12,7 +12,7 @@
 ## Schur complement -- LU
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -84,12 +84,40 @@ else
   cudss_set(solver, "schur_matrix", S_cudss_sparse.matrix)
   cudss_get(solver, "schur_matrix")
 end
+
+# [A₁₁ A₁₂] [x₁] = [b₁] ⟺ A₁₁x₁ = b₁ - A₁₂x₂
+# [A₂₁ A₂₂] [x₂]   [b₂]   Sx₂ = b₂ - A₂₁(A₁₁)⁻¹b₁ = bₛ
+#
+# Compute bₛ with a partial forward solve
+# bₛ is stored in the last nₛ components of b_gpu
+# nₛ = 3 is the size of the Schur complement
+ns = 3
+cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
+bs_gpu = x_gpu[n-ns+1:n]
+
+if dense_schur
+  # Compute x₂ with the dense LU of cuSOLVER
+  F_gpu = copy(S_gpu)
+  _, ipiv, _ = CUSOLVER.getrf!(F_gpu)
+  x2_gpu = copy(bs_gpu)
+  CUSOLVER.getrs!('N', F_gpu, ipiv, x2_gpu)
+else
+  # Compute x₂ with the sparse LU of cuDSS
+  F_gpu = lu(S_gpu)
+  x2_gpu = F_gpu \ bs_gpu
+end
+
+# Compute x₁ with a partial backward solve
+# x₂ must be stored in the last nₛ components of x_gpu
+x_gpu[n-ns+1:n] .= x2_gpu
+cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+x1_gpu = b_gpu[1:n-ns]
 ```
 
 ## Schur complement -- LDLᵀ and LDLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -165,12 +193,41 @@ else
   cudss_set(solver, "schur_matrix", S_cudss_sparse.matrix)
   cudss_get(solver, "schur_matrix")
 end
+
+# [A₁₁ A₁₂] [x₁] = [b₁] ⟺ Sx₁ = b₁ - A₁₂(A₂₂)⁻¹b₂ = bₛ
+# [A₂₁ A₂₂] [x₂]   [b₂]   A₂₂x₂ = b₂ - A₂₁x₁
+#
+# Compute bₛ with a partial forward solve
+# bₛ is stored in the last nₛ components of x_gpu
+# nₛ = 2 is the size of the Schur complement
+ns = 2
+cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
+cudss("solve_diag", solver, x_gpu, x_gpu; asynchronous=false)
+bs_gpu = x_gpu[n-ns+1:n]
+
+if dense_schur
+  # Compute x₁ with the dense LDLᵀ / LDLᴴ of cuSOLVER
+  F_gpu = copy(S_gpu)
+  _, ipiv, _ = CUSOLVER.sytrf!('L', F_gpu)
+  x1_gpu = copy(bs_gpu)
+  CUSOLVER.sytrs!('L', F_gpu, CuVector{Int64}(ipiv), x1_gpu)
+else
+  # Compute x₁ with the sparse LDLᵀ / LDLᴴ of cuDSS
+  F_gpu = ldlt(S_gpu, view='L')
+  x1_gpu = F_gpu \ bs_gpu
+end
+
+# Compute x₂ with a partial backward solve
+# x₁ must be stored in the last nₛ components of x_gpu
+x_gpu[n-ns+1:n] .= x1_gpu
+cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+x2_gpu = b_gpu[ns+1:n]
 ```
 
 ## Schur complement -- LLᵀ and LLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -246,4 +303,32 @@ else
   cudss_set(solver, "schur_matrix", S_cudss_sparse.matrix)
   cudss_get(solver, "schur_matrix")
 end
+
+# [A₁₁ A₁₂] [x₁] = [b₁] ⟺ Sx₁ = b₁ - A₁₂(A₂₂)⁻¹b₂ = bₛ
+# [A₂₁ A₂₂] [x₂]   [b₂]   A₂₂x₂ = b₂ - A₂₁x₁
+#
+# Compute bₛ with a partial forward solve
+# bₛ is stored in the last nₛ components of x_gpu
+# nₛ = 2 is the size of the Schur complement
+ns = 2
+cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
+bs_gpu = x_gpu[n-ns+1:n]
+
+if dense_schur
+  # Compute x₁ with the dense LLᵀ / LLᴴ of cuSOLVER
+  F_gpu = copy(S_gpu)
+  CUSOLVER.potrf!('U', F_gpu)
+  x1_gpu = copy(bs_gpu)
+  CUSOLVER.potrs!('U', F_gpu, x1_gpu)
+else
+  # Compute x₁ with the sparse LLᵀ / LLᴴ of cuDSS
+  F_gpu = cholesky(S_gpu, view='U')
+  x1_gpu = F_gpu \ bs_gpu
+end
+
+# Compute x₂ with a partial backward solve
+# x₁ must be stored in the last nₛ components of x_gpu
+x_gpu[n-ns+1:n] .= x1_gpu
+cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+x2_gpu = b_gpu[ns+1:n]
 ```

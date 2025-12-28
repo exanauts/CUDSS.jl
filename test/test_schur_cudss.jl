@@ -1,7 +1,7 @@
 function cudss_schur_lu()
-  @testset "precision = $T" for T in (Float32, Float64,)  # ComplexF32, ComplexF64)
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint, Int64)
-      @testset "indexing = $index" for index in ('Z',) #, 'O')
+      @testset "indexing = $index" for index in ('Z', 'O')
         @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
           # A = [A₁₁ A₁₂] where A₁₁ = [4 0], A₁₂ = [1 0 2]
           #     [A₂₁ A₂₂]             [0 5]        [0 3 0]
@@ -97,12 +97,14 @@ function cudss_schur_lu()
 
           if dense_schur
             # Compute x₂ with the dense LU of cuSOLVER
-            F, ipiv, _ = CUSOLVER.getrf!(S_gpu)
+            F_gpu = copy(S_gpu)
+            _, ipiv, _ = CUSOLVER.getrf!(F_gpu)
             x2_gpu = copy(bs_gpu)
-            CUSOLVER.getrs!('N', F, ipiv, x2_gpu)
+            CUSOLVER.getrs!('N', F_gpu, ipiv, x2_gpu)
           else
             # Compute x₂ with the sparse LU of cuDSS
-            x2_gpu = lu(S_gpu) \ bs_gpu
+            F_gpu = lu(S_gpu)
+            x2_gpu = F_gpu \ bs_gpu
           end
           x2_cpu = lu(S_cpu) \ bs_cpu
           @test Vector(x2_gpu) ≈ x2_cpu
@@ -121,9 +123,9 @@ function cudss_schur_lu()
 end
 
 function cudss_schur_ldlt()
-  @testset "precision = $T" for T in (Float32, Float64,)  # ComplexF32, ComplexF64)
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint, Int64)
-      @testset "indexing = $index" for index in ('Z',) #, 'O')
+      @testset "indexing = $index" for index in ('Z', 'O')
         @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
           @testset "Triangle of the matrix: $uplo" for (uplo, op) in (('L', tril), ('U', triu), ('F', identity))
             (!dense_schur && uplo == 'F') && continue
@@ -210,40 +212,39 @@ function cudss_schur_ldlt()
               @test Matrix(S_gpu) ≈ op(S_cpu)
             end
 
-            # to be fixed...
-            if false
-              # [A₁₁ A₁₂] [x₁] = [b₁] ⟺ Sx₁ = b₁ - A₁₂(A₂₂)⁻¹b₂ = bₛ
-              # [A₂₁ A₂₂] [x₂]   [b₂]   A₂₂x₂ = b₂ - A₂₁x₁
-              #
-              # Compute bₛ with a partial forward solve
-              # bₛ is stored in the first nₛ = 2 components of x_gpu
-              # nₛ = 2 is the size of the Schur complement
-              cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
-              bs_gpu = x_gpu[1:2]
-              bs_cpu = b_cpu[1:2] - A12 * (A22 \ b_cpu[3:5])
-              @test Vector(bs_gpu) ≈ bs_cpu
+            # [A₁₁ A₁₂] [x₁] = [b₁] ⟺ Sx₁ = b₁ - A₁₂(A₂₂)⁻¹b₂ = bₛ
+            # [A₂₁ A₂₂] [x₂]   [b₂]   A₂₂x₂ = b₂ - A₂₁x₁
+            #
+            # Compute bₛ with a partial forward solve
+            # bₛ is stored in the last nₛ components of x_gpu
+            # nₛ = 2 is the size of the Schur complement
+            cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
+            cudss("solve_diag", solver, x_gpu, x_gpu; asynchronous=false)
+            bs_gpu = x_gpu[4:5]
+            bs_cpu = b_cpu[1:2] - A12 * (A22 \ b_cpu[3:5])
+            @test Vector(bs_gpu) ≈ bs_cpu
 
-              if dense_schur
-                # Compute x₂ with the dense LDLᵀ / LDLᴴ of cuSOLVER
-                uplo_cusolver = (uplo == 'F') ? 'L' : uplo
-                F, ipiv, _ = CUSOLVER.sytrf!(uplo_cusolver, S_gpu)
-                x1_gpu = copy(bs_gpu)
-                CUSOLVER.sytrs!(uplo_cusolver, F, CuVector{Int64}(ipiv), x1_gpu)
-              else
-                # Compute x₂ with the sparse LDLᵀ / LDLᴴ of cuDSS
-                x1_gpu = ldlt(S_gpu) \ bs_gpu
-              end
-              x1_cpu = bunchkaufman(S_cpu) \ bs_cpu
-              @test Vector(x1_gpu) ≈ x1_cpu
-
-              # Compute x₂ with a partial backward solve
-              # x₁ must be stored the first nₛ components of x_gpu
-              x_gpu[1:2] .= x1_gpu
-              cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
-              x2_gpu = b_gpu[3:5]
-              x2_cpu = A22 \ (b_cpu[3:5] - A21 * x1_cpu)
-              @test Vector(x2_gpu) ≈ x2_cpu
+            if dense_schur
+              # Compute x₁ with the dense LDLᵀ / LDLᴴ of cuSOLVER
+              F_gpu = copy(S_gpu)
+              _, ipiv, _ = CUSOLVER.sytrf!('L', F_gpu)
+              x1_gpu = copy(bs_gpu)
+              CUSOLVER.sytrs!('L', F_gpu, CuVector{Int64}(ipiv), x1_gpu)
+            else
+              # Compute x₁ with the sparse LDLᵀ / LDLᴴ of cuDSS
+              F_gpu = ldlt(S_gpu, view=uplo)
+              x1_gpu = F_gpu \ bs_gpu
             end
+            x1_cpu = bunchkaufman(S_cpu) \ bs_cpu
+            @test Vector(x1_gpu) ≈ x1_cpu
+
+            # Compute x₂ with a partial backward solve
+            # x₁ must be stored in the last nₛ components of x_gpu
+            x_gpu[4:5] .= x1_gpu
+            cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+            x2_gpu = b_gpu[3:5]
+            x2_cpu = A22 \ (b_cpu[3:5] - A21 * x1_cpu)
+            @test Vector(x2_gpu) ≈ x2_cpu
           end
         end
       end
@@ -252,9 +253,9 @@ function cudss_schur_ldlt()
 end
 
 function cudss_schur_cholesky()
-  @testset "precision = $T" for T in (Float32, Float64,)  # ComplexF32, ComplexF64)
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     @testset "integer = $INT" for INT in (Cint, Int64)
-      @testset "indexing = $index" for index in ('Z',) # 'O')
+      @testset "indexing = $index" for index in ('Z', 'O')
         @testset "Dense Schur complement = $dense_schur" for dense_schur in (false, true)
           @testset "Triangle of the matrix: $uplo" for (uplo, op) in (('L', tril), ('U', triu), ('F', identity))
             (!dense_schur && uplo == 'F') && continue
@@ -341,40 +342,38 @@ function cudss_schur_cholesky()
               @test Matrix(S_gpu) ≈ op(S_cpu)
             end
 
-            # to be fixed...
-            if false
-              # [A₁₁ A₁₂] [x₁] = [b₁] ⟺ Sx₁ = b₁ - A₁₂(A₂₂)⁻¹b₂ = bₛ
-              # [A₂₁ A₂₂] [x₂]   [b₂]   A₂₂x₂ = b₂ - A₂₁x₁
-              #
-              # Compute bₛ with a partial forward solve
-              # bₛ is stored in the first nₛ = 2 components of x_gpu
-              # nₛ = 2 is the size of the Schur complement
-              cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
-              bs_gpu = x_gpu[1:2]
-              bs_cpu = b_cpu[1:2] - A12 * (A22 \ b_cpu[3:5])
-              @test Vector(bs_gpu) ≈ bs_cpu
+            # [A₁₁ A₁₂] [x₁] = [b₁] ⟺ Sx₁ = b₁ - A₁₂(A₂₂)⁻¹b₂ = bₛ
+            # [A₂₁ A₂₂] [x₂]   [b₂]   A₂₂x₂ = b₂ - A₂₁x₁
+            #
+            # Compute bₛ with a partial forward solve
+            # bₛ is stored in the last nₛ components of x_gpu
+            # nₛ = 2 is the size of the Schur complement
+            cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
+            bs_gpu = x_gpu[4:5]
+            bs_cpu = b_cpu[1:2] - A12 * (A22 \ b_cpu[3:5])
+            @test Vector(bs_gpu) ≈ bs_cpu
 
-              if dense_schur
-                # Compute x₂ with the dense LLᵀ / LLᴴ of cuSOLVER
-                uplo_cusolver = (uplo == 'F') ? 'L' : uplo
-                F, _ = CUSOLVER.potrf!(uplo_cusolver, S_gpu)
-                x1_gpu = copy(bs_gpu)
-                CUSOLVER.potrs!(uplo_cusolver, F, x1_gpu)
-              else
-                # Compute x₂ with the sparse LLᵀ / LLᴴ of cuDSS
-                x1_gpu = cholesky(S_gpu) \ bs_gpu
-              end
-              x1_cpu = cholesky(S_cpu) \ bs_cpu
-              @test Vector(x1_gpu) ≈ x1_cpu
-
-              # Compute x₂ with a partial backward solve
-              # x₁ must be stored the first nₛ components of x_gpu
-              x_gpu[1:2] .= x1_gpu
-              cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
-              x2_gpu = b_gpu[3:5]
-              x2_cpu = A22 \ (b_cpu[3:5] - A21 * x1_cpu)
-              @test Vector(x2_gpu) ≈ x2_cpu
+            if dense_schur
+              # Compute x₁ with the dense LLᵀ / LLᴴ of cuSOLVER
+              F_gpu = copy(S_gpu)
+              CUSOLVER.potrf!('L', F_gpu)
+              x1_gpu = copy(bs_gpu)
+              CUSOLVER.potrs!('L', F_gpu, x1_gpu)
+            else
+              # Compute x₁ with the sparse LLᵀ / LLᴴ of cuDSS
+              F_gpu = cholesky(S_gpu, view=uplo)
+              x1_gpu = F_gpu \ bs_gpu
             end
+            x1_cpu = cholesky(S_cpu) \ bs_cpu
+            @test Vector(x1_gpu) ≈ x1_cpu
+
+            # Compute x₂ with a partial backward solve
+            # x₁ must be stored in the last nₛ components of x_gpu
+            x_gpu[4:5] .= x1_gpu
+            cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+            x2_gpu = b_gpu[3:5]
+            x2_cpu = A22 \ (b_cpu[3:5] - A21 * x1_cpu)
+            @test Vector(x2_gpu) ≈ x2_cpu
           end
         end
       end
