@@ -1,7 +1,7 @@
 #### Schur complement
 
 !!! danger
-  With cuDSS version 0.7.1, the Schur complement functionality is partially buggy. As a result, Schur complement support in `CUDSS.jl` is currently considered experimental. Users are advised to use this feature with caution, carefully validate results, and avoid relying on it in production workflows until the issues are resolved in a future cuDSS release.
+    With cuDSS version 0.7.1, the Schur complement functionality is partially buggy. As a result, Schur complement support in `CUDSS.jl` is currently considered experimental. Users are advised to use this feature with caution, carefully validate results, and avoid relying on it in production workflows until the issues are resolved in a future cuDSS release.
 
 !!! info
     If the user requests sparse storage for a Hermitian Schur complement (after partial Cholesky or LDLᴴ decomposition), only one triangular part of the matrix can be recovered when dumping the matrix.
