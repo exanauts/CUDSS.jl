@@ -58,19 +58,15 @@ end
 # to avoid the overhead of creating/destroying handles frequently.
 const idle_handles = HandleCache{CuContext,cudssHandle_t}(handle_ctor, handle_dtor)
 
-"""
-    handle()
-
-Get the cuDSS handle for the current task and CUDA context.
-
-This function implements CUDA.jl-compatible task-based concurrency:
-- Each Julia Task maintains its own library state via `task_local_storage()`
-- The handle is automatically configured to use the current task's CUDA stream
-- Stream changes (e.g., via `CUDA.stream!()`) are detected and applied automatically
-
-This follows the same pattern as CUBLAS.handle(), CUSPARSE.handle(), etc.,
-ensuring consistent behavior across all CUDA libraries.
-"""
+# Get the cuDSS handle for the current task and CUDA context.
+#
+# This function implements CUDA.jl-compatible task-based concurrency:
+# - Each Julia Task maintains its own library state via `task_local_storage()`
+# - The handle is automatically configured to use the current task's CUDA stream
+# - Stream changes (e.g., via `CUDA.stream!()`) are detected and applied automatically
+#
+# This follows the same pattern as CUBLAS.handle(), CUSPARSE.handle(), etc.,
+# ensuring consistent behavior across all CUDA libraries.
 function handle()
     # Get the current CUDA state for this task (device, context, stream, math_mode)
     # CUDA.jl creates one stream per task per device automatically
