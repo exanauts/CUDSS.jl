@@ -1000,7 +1000,7 @@ function cudss_task_concurrency()
       A_cpu = sprand(T, n, n, 0.05)
       A_cpu = A_cpu * A_cpu' + I  # Make SPD
       b_cpu = rand(T, n)
-      x_expected = A_cpu \ b_cpu
+      x_expected = Matrix(A_cpu) \ b_cpu  # Use dense solve for CPU reference
       (A_cpu, b_cpu, x_expected)
     end
 
