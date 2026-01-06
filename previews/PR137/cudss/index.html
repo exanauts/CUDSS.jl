@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>cuDSS interface · CUDSS.jl</title><meta name="title" content="cuDSS interface · CUDSS.jl"/><meta property="og:title" content="cuDSS interface · CUDSS.jl"/><meta property="twitter:title" content="cuDSS interface · CUDSS.jl"/><meta name="description" content="Documentation for CUDSS.jl."/><meta property="og:description" content="Documentation for CUDSS.jl."/><meta property="twitter:description" content="Documentation for CUDSS.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">CUDSS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../types/">Types</a></li><li><a class="tocitem" href="../functions/">Functions</a></li><li class="is-active"><a class="tocitem" href>cuDSS interface</a><ul class="internal"><li><a class="tocitem" href="#LU"><span>LU</span></a></li><li><a class="tocitem" href="#LDLᵀ-and-LDLᴴ"><span>LDLᵀ and LDLᴴ</span></a></li><li><a class="tocitem" href="#LLᵀ-and-LLᴴ"><span>LLᵀ and LLᴴ</span></a></li></ul></li><li><a class="tocitem" href="../generic/">Generic interface</a></li><li><a class="tocitem" href="../schur_complement/">Schur complement</a></li><li><a class="tocitem" href="../uniform_batch/">Uniform batch</a></li><li><a class="tocitem" href="../nonuniform_batch/">Non-uniform batch</a></li><li><a class="tocitem" href="../options/">Options</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>cuDSS interface</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>cuDSS interface</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl/blob/main/docs/src/cudss.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h4 id="Factorization-of-a-single-sparse-matrix"><a class="docs-heading-anchor" href="#Factorization-of-a-single-sparse-matrix">Factorization of a single sparse matrix</a><a id="Factorization-of-a-single-sparse-matrix-1"></a><a class="docs-heading-anchor-permalink" href="#Factorization-of-a-single-sparse-matrix" title="Permalink"></a></h4><p>Solving a single sparse linear system in cuDSS is performed in three distinct phases: symbolic analysis, numerical factorization, and solve. The symbolic analysis determines the structure of the factors and computes a fill-reducing permutation based solely on the sparsity pattern of the matrix. The numerical factorization operates on the matrix values using the symbolic information obtained in the first phase. Once the factorization is complete, the solve phase computes the solution for one or more right-hand sides. Both the factorization and solve phases can be efficiently repeated as long as the sparsity pattern of the matrix remains unchanged.</p><h2 id="LU"><a class="docs-heading-anchor" href="#LU">LU</a><a id="LU-1"></a><a class="docs-heading-anchor-permalink" href="#LU" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using SparseArrays, LinearAlgebra
+
+T = Float64
+n = 100
+A_cpu = sprand(T, n, n, 0.05) + I
+x_cpu = zeros(T, n)
+b_cpu = rand(T, n)
+
+A_gpu = CuSparseMatrixCSR(A_cpu)
+x_gpu = CuVector(x_cpu)
+b_gpu = CuVector(b_cpu)
+
+solver = CudssSolver(A_gpu, &quot;G&quot;, &#39;F&#39;)
+
+cudss(&quot;analysis&quot;, solver, x_gpu, b_gpu)
+cudss(&quot;factorization&quot;, solver, x_gpu, b_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, x_gpu, b_gpu; asynchronous=false)
+
+r_gpu = b_gpu - A_gpu * x_gpu
+norm(r_gpu)
+
+# In-place LU
+d_gpu = rand(T, n) |&gt; CuVector
+A_gpu = A_gpu + Diagonal(d_gpu)
+cudss_update(solver, A_gpu)
+
+c_cpu = rand(T, n)
+c_gpu = CuVector(c_cpu)
+
+cudss(&quot;refactorization&quot;, solver, x_gpu, c_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, x_gpu, c_gpu; asynchronous=false)
+
+r_gpu = c_gpu - A_gpu * x_gpu
+norm(r_gpu)</code></pre><h2 id="LDLᵀ-and-LDLᴴ"><a class="docs-heading-anchor" href="#LDLᵀ-and-LDLᴴ">LDLᵀ and LDLᴴ</a><a id="LDLᵀ-and-LDLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#LDLᵀ-and-LDLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using SparseArrays, LinearAlgebra
+
+T = Float64
+R = real(T)
+n = 100
+p = 5
+A_cpu = sprand(T, n, n, 0.05) + I
+A_cpu = A_cpu + A_cpu&#39;
+X_cpu = zeros(T, n, p)
+B_cpu = rand(T, n, p)
+
+A_gpu = CuSparseMatrixCSR(A_cpu |&gt; tril)
+X_gpu = CuMatrix(X_cpu)
+B_gpu = CuMatrix(B_cpu)
+
+structure = T &lt;: Real ? &quot;S&quot; : &quot;H&quot;
+solver = CudssSolver(A_gpu, structure, &#39;L&#39;)
+
+cudss(&quot;analysis&quot;, solver, X_gpu, B_gpu)
+cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+
+R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+norm(R_gpu)
+
+# In-place LDLᵀ
+d_gpu = rand(R, n) |&gt; CuVector
+A_gpu = A_gpu + Diagonal(d_gpu)
+cudss_update(solver, A_gpu)
+
+C_cpu = rand(T, n, p)
+C_gpu = CuMatrix(C_cpu)
+
+cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, C_gpu; asynchronous=false)
+
+R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
+norm(R_gpu)</code></pre><h2 id="LLᵀ-and-LLᴴ"><a class="docs-heading-anchor" href="#LLᵀ-and-LLᴴ">LLᵀ and LLᴴ</a><a id="LLᵀ-and-LLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#LLᵀ-and-LLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using SparseArrays, LinearAlgebra
+
+T = ComplexF64
+R = real(T)
+n = 100
+p = 5
+A_cpu = sprand(T, n, n, 0.01)
+A_cpu = A_cpu * A_cpu&#39; + I
+X_cpu = zeros(T, n, p)
+B_cpu = rand(T, n, p)
+
+A_gpu = CuSparseMatrixCSR(A_cpu |&gt; triu)
+X_gpu = CuMatrix(X_cpu)
+B_gpu = CuMatrix(B_cpu)
+
+structure = T &lt;: Real ? &quot;SPD&quot; : &quot;HPD&quot;
+solver = CudssSolver(A_gpu, structure, &#39;U&#39;)
+
+cudss(&quot;analysis&quot;, solver, X_gpu, B_gpu)
+cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+
+R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
+norm(R_gpu)
+
+# In-place LLᴴ
+d_gpu = rand(R, n) |&gt; CuVector
+A_gpu = A_gpu + Diagonal(d_gpu)
+cudss_update(solver, A_gpu)
+
+C_cpu = rand(T, n, p)
+C_gpu = CuMatrix(C_cpu)
+
+cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, C_gpu; asynchronous=false)
+
+R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
+norm(R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../functions/">« Functions</a><a class="docs-footer-nextpage" href="../generic/">Generic interface »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Tuesday 6 January 2026 16:40">Tuesday 6 January 2026</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
