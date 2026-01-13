@@ -15,5 +15,6 @@ jobs:
           version: '1'
       - name: Aqua.jl
         run: julia --color=yes -e 'using Pkg; Pkg.add("Aqua"); Pkg.add("CUDA"); Pkg.develop(path=".");
-                                   using Aqua, CUDA.CUSPARSE, CUDSS; Aqua.test_all(CUDSS, piracies=false, ambiguities=false);
+                                   using Aqua, CUDA.CUSPARSE, CUDSS; Aqua.test_all(CUDSS, piracies=false, ambiguities=false, stale_deps=false);
+                                   Aqua.test_stale_deps(CUDSS; ignore=[:CUDA_Runtime_Discovery]);
                                    Aqua.test_ambiguities(CUDSS); Aqua.test_piracies(CUDSS; treat_as_own=[CuSparseMatrixCSR])'
