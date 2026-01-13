@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Non-uniform batch · CUDSS.jl</title><meta name="title" content="Non-uniform batch · CUDSS.jl"/><meta property="og:title" content="Non-uniform batch · CUDSS.jl"/><meta property="twitter:title" content="Non-uniform batch · CUDSS.jl"/><meta name="description" content="Documentation for CUDSS.jl."/><meta property="og:description" content="Documentation for CUDSS.jl."/><meta property="twitter:description" content="Documentation for CUDSS.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">CUDSS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../types/">Types</a></li><li><a class="tocitem" href="../functions/">Functions</a></li><li><a class="tocitem" href="../cudss/">cuDSS interface</a></li><li><a class="tocitem" href="../generic/">Generic interface</a></li><li><a class="tocitem" href="../schur_complement/">Schur complement</a></li><li><a class="tocitem" href="../uniform_batch/">Uniform batch</a></li><li class="is-active"><a class="tocitem" href>Non-uniform batch</a><ul class="internal"><li><a class="tocitem" href="#Batch-LU"><span>Batch LU</span></a></li><li><a class="tocitem" href="#Batch-LDLᵀ-and-LDLᴴ"><span>Batch LDLᵀ and LDLᴴ</span></a></li><li><a class="tocitem" href="#Batch-LLᵀ-and-LLᴴ"><span>Batch LLᵀ and LLᴴ</span></a></li></ul></li><li><a class="tocitem" href="../options/">Options</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Non-uniform batch</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Non-uniform batch</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/exanauts/CUDSS.jl/blob/main/docs/src/nonuniform_batch.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h4 id="Batch-factorization-of-matrices-with-different-sparsity-patterns"><a class="docs-heading-anchor" href="#Batch-factorization-of-matrices-with-different-sparsity-patterns">Batch factorization of matrices with different sparsity patterns</a><a id="Batch-factorization-of-matrices-with-different-sparsity-patterns-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-factorization-of-matrices-with-different-sparsity-patterns" title="Permalink"></a></h4><div class="admonition is-info" id="Note-503c3f053dbf5a51"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-503c3f053dbf5a51" title="Permalink"></a></header><div class="admonition-body"><p>This functionality requires CUDSS.jl v0.4.2 and above.</p></div></div><h2 id="Batch-LU"><a class="docs-heading-anchor" href="#Batch-LU">Batch LU</a><a id="Batch-LU-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-LU" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using SparseArrays, LinearAlgebra
+
+T = Float64
+n = 100
+nbatch = 5
+
+batch_A_gpu = CuSparseMatrixCSR{T,Cint}[]
+batch_x_gpu = CuVector{T}[]
+batch_b_gpu = CuVector{T}[]
+
+for i = 1:nbatch
+    A_cpu = sprand(T, n, n, 0.05) + I
+    x_cpu = zeros(T, n)
+    b_cpu = rand(T, n)
+
+    push!(batch_A_gpu, A_cpu |&gt; CuSparseMatrixCSR)
+    push!(batch_x_gpu, x_cpu |&gt; CuVector)
+    push!(batch_b_gpu, b_cpu |&gt; CuVector)
+end
+
+solver = CudssBatchedSolver(batch_A_gpu, &quot;G&quot;, &#39;F&#39;)
+
+cudss(&quot;analysis&quot;, solver, batch_x_gpu, batch_b_gpu)
+cudss(&quot;factorization&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+
+batch_r_gpu = batch_b_gpu .- batch_A_gpu .* batch_x_gpu
+norm.(batch_r_gpu)
+
+# In-place LU
+for i = 1:nbatch
+    d_gpu = rand(T, n) |&gt; CuVector
+    batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
+end
+cudss_update(solver, batch_A_gpu)
+
+for i = 1:nbatch
+    c_cpu = rand(T, n)
+    c_gpu = CuVector(c_cpu)
+    batch_b_gpu[i] = c_gpu
+end
+
+cudss(&quot;refactorization&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_x_gpu, batch_b_gpu; asynchronous=false)
+
+batch_r_gpu = batch_b_gpu .- batch_A_gpu .* batch_x_gpu
+norm.(batch_r_gpu)</code></pre><h2 id="Batch-LDLᵀ-and-LDLᴴ"><a class="docs-heading-anchor" href="#Batch-LDLᵀ-and-LDLᴴ">Batch LDLᵀ and LDLᴴ</a><a id="Batch-LDLᵀ-and-LDLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-LDLᵀ-and-LDLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using SparseArrays, LinearAlgebra
+
+T = Float64
+R = real(T)
+n = 100
+p = 5
+nbatch = 10
+
+batch_A_cpu = SparseMatrixCSC{T}[]
+batch_A_gpu = CuSparseMatrixCSR{T,Cint}[]
+batch_X_gpu = CuMatrix{T}[]
+batch_B_gpu = CuMatrix{T}[]
+
+for i = 1:nbatch
+    A_cpu = sprand(T, n, n, 0.05) + I
+    A_cpu = A_cpu + A_cpu&#39;
+    X_cpu = zeros(T, n, p)
+    B_cpu = rand(T, n, p)
+
+    push!(batch_A_cpu, A_cpu)
+    push!(batch_A_gpu, A_cpu |&gt; tril |&gt; CuSparseMatrixCSR)
+    push!(batch_X_gpu, X_cpu |&gt; CuMatrix)
+    push!(batch_B_gpu, B_cpu |&gt; CuMatrix)
+end
+
+structure = T &lt;: Real ? &quot;S&quot; : &quot;H&quot;
+solver = CudssBatchedSolver(batch_A_gpu, structure, &#39;L&#39;)
+
+cudss(&quot;analysis&quot;, solver, batch_X_gpu, batch_B_gpu)
+cudss(&quot;factorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+
+batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
+norm.(batch_R_gpu)
+
+# In-place LDLᵀ
+d_cpu = rand(R, n)
+d_gpu = CuVector(d_cpu)
+for i = 1:nbatch
+    batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
+    batch_A_cpu[i] = batch_A_cpu[i] + Diagonal(d_cpu)
+end
+cudss_update(solver, batch_A_gpu)
+
+for i = 1:nbatch
+    C_cpu = rand(T, n, p)
+    C_gpu = CuMatrix(C_cpu)
+    batch_B_gpu[i] = C_gpu
+end
+
+cudss(&quot;refactorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+
+batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
+norm.(batch_R_gpu)</code></pre><h2 id="Batch-LLᵀ-and-LLᴴ"><a class="docs-heading-anchor" href="#Batch-LLᵀ-and-LLᴴ">Batch LLᵀ and LLᴴ</a><a id="Batch-LLᵀ-and-LLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-LLᵀ-and-LLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+using CUDSS
+using SparseArrays, LinearAlgebra
+
+T = ComplexF64
+R = real(T)
+n = 100
+p = 4
+nbatch = 8
+
+batch_A_cpu = SparseMatrixCSC{T}[]
+batch_A_gpu = CuSparseMatrixCSR{T,Cint}[]
+batch_X_gpu = CuMatrix{T}[]
+batch_B_gpu = CuMatrix{T}[]
+
+for i = 1:nbatch
+    A_cpu = sprand(T, n, n, 0.05) + I
+    A_cpu = A_cpu * A_cpu&#39; + I
+    X_cpu = zeros(T, n, p)
+    B_cpu = rand(T, n, p)
+
+    push!(batch_A_cpu, A_cpu)
+    push!(batch_A_gpu, A_cpu |&gt; triu |&gt; CuSparseMatrixCSR)
+    push!(batch_X_gpu, X_cpu |&gt; CuMatrix)
+    push!(batch_B_gpu, B_cpu |&gt; CuMatrix)
+end
+
+structure = T &lt;: Real ? &quot;SPD&quot; : &quot;HPD&quot;
+solver = CudssBatchedSolver(batch_A_gpu, structure, &#39;U&#39;)
+
+cudss(&quot;analysis&quot;, solver, batch_X_gpu, batch_B_gpu)
+cudss(&quot;factorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+
+batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
+norm.(batch_R_gpu)
+
+# In-place LLᴴ
+d_cpu = rand(R, n)
+d_gpu = CuVector(d_cpu)
+for i = 1:nbatch
+    batch_A_gpu[i] = batch_A_gpu[i] + Diagonal(d_gpu)
+    batch_A_cpu[i] = batch_A_cpu[i] + Diagonal(d_cpu)
+end
+cudss_update(solver, batch_A_gpu)
+
+for i = 1:nbatch
+    C_cpu = rand(T, n, p)
+    C_gpu = CuMatrix(C_cpu)
+    batch_B_gpu[i] = C_gpu
+end
+
+cudss(&quot;refactorization&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, batch_X_gpu, batch_B_gpu; asynchronous=false)
+
+batch_R_gpu = batch_B_gpu .- CuSparseMatrixCSR.(batch_A_cpu) .* batch_X_gpu
+norm.(batch_R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../uniform_batch/">« Uniform batch</a><a class="docs-footer-nextpage" href="../options/">Options »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Tuesday 13 January 2026 09:11">Tuesday 13 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
