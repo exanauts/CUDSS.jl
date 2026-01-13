@@ -24,7 +24,13 @@ function __init__()
       path = CUDA_Runtime_Discovery.get_library(dirs, "cudss"; optional=true)
       (path === nothing) && error("cuDSS is not available on your system (looked in $(join(dirs, ", "))).")
       libcudss = path
-      CUDSS_INSTALLATION = "LOCAL"
+      cudss_version = version()
+      if v"0.7.0" <= cudss_version < v"0.8"
+        CUDSS_INSTALLATION = "LOCAL"
+      else
+        libcudss = nothing # Reset the library to nothing because we are failing out (just in case)
+        error("cuDSS found: $(path) is version $(cudss_version) but CUDSS.jl expects version 0.7.*")
+      end
     else
       !CUDSS_jll.is_available() && error("cuDSS is not available for your platform.")
       libcudss = CUDSS_jll.libcudss
