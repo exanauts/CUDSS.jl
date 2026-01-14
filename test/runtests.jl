@@ -86,6 +86,10 @@ include("test_nonuniform_batch_cudss.jl")
   @testset "Refactorization Cholesky" begin
     refactorization_cholesky()
   end
+
+  @testset "Task-based concurrency" begin
+    cudss_task_concurrency()
+  end
 end
 
 @testset "Uniform batch CUDSS" begin

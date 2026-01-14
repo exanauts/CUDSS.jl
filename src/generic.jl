@@ -24,7 +24,7 @@ function LinearAlgebra.lu(A::CuSparseMatrixCSR{T,INT}; check = false) where {T <
   x = CudssMatrix(T, n; nbatch)
   b = CudssMatrix(T, n; nbatch)
   cudss("analysis", solver, x, b; asynchronous=true)
-  cudss("factorization", solver, x, b; asynchronous=false)
+  cudss("factorization", solver, x, b; asynchronous=true)
   return solver
 end
 
@@ -41,7 +41,7 @@ function LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,IN
   x = CudssMatrix(T, n; nbatch)
   b = CudssMatrix(T, n; nbatch)
   phase = solver.fresh_factorization ? "factorization" : "refactorization"
-  cudss(phase, solver, x, b; asynchronous=false)
+  cudss(phase, solver, x, b; asynchronous=true)
   return solver
 end
 
@@ -76,7 +76,7 @@ function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check =
   x = CudssMatrix(T, n; nbatch)
   b = CudssMatrix(T, n; nbatch)
   cudss("analysis", solver, x, b; asynchronous=true)
-  cudss("factorization", solver, x, b; asynchronous=false)
+  cudss("factorization", solver, x, b; asynchronous=true)
   return solver
 end
 
@@ -96,7 +96,7 @@ function LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,
   x = CudssMatrix(T, n; nbatch)
   b = CudssMatrix(T, n; nbatch)
   phase = solver.fresh_factorization ? "factorization" : "refactorization"
-  cudss(phase, solver, x, b; asynchronous=false)
+  cudss(phase, solver, x, b; asynchronous=true)
   return solver
 end
 
@@ -131,7 +131,7 @@ function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}, p::NoPivot=NoPivot(
   x = CudssMatrix(T, n; nbatch)
   b = CudssMatrix(T, n; nbatch)
   cudss("analysis", solver, x, b; asynchronous=true)
-  cudss("factorization", solver, x, b; asynchronous=false)
+  cudss("factorization", solver, x, b; asynchronous=true)
   return solver
 end
 
@@ -151,14 +151,14 @@ function LinearAlgebra.cholesky!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCS
   x = CudssMatrix(T, n; nbatch)
   b = CudssMatrix(T, n; nbatch)
   phase = solver.fresh_factorization ? "factorization" : "refactorization"
-  cudss(phase, solver, x, b; asynchronous=false)
+  cudss(phase, solver, x, b; asynchronous=true)
   return solver
 end
 
 function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::CudssMatrix{T}) where T <: BlasFloat
   @assert solver.matrix.nbatch == b.nbatch
   @assert solver.matrix.nrows == b.nrows
-  cudss("solve", solver, b, b; asynchronous=false)
+  cudss("solve", solver, b, b; asynchronous=true)
   return b
 end
 
@@ -166,7 +166,7 @@ function LinearAlgebra.ldiv!(x::CudssMatrix{T}, solver::CudssSolver{T}, b::Cudss
   @assert solver.matrix.nbatch == b.nbatch == x.nbatch
   @assert solver.matrix.nrows == b.nrows == x.nrows
   @assert b.ncols == x.ncols
-  cudss("solve", solver, x, b; asynchronous=false)
+  cudss("solve", solver, x, b; asynchronous=true)
   return x
 end
 
@@ -181,7 +181,7 @@ function LinearAlgebra.ldiv!(solver::CudssSolver{T}, b::CuArray{T}) where T <: B
     cudss_b = CudssMatrix(T, solver.matrix.nrows, p; nbatch=solver.matrix.nbatch)
     cudss_update(cudss_b, b)
   end
-  cudss("solve", solver, cudss_b, cudss_b; asynchronous=false)
+  cudss("solve", solver, cudss_b, cudss_b; asynchronous=true)
   return b
 end
 
@@ -200,7 +200,7 @@ function LinearAlgebra.ldiv!(x::CuArray{T}, solver::CudssSolver{T}, b::CuArray{T
     cudss_update(cudss_x, x)
     cudss_update(cudss_b, b)
   end
-  cudss("solve", solver, cudss_x, cudss_b; asynchronous=false)
+  cudss("solve", solver, cudss_x, cudss_b; asynchronous=true)
   return x
 end
 

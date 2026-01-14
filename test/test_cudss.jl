@@ -980,3 +980,92 @@ function refactorization_cholesky()
     end
   end
 end
+
+function cudss_task_concurrency()
+  # Test that CUDSS.jl correctly handles task-based concurrency.
+  # Each Julia task should get its own CUDSS handle and use its own CUDA stream.
+  # This test verifies that multiple concurrent solvers produce correct results.
+  #
+  # Note: We use @async (not Threads.@spawn) because CUDA.jl creates one stream
+  # per Task, not per Thread. This test works even with a single-threaded Julia.
+
+  n = 100
+  num_tasks = 4
+
+  @testset "precision = $T" for T in (Float32, Float64)
+    R = real(T)
+
+    # Create independent linear systems for each task
+    systems = map(1:num_tasks) do i
+      A_cpu = sprand(T, n, n, 0.05)
+      A_cpu = A_cpu * A_cpu' + I  # Make SPD
+      b_cpu = rand(T, n)
+      x_expected = Matrix(A_cpu) \ b_cpu  # Use dense solve for CPU reference
+      (A_cpu, b_cpu, x_expected)
+    end
+
+    # Solve all systems concurrently using tasks
+    results = Vector{Any}(undef, num_tasks)
+
+    @sync begin
+      for i in 1:num_tasks
+        @async begin
+          A_cpu, b_cpu, _ = systems[i]
+
+          # Each task creates its own GPU arrays and solver
+          A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+          x_gpu = CUDA.zeros(T, n)
+          b_gpu = CuVector(b_cpu)
+
+          structure = T <: Real ? "SPD" : "HPD"
+          solver = CudssSolver(A_gpu, structure, 'L')
+
+          cudss("analysis", solver, x_gpu, b_gpu)
+          cudss("factorization", solver, x_gpu, b_gpu)
+          cudss("solve", solver, x_gpu, b_gpu)
+
+          # Store result
+          results[i] = Array(x_gpu)
+        end
+      end
+    end
+
+    # Verify all results are correct
+    for i in 1:num_tasks
+      _, _, x_expected = systems[i]
+      @test norm(results[i] - x_expected) / norm(x_expected) ≤ √eps(R)
+    end
+  end
+
+  @testset "stream isolation" begin
+    # Test that each task uses a different stream
+    T = Float64
+
+    A_cpu = sprand(T, n, n, 0.05)
+    A_cpu = A_cpu * A_cpu' + I
+    b_cpu = rand(T, n)
+
+    streams_used = Vector{Any}(undef, 2)
+
+    @sync begin
+      for i in 1:2
+        @async begin
+          # Record the stream this task is using
+          streams_used[i] = CUDA.stream()
+
+          A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+          x_gpu = CUDA.zeros(T, n)
+          b_gpu = CuVector(b_cpu)
+
+          solver = CudssSolver(A_gpu, "SPD", 'L')
+          cudss("analysis", solver, x_gpu, b_gpu)
+          cudss("factorization", solver, x_gpu, b_gpu)
+          cudss("solve", solver, x_gpu, b_gpu)
+        end
+      end
+    end
+
+    # Verify that different tasks used different streams
+    @test streams_used[1] !== streams_used[2]
+  end
+end

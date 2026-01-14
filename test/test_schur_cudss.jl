@@ -51,7 +51,7 @@ function cudss_schur_lu()
           # [A₁₁ A₁₂] = [L₁₁  0] [U₁₁ U₁₂]
           # [A₂₁ A₂₂]   [L₂₁  I] [ 0   S ]
           cudss("analysis", solver, x_gpu, b_gpu)
-          cudss("factorization", solver, x_gpu, b_gpu; asynchronous=false)
+          cudss("factorization", solver, x_gpu, b_gpu; asynchronous=true)
 
           # Dimension of the Schur complement nₛ and the number of nonzeros
           (nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape")
@@ -90,7 +90,7 @@ function cudss_schur_lu()
           # Compute bₛ with a partial forward solve
           # bₛ is stored in the last nₛ components of b_gpu
           # nₛ = 3 is the size of the Schur complement
-          cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
+          cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=true)
           bs_gpu = x_gpu[3:5]
           bs_cpu = b_cpu[3:5] - A21 * (A11 \ b_cpu[1:2])
           @test Vector(bs_gpu) ≈ bs_cpu
@@ -112,7 +112,7 @@ function cudss_schur_lu()
           # Compute x₁ with a partial backward solve
           # x₂ must be stored in the last nₛ components of x_gpu
           x_gpu[3:5] .= x2_gpu
-          cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+          cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=true)
           x1_gpu = b_gpu[1:2]
           x1_cpu = A11 \ (b_cpu[1:2] - A12 * x2_cpu)
           @test Vector(x1_gpu) ≈ x1_cpu
@@ -176,7 +176,7 @@ function cudss_schur_ldlt()
 
             # Compute the Schur complement
             cudss("analysis", solver, x_gpu, b_gpu)
-            cudss("factorization", solver, x_gpu, b_gpu; asynchronous=false)
+            cudss("factorization", solver, x_gpu, b_gpu; asynchronous=true)
 
             # Dimension of the Schur complement nₛ and the number of nonzeros
             (nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape")
@@ -218,8 +218,8 @@ function cudss_schur_ldlt()
             # Compute bₛ with a partial forward solve
             # bₛ is stored in the last nₛ components of x_gpu
             # nₛ = 2 is the size of the Schur complement
-            cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
-            cudss("solve_diag", solver, x_gpu, x_gpu; asynchronous=false)
+            cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=true)
+            cudss("solve_diag", solver, x_gpu, x_gpu; asynchronous=true)
             bs_gpu = x_gpu[4:5]
             bs_cpu = b_cpu[1:2] - A12 * (A22 \ b_cpu[3:5])
             @test Vector(bs_gpu) ≈ bs_cpu
@@ -241,7 +241,7 @@ function cudss_schur_ldlt()
             # Compute x₂ with a partial backward solve
             # x₁ must be stored in the last nₛ components of x_gpu
             x_gpu[4:5] .= x1_gpu
-            cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+            cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=true)
             x2_gpu = b_gpu[3:5]
             x2_cpu = A22 \ (b_cpu[3:5] - A21 * x1_cpu)
             @test Vector(x2_gpu) ≈ x2_cpu
@@ -306,7 +306,7 @@ function cudss_schur_cholesky()
 
             # Compute the Schur complement
             cudss("analysis", solver, x_gpu, b_gpu)
-            cudss("factorization", solver, x_gpu, b_gpu; asynchronous=false)
+            cudss("factorization", solver, x_gpu, b_gpu; asynchronous=true)
 
             # Dimension of the Schur complement nₛ and the number of nonzeros
             (nrows_S, ncols_S, nnz_S) = cudss_get(solver, "schur_shape")
@@ -348,7 +348,7 @@ function cudss_schur_cholesky()
             # Compute bₛ with a partial forward solve
             # bₛ is stored in the last nₛ components of x_gpu
             # nₛ = 2 is the size of the Schur complement
-            cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=false)
+            cudss("solve_fwd_schur", solver, x_gpu, b_gpu; asynchronous=true)
             bs_gpu = x_gpu[4:5]
             bs_cpu = b_cpu[1:2] - A12 * (A22 \ b_cpu[3:5])
             @test Vector(bs_gpu) ≈ bs_cpu
@@ -370,7 +370,7 @@ function cudss_schur_cholesky()
             # Compute x₂ with a partial backward solve
             # x₁ must be stored in the last nₛ components of x_gpu
             x_gpu[4:5] .= x1_gpu
-            cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=false)
+            cudss("solve_bwd_schur", solver, b_gpu, x_gpu; asynchronous=true)
             x2_gpu = b_gpu[3:5]
             x2_cpu = A22 \ (b_cpu[3:5] - A21 * x1_cpu)
             @test Vector(x2_gpu) ≈ x2_cpu
