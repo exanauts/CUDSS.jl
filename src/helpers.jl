@@ -10,6 +10,7 @@ export CudssMatrix, CudssBatchedMatrix, CudssData, CudssConfig
     matrix = CudssMatrix(B::CuMatrix{T})
     matrix = CudssMatrix(A::CuSparseMatrixCSR{T,INT}, struture::String, view::Char; index::Char='O')
     matrix = CudssMatrix(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}, struture::String, view::Char; index::Char='O')
+    matrix = CudssMatrix(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuMatrix{T}, struture::String, view::Char; index::Char='O')
 
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
 
@@ -94,6 +95,18 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         nz_batch = length(colVal)
         nz_total = length(nzVal)
         nbatch = nz_total ÷ nz_batch
+        matrix_ref = Ref{cudssMatrix_t}()
+        cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
+                             colVal, nzVal, INT, T, structure,
+                             view, index)
+        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_total)
+        finalizer(cudssMatrixDestroy, obj)
+        obj
+    end
+
+    function CudssMatrix(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuMatrix{T}, structure::String, view::Char; index::Char='O') where {T <: BlasFloat, INT <: CudssInt}
+        n = length(rowPtr) - 1
+        nz_batch, nbatch = size(nzVal)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
                              colVal, nzVal, INT, T, structure,

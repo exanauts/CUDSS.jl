@@ -21,6 +21,10 @@ function CuSparseMatrixCSR{T,INT}(A::SparseMatrixCSC) where {T,INT}
   CuSparseMatrixCSR{T,INT}(CuVector{INT}(C.rowPtr), CuVector{INT}(C.colVal), CuVector{T}(C.nzVal), C.dims)
 end
 
+function CuSparseMatrixCSR{T,INT}(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuMatrix{T}, dims::NTuple{2,<:Integer}) where {T,INT}
+  CuSparseMatrixCSR{T,INT}(rowPtr, colVal, vec(nzVal), dims)
+end
+
 include("test_cudss.jl")
 include("test_uniform_batch_cudss.jl")
 include("test_nonuniform_batch_cudss.jl")
@@ -73,33 +77,17 @@ include("test_nonuniform_batch_cudss.jl")
   end
 end
 
-@testset "Uniform batch CUDSS" begin
-  @testset "cuDSS API" begin
-    @testset "Uniform batch LU" begin
-      cudss_uniform_batch_lu()
-    end
-
-    @testset "Uniform batch LDL" begin
-      cudss_uniform_batch_ldlt()
-    end
-
-    @testset "Uniform batch Cholesky" begin
-      cudss_uniform_batch_cholesky()
-    end
+@testset "Uniform batch" begin
+  @testset "Uniform batch LU" begin
+    uniform_batch_lu()
   end
 
-  @testset "Generic API" begin
-    @testset "Uniform batch LU" begin
-      generic_uniform_batch_lu()
-    end
+  @testset "Uniform batch LDL" begin
+    uniform_batch_ldlt()
+  end
 
-    @testset "Uniform batch LDL" begin
-      generic_uniform_batch_ldlt()
-    end
-
-    @testset "Uniform batch Cholesky" begin
-      generic_uniform_batch_cholesky()
-    end
+  @testset "Uniform batch Cholesky" begin
+    uniform_batch_cholesky()
   end
 end
 
