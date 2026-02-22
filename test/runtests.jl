@@ -15,16 +15,6 @@ function CuSparseMatrixCSR{T,INT}(A::CuSparseMatrixCSR) where {T,INT}
   CuSparseMatrixCSR{T,INT}(CuVector{INT}(A.rowPtr), CuVector{INT}(A.colVal), CuVector{T}(A.nzVal), A.dims)
 end
 
-# function CuSparseMatrixCSR{T,INT}(A::SparseMatrixCSC) where {T,INT}
-#   B = CuSparseMatrixCSC(A)
-#   C = CuSparseMatrixCSR(B)
-#   CuSparseMatrixCSR{T,INT}(CuVector{INT}(C.rowPtr), CuVector{INT}(C.colVal), CuVector{T}(C.nzVal), C.dims)
-# end
-
-function CuSparseMatrixCSR{T,INT}(rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuMatrix{T}, dims::NTuple{2,<:Integer}) where {T,INT}
-  CuSparseMatrixCSR{T,INT}(rowPtr, colVal, vec(nzVal), dims)
-end
-
 include("test_cudss.jl")
 include("test_uniform_batch_cudss.jl")
 include("test_nonuniform_batch_cudss.jl")

@@ -31,7 +31,7 @@ function uniform_batch_lu()
           end
 
           if generic
-            Aλ_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal, (n,n))
+            Aλ_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, vec(nzVal), (n,n))
             solver = lu(Aλ_gpu)
           else
             # Constructor for uniform batch of systems
@@ -69,17 +69,10 @@ function uniform_batch_lu()
 
           rλ_gpu = rand(R, nbatch)
           for i = 1:nbatch
-            if strided
-              nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-              A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-              b_gpu = bλ_gpu[1 + (i-1) * n : i * n]
-              x_gpu = xλ_gpu[1 + (i-1) * n : i * n]
-            else
-              nz = nzVal[:,i]
-              A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-              b_gpu = bλ_gpu[:,i]
-              x_gpu = xλ_gpu[:,i]
-            end
+            nz = strided ? nzVal[1 + (i-1) * nnzA : i * nnzA] : nzVal[:, i]
+            A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+            b_gpu = strided ? bλ_gpu[1 + (i-1) * n : i * n] : bλ_gpu[:,i]
+            x_gpu = strided ? xλ_gpu[1 + (i-1) * n : i * n] : xλ_gpu[:,i]
             r_gpu = b_gpu - A_gpu * x_gpu
             rλ_gpu[i] = norm(r_gpu)
           end
@@ -114,17 +107,10 @@ function uniform_batch_lu()
           end
 
           for i = 1:nbatch
-            if strided
-              nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-              A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-              b_gpu = bλ_gpu[1 + (i-1) * n : i * n]
-              x_gpu = xλ_gpu[1 + (i-1) * n : i * n]
-            else
-              nz = new_nzVal[:,i]
-              A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
-              b_gpu = bλ_gpu[:,i]
-              x_gpu = xλ_gpu[:,i]
-            end
+            nz = strided ? new_nzVal[1 + (i-1) * nnzA : i * nnzA] : new_nzVal[:, i]
+            A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
+            b_gpu = strided ? bλ_gpu[1 + (i-1) * n : i * n] : bλ_gpu[:, i]
+            x_gpu = strided ? xλ_gpu[1 + (i-1) * n : i * n] : xλ_gpu[:, i]
             r_gpu = b_gpu - A_gpu * x_gpu
             rλ_gpu[i] = norm(r_gpu)
           end
@@ -261,16 +247,16 @@ function uniform_batch_ldlt()
                                       13, 15, 29, 8, 14, -13, -15, -29, -8, -14])
               else
                 Xs_gpu = CuArray{T}(undef, n, nrhs, nbatch)
-                Bs_gpu = CuArray{T}([7 -7 ;
-                                    12 -12;
-                                    25 -25;
-                                    4  -4 ;
-                                    13 -13;;;
-                                    13 -13;
-                                    15 -15;
-                                    29 -29;
-                                    8  -8 ;
-                                    14 -14])
+                Bs_gpu = CuArray{T}([ 7 -7 ;
+                                     12 -12;
+                                     25 -25;
+                                     4  -4 ;
+                                     13 -13;;;
+                                     13 -13;
+                                     15 -15;
+                                     29 -29;
+                                     8  -8 ;
+                                     14 -14])
               end
             else
               if strided
@@ -293,7 +279,7 @@ function uniform_batch_ldlt()
             end
 
             if generic
-              As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal, (n,n))
+              As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, vec(nzVal), (n,n))
               solver = ldlt(As_gpu; view=uplo)
             else
               # Constructor for uniform batch of systems
@@ -319,24 +305,15 @@ function uniform_batch_ldlt()
 
             Rs_gpu = rand(R, nbatch)
             for i = 1:nbatch
-              if strided
-                nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-              else
-                nz = nzVal[:,i]
-              end
+              nz = strided ? nzVal[1 + (i-1) * nnzA : i * nnzA] : nzVal[:, i]
               A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
               A_cpu = SparseMatrixCSC(A_gpu)
               if (uplo == 'L' || uplo == 'U')
                 A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
               end
               A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-              if strided
-                B_gpu = reshape(Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-                X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-              else
-                B_gpu = Bs_gpu[:,:,i]
-                X_gpu = Xs_gpu[:,:,i]
-              end
+              B_gpu = strided ? reshape(Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs) : Bs_gpu[:, :, i]
+              X_gpu = strided ? reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs) : Xs_gpu[:, :, i]
               R_gpu = B_gpu - A_gpu * X_gpu
               Rs_gpu[i] = norm(R_gpu)
             end
@@ -493,24 +470,15 @@ function uniform_batch_ldlt()
             end
 
             for i = 1:nbatch
-              if strided
-                nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-              else
-                nz = new_nzVal[:,i]
-              end
+              nz = strided ? new_nzVal[1 + (i-1) * nnzA : i * nnzA] : new_nzVal[:, i]
               A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
               A_cpu = SparseMatrixCSC(A_gpu)
               if (uplo == 'L' || uplo == 'U')
                 A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
               end
               A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-              if strided
-                B_gpu = reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-                X_gpu = reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs)
-              else
-                B_gpu = new_Bs_gpu[:,:,i]
-                X_gpu = Xs_gpu[:,:,i]
-              end
+              B_gpu = strided ? reshape(new_Bs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs) : new_Bs_gpu[:, :, i]
+              X_gpu = strided ? reshape(Xs_gpu[1 + (i-1) * n * nrhs : i * n * nrhs], n, nrhs) : Xs_gpu[:, :, i]
               R_gpu = B_gpu - A_gpu * X_gpu
               Rs_gpu[i] = norm(R_gpu)
             end
@@ -590,7 +558,7 @@ function uniform_batch_cholesky()
             end
 
             if generic
-              As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal, (n,n))
+              As_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, vec(nzVal), (n,n))
               solver = cholesky(As_gpu; view=uplo)
             else
               # Constructor for uniform batch of systems
@@ -629,24 +597,15 @@ function uniform_batch_cholesky()
 
             rs_gpu = rand(R, nbatch)
             for i = 1:nbatch
-              if strided
-                nz = nzVal[1 + (i-1) * nnzA : i * nnzA]
-              else
-                nz = nzVal[:,i]
-              end
+              nz = strided ? nzVal[1 + (i-1) * nnzA : i * nnzA] : nzVal[:, i]
               A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
               A_cpu = SparseMatrixCSC(A_gpu)
               if (uplo == 'L' || uplo == 'U')
                 A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
               end
               A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-              if strided
-                b_gpu = bs_gpu[1 + (i-1) * n : i * n]
-                x_gpu = xs_gpu[1 + (i-1) * n : i * n]
-              else
-                b_gpu = bs_gpu[:,i]
-                x_gpu = xs_gpu[:,i]
-              end
+              b_gpu = strided ? bs_gpu[1 + (i-1) * n : i * n] : bs_gpu[:, i]
+              x_gpu = strided ? xs_gpu[1 + (i-1) * n : i * n] : xs_gpu[:, i]
               r_gpu = b_gpu - A_gpu * x_gpu
               rs_gpu[i] = norm(r_gpu)
             end
@@ -714,24 +673,15 @@ function uniform_batch_cholesky()
             end
 
             for i = 1:nbatch
-              if strided
-                nz = new_nzVal[1 + (i-1) * nnzA : i * nnzA]
-              else
-                nz = new_nzVal[:,i]
-              end
+              nz = strided ? new_nzVal[1 + (i-1) * nnzA : i * nnzA] : new_nzVal[:, i]
               A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nz, (n,n))
               A_cpu = SparseMatrixCSC(A_gpu)
               if (uplo == 'L' || uplo == 'U')
                 A_cpu = A_cpu + A_cpu' - Diagonal(A_cpu)
               end
               A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
-              if strided
-                b_gpu = bs_gpu[1 + (i-1) * n : i * n]
-                x_gpu = xs_gpu[1 + (i-1) * n : i * n]
-              else
-                b_gpu = bs_gpu[:,i]
-                x_gpu = xs_gpu[:,i]
-              end
+              b_gpu = strided ? bs_gpu[1 + (i-1) * n : i * n] : bs_gpu[:, i]
+              x_gpu = strided ? xs_gpu[1 + (i-1) * n : i * n] : xs_gpu[:, i]
               r_gpu = b_gpu - A_gpu * x_gpu
               rs_gpu[i] = norm(r_gpu)
             end
