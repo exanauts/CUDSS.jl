@@ -443,7 +443,7 @@ function uniform_batch_ldlt()
             end
 
             if generic
-              As_gpu.nzVal = new_nzVal
+              As_gpu.nzVal = vec(new_nzVal)
               ldlt!(solver, As_gpu)
             else
               cudss_update(solver, rowPtr, colVal, new_nzVal)
