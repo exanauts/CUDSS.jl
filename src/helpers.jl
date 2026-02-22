@@ -111,7 +111,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
                              colVal, nzVal, INT, T, structure,
                              view, index)
-        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_total)
+        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_batch * nbatch)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
