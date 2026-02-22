@@ -210,7 +210,7 @@ function cudss_update(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal:
   cudssMatrixSetCsrPointers(matrix, rowPtr, CU_NULL, colVal, nzVal)
 end
 
-function cudss_update(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}) where {T <: BlasFloat, INT <: CudssInt}
+function cudss_update(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuMatrix{T}) where {T <: BlasFloat, INT <: CudssInt}
   cudss_update(solver.matrix, rowPtr, colVal, nzVal)
 end
 
