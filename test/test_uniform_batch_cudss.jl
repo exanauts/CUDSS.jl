@@ -736,6 +736,7 @@ function uniform_batch_cholesky()
               rs_gpu[i] = norm(r_gpu)
             end
             @test norm(rs_gpu) ≤ √eps(R)
+          end
         end
       end
     end
