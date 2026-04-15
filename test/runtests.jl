@@ -1,5 +1,7 @@
 using Test, Random
-using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
+using CUDACore
+using cuSOLVER
+using cuSPARSE
 using CUDSS
 using SparseArrays
 using LinearAlgebra
