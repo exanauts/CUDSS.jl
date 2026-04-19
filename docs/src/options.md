@@ -1,7 +1,7 @@
 ## Iterative refinement
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -34,7 +34,7 @@ norm(R_gpu)
 ## User permutation
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -67,7 +67,7 @@ norm(r_gpu)
 ## Hybrid memory mode
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -106,7 +106,7 @@ norm(r_gpu)
 ## Selecting matrices in a uniform batch
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 

@@ -16,7 +16,7 @@ F = cholesky(H)
 ```
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -68,7 +68,7 @@ F = ldlt(S)
 ```
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -112,7 +112,7 @@ LinearAlgebra.lu!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where
 ```
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays

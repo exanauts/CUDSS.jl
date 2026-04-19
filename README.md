@@ -39,7 +39,7 @@ This ensures efficient solving of sparse linear systems on GPUs.
 ### Example 1: Sparse unsymmetric linear system with one right-hand side
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -80,7 +80,7 @@ norm(r_gpu)
 ### Example 2: Sparse symmetric linear system with multiple right-hand sides
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -125,7 +125,7 @@ norm(R_gpu)
 ### Example 3: Sparse hermitian positive definite linear system with multiple right-hand sides
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 

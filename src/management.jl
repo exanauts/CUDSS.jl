@@ -18,9 +18,9 @@ function cudssGetProperty(property::libraryPropertyType)
   value_ref[]
 end
 
-version() = VersionNumber(cudssGetProperty(CUDA.MAJOR_VERSION),
-                          cudssGetProperty(CUDA.MINOR_VERSION),
-                          cudssGetProperty(CUDA.PATCH_LEVEL))
+version() = VersionNumber(cudssGetProperty(CUDACore.MAJOR_VERSION),
+                          cudssGetProperty(CUDACore.MINOR_VERSION),
+                          cudssGetProperty(CUDACore.PATCH_LEVEL))
 
 ## handles
 
@@ -38,7 +38,7 @@ end
 const idle_handles = HandleCache{CuContext,cudssHandle_t}(handle_ctor, handle_dtor)
 
 function handle()
-    cuda = CUDA.active_state()
+    cuda = CUDACore.active_state()
 
     # every task maintains library state per device
     LibraryState = @NamedTuple{handle::cudssHandle_t, stream::CuStream}

@@ -6,7 +6,7 @@
 ## Batch LU
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -60,7 +60,7 @@ norm.(batch_r_gpu)
 ## Batch LDLᵀ and LDLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -122,7 +122,7 @@ norm.(batch_R_gpu)
 ## Batch LLᵀ and LLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 

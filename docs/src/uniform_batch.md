@@ -19,7 +19,7 @@ This is supported provided that the batch index is the last dimension, and apply
 ## Batch LU -- cuDSS API
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -126,7 +126,7 @@ rλ_gpu
 ## Batch LU -- generic API
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -201,7 +201,7 @@ rλ_gpu
 ## Batch LDLᵀ and LDLᴴ -- cuDSS API
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -328,7 +328,7 @@ Rs_gpu
 ## Batch LDLᵀ and LDLᴴ -- generic API
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -419,7 +419,7 @@ Rs_gpu
 ## Batch LLᵀ and LLᴴ -- cuDSS API
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -522,7 +522,7 @@ rs_gpu
 ## Batch LLᵀ and LLᴴ -- generic API
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using LinearAlgebra
 using SparseArrays

@@ -12,7 +12,7 @@
 ## Schur complement -- LU
 
 ```julia
-using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
+using CUDA, cuSPARSE, cuSOLVER
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -117,7 +117,7 @@ x1_gpu = b_gpu[1:n-ns]
 ## Schur complement -- LDLᵀ and LDLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
+using CUDA, cuSPARSE, cuSOLVER
 using CUDSS
 using LinearAlgebra
 using SparseArrays
@@ -227,7 +227,7 @@ x2_gpu = b_gpu[ns+1:n]
 ## Schur complement -- LLᵀ and LLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
+using CUDA, cuSPARSE, cuSOLVER
 using CUDSS
 using LinearAlgebra
 using SparseArrays

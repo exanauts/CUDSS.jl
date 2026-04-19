@@ -1,12 +1,12 @@
 module CUDSS
 
-using CUDA, CUDA.CUSPARSE, CUDA.CUBLAS
+using CUDA, cuSPARSE, cuBLAS
 using GPUToolbox
 using CUDSS_jll
 using LinearAlgebra
 using SparseArrays
 
-if CUDA.local_toolkit
+if CUDACore.local_toolkit
     using CUDA_Runtime_Discovery
 else
     import CUDSS_jll
@@ -19,7 +19,7 @@ function __init__()
     if haskey(ENV, "JULIA_CUDSS_LIBRARY_PATH") && Sys.islinux()
       libcudss = joinpath(ENV["JULIA_CUDSS_LIBRARY_PATH"], "libcudss.so")
       CUDSS_INSTALLATION = "CUSTOM"
-    elseif CUDA.local_toolkit
+    elseif CUDACore.local_toolkit
       dirs = CUDA_Runtime_Discovery.find_toolkit()
       path = CUDA_Runtime_Discovery.get_library(dirs, "cudss"; optional=true)
       (path === nothing) && error("cuDSS is not available on your system (looked in $(join(dirs, ", "))).")
@@ -39,8 +39,7 @@ function __init__()
   end
 end
 
-import CUDA: libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream, unsafe_free!
-import CUDA.APIUtils: HandleCache
+import CUDA.CUDACore: libraryPropertyType, cudaDataType, initialize_context, retry_reclaim, CUstream, unsafe_free!, HandleCache
 import LinearAlgebra: lu, lu!, ldlt, ldlt!, cholesky, cholesky!, ldiv!, BlasFloat, BlasReal, checksquare, Factorization
 import Base: \
 

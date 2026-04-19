@@ -9,7 +9,7 @@ Both the factorization and solve phases can be efficiently repeated as long as t
 ## LU
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -50,7 +50,7 @@ norm(r_gpu)
 ## LDLᵀ and LDLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -95,7 +95,7 @@ norm(R_gpu)
 ## LLᵀ and LLᴴ
 
 ```julia
-using CUDA, CUDA.CUSPARSE
+using CUDA, cuSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
