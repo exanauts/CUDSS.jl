@@ -16,7 +16,7 @@ cuSPARSE = "b26da814-b3bc-49ef-b0ee-c816305aa060"
 [compat]
 CEnum = "0.5"
 CUDACore = "6.0.0"
-CUDA_Runtime_Discovery = "1.0.0"
+CUDA_Runtime_Discovery = "1.0.0, 2.0.0"
 CUDSS_jll = "0.7.1"
 GPUToolbox = "0.3, 1"
 LinearAlgebra = "1.10"
