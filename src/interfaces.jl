@@ -526,7 +526,7 @@ function cudss(phase::String, solver::CudssSolver{T}, X::CudssMatrix{T}, B::Cuds
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
-  !asynchronous && CUDA.synchronize()
+  !asynchronous && CUDACore.synchronize()
   if (phase == "factorization") && solver.fresh_factorization
     solver.fresh_factorization = false
   end
@@ -551,7 +551,7 @@ function cudss(phase::String, solver::CudssBatchedSolver{T}, X::CudssBatchedMatr
   (phase == "refactorization") && cudss_set(solver, "info", 0)
   cudss_phase = convert(cudssPhase_t, phase)
   cudssExecute(solver.data.handle, cudss_phase, solver.config, solver.data, solver.matrix, X, B)
-  !asynchronous && CUDA.synchronize()
+  !asynchronous && CUDACore.synchronize()
   if (phase == "factorization") && solver.fresh_factorization
     solver.fresh_factorization = false
   end
