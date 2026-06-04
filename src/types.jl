@@ -2,18 +2,18 @@
 
 const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reorder_row",
                                "perm_reorder_col", "perm_row", "perm_col", "diag", "user_perm",
-                               "hybrid_device_memory_min", "comm", "memory_estimates",
+                               "hybrid_device_memory_min", "comm_device", "comm_host", "memory_estimates",
                                "perm_matching", "scale_row", "scale_col", "nsuperpanels",
                                "user_schur_indices", "schur_shape", "schur_matrix",
-                               "user_elimination_tree", "elimination_tree", "user_host_interrupt")
+                               "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt")
 
-const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg", "use_matching",
+const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg",
                                  "matching_alg", "solve_mode", "ir_n_steps", "ir_tol", "pivot_type",
                                  "pivot_threshold", "pivot_epsilon", "max_lu_nnz", "hybrid_memory_mode",
                                  "hybrid_device_memory_limit", "use_cuda_register_memory", "host_nthreads",
                                  "hybrid_execute_mode", "pivot_epsilon_alg", "nd_nlevels", "ubatch_size",
                                  "ubatch_index", "use_superpanels", "device_count", "device_indices",
-                                 "schur_mode", "deterministic_mode")
+                                 "schur_mode", "deterministic_mode", "nd_ubfactor")
 
 ## config type
 
@@ -24,8 +24,6 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_FACTORIZATION_ALG
     elseif config == "solve_alg"
         return CUDSS_CONFIG_SOLVE_ALG
-    elseif config == "use_matching"
-        return CUDSS_CONFIG_USE_MATCHING
     elseif config == "matching_alg"
         return CUDSS_CONFIG_MATCHING_ALG
     elseif config == "solve_mode"
@@ -43,7 +41,7 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
     elseif config == "max_lu_nnz"
         return CUDSS_CONFIG_MAX_LU_NNZ
     elseif config == "hybrid_memory_mode"
-        return CUDSS_CONFIG_HYBRID_MODE
+        return CUDSS_CONFIG_HYBRID_MEMORY_MODE
     elseif config == "hybrid_device_memory_limit"
         return CUDSS_CONFIG_HYBRID_DEVICE_MEMORY_LIMIT
     elseif config == "use_cuda_register_memory"
@@ -70,6 +68,8 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_SCHUR_MODE
     elseif config == "deterministic_mode"
         return CUDSS_CONFIG_DETERMINISTIC_MODE
+    elseif config == "nd_ubfactor"
+        return CUDSS_CONFIG_ND_UBFACTOR
     else
         throw(ArgumentError("Unknown config parameter $config"))
     end
@@ -100,8 +100,10 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
         return CUDSS_DATA_USER_PERM
     elseif data == "hybrid_device_memory_min"
         return CUDSS_DATA_HYBRID_DEVICE_MEMORY_MIN
-    elseif data == "comm"
-        return CUDSS_DATA_COMM
+    elseif data == "comm_device"
+        return CUDSS_DATA_COMM_DEVICE
+    elseif data == "comm_host"
+        return CUDSS_DATA_COMM_HOST
     elseif data == "memory_estimates"
         return CUDSS_DATA_MEMORY_ESTIMATES
     elseif data == "perm_matching"
@@ -118,10 +120,10 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
         return CUDSS_DATA_SCHUR_SHAPE
     elseif data == "schur_matrix"
         return CUDSS_DATA_SCHUR_MATRIX
-    elseif data == "user_elimination_tree"
-        return CUDSS_DATA_USER_ELIMINATION_TREE
-    elseif data == "elimination_tree"
-        return CUDSS_DATA_ELIMINATION_TREE
+    elseif data == "user_nd_partition_tree"
+        return CUDSS_DATA_USER_ND_PARTITION_TREE
+    elseif data == "nd_partition_tree"
+        return CUDSS_DATA_ND_PARTITION_TREE
     elseif data == "user_host_interrupt"
         return CUDSS_DATA_USER_HOST_INTERRUPT
     else
@@ -223,35 +225,46 @@ function Base.convert(::Type{cudssLayout_t}, layout::Char)
     end
 end
 
-## algorithm type
+## value / index type
 
-function Base.convert(::Type{cudssAlgType_t}, algorithm::String)
-    if algorithm == "default"
-        return CUDSS_ALG_DEFAULT
-    elseif algorithm == "algo1"
-        return CUDSS_ALG_1
-    elseif algorithm == "algo2"
-        return CUDSS_ALG_2
-    elseif algorithm == "algo3"
-        return CUDSS_ALG_3
-    elseif algorithm == "algo4"
-        return CUDSS_ALG_4
-    elseif algorithm == "algo5"
-        return CUDSS_ALG_5
-    else
-        throw(ArgumentError("Unknown algorithm $algorithm"))
+Base.convert(::Type{cudssDataType_t}, ::Type{Float32})    = CUDSS_R_32F
+Base.convert(::Type{cudssDataType_t}, ::Type{Float64})    = CUDSS_R_64F
+Base.convert(::Type{cudssDataType_t}, ::Type{ComplexF32}) = CUDSS_C_32F
+Base.convert(::Type{cudssDataType_t}, ::Type{ComplexF64}) = CUDSS_C_64F
+Base.convert(::Type{cudssDataType_t}, ::Type{Int32})      = CUDSS_R_32I
+Base.convert(::Type{cudssDataType_t}, ::Type{Int64})      = CUDSS_R_64I
+
+## algorithm type
+#
+# cuDSS 0.8 replaced the single `cudssAlgType_t` enum with five parameter-specific
+# enums (`cudssReorderingAlg_t`, `cudssFactorizationAlg_t`, `cudssSolveAlg_t`,
+# `cudssMatchingAlg_t` and `cudssPivotEpsilonAlg_t`). They all share `*_DEFAULT == 0`
+# and enumerate the available algorithms from `1` upward, so we keep exposing the
+# generic `"default"` / `"algoN"` interface and pass the corresponding integer to
+# cuDSS, which validates whether the value is supported for the given parameter.
+
+cudss_algorithm(algorithm::Integer) = Cint(algorithm)
+
+function cudss_algorithm(algorithm::String)
+    algorithm == "default" && return Cint(0)
+    if startswith(algorithm, "algo")
+        n = tryparse(Int, algorithm[5:end])
+        (n !== nothing && n ≥ 1) && return Cint(n)
     end
+    throw(ArgumentError("Unknown algorithm $algorithm"))
 end
 
 ## pivot type
 
 function Base.convert(::Type{cudssPivotType_t}, pivoting::Char)
     if pivoting == 'C'
-        return CUDSS_PIVOT_COL
+        return CUDSS_PIVOT_GLOBAL_COL
     elseif pivoting == 'R'
-        return CUDSS_PIVOT_ROW
+        return CUDSS_PIVOT_GLOBAL_ROW
     elseif pivoting == 'N'
         return CUDSS_PIVOT_NONE
+    elseif pivoting == 'A'
+        return CUDSS_PIVOT_AUTO
     else
         throw(ArgumentError("Unknown pivoting $pivoting"))
     end

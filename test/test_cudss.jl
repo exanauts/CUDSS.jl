@@ -69,7 +69,7 @@ function cudss_solver()
       @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
         @testset "view = $view" for view in ('L', 'U', 'F')
           solver = CudssSolver(A_gpu, structure, view)
-          cudss_set(solver, "use_matching", 1)  # neeeded for "perm_matching" / "scale_row" / "scale_col"
+          cudss_set(solver, "matching_alg", "algo6")  # enable matching (AUTO) for "perm_matching" / "scale_row" / "scale_col"
 
           x_cpu = zeros(T, n)
           x_gpu = CuVector(x_cpu)
@@ -84,7 +84,7 @@ function cudss_solver()
           buffer_T = Vector{T}(undef, n)
 
           @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-            parameter ∈ ("comm", "user_schur_indices", "schur_shape", "schur_matrix", "user_elimination_tree", "elimination_tree", "user_host_interrupt") && continue
+            parameter ∈ ("comm_device", "comm_host", "user_schur_indices", "schur_shape", "schur_matrix", "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt") && continue
             @testset "cudss_set" begin
               (parameter == "nsuperpanels") && continue
               if parameter == "user_perm"
@@ -104,7 +104,7 @@ function cudss_solver()
               (parameter == "info") && cudss_set(solver, parameter, 1)
             end
             @testset "cudss_get" begin
-              parameter ∈ ("comm", "user_perm", "perm_row", "perm_col") && continue
+              parameter ∈ ("comm_device", "comm_host", "user_perm", "perm_row", "perm_col") && continue
               (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
               val = cudss_get(solver, parameter)
             end
@@ -140,7 +140,6 @@ function cudss_solver()
                 (parameter == "hybrid_memory_mode") && cudss_set(solver, parameter, flag)
                 (parameter == "hybrid_execute_mode") && cudss_set(solver, parameter, flag)
                 (parameter == "use_superpanels") && cudss_set(solver, parameter, flag)
-                (parameter == "use_matching") && cudss_set(solver, parameter, flag)
                 (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
               end
               for pivoting in ('C', 'R', 'N')
@@ -175,6 +174,8 @@ function cudss_execution()
           data = CudssData()
           solver = CudssSolver(matrix, config, data)
           cudss_set(solver, "pivot_type", pivot)
+          # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering in cuDSS 0.8
+          (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
 
           cudss("analysis", solver, x_gpu, b_gpu)
           cudss("factorization", solver, x_gpu, b_gpu)
@@ -219,6 +220,8 @@ function cudss_execution()
             data = CudssData()
             solver = CudssSolver(matrix, config, data)
             cudss_set(solver, "pivot_type", pivot)
+            # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering in cuDSS 0.8
+            (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
 
             cudss("analysis", solver, X_gpu, B_gpu)
             cudss("factorization", solver, X_gpu, B_gpu)
@@ -264,6 +267,8 @@ function cudss_execution()
             data = CudssData()
             solver = CudssSolver(matrix, config, data)
             cudss_set(solver, "pivot_type", pivot)
+            # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering in cuDSS 0.8
+            (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
 
             cudss("analysis", solver, X_gpu, B_gpu)
             cudss("factorization", solver, X_gpu, B_gpu)
@@ -922,11 +927,7 @@ function hybrid_memory_mode()
         b_cpu = rand(T, n)
         @testset "uplo = $uplo" for uplo in ('L', 'U', 'F')
           res = hybrid_ldlt(T, INT, A_cpu, x_cpu, b_cpu, uplo)
-          if T == ComplexF64
-            @test_broken res ≤ √eps(R)
-          else
-            @test res ≤ √eps(R)
-          end
+          @test res ≤ √eps(R)
         end
       end
       @testset "LLᵀ / LLᴴ" begin
