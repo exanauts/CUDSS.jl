@@ -97,7 +97,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         nbatch = nz_total ÷ nz_batch
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
-                             colVal, nzVal, INT, T, structure,
+                             colVal, nzVal, INT, INT, T, structure,
                              view, index)
         obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_total)
         finalizer(cudssMatrixDestroy, obj)
@@ -109,7 +109,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         nz_batch, nbatch = size(nzVal)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
-                             colVal, nzVal, INT, T, structure,
+                             colVal, nzVal, INT, INT, T, structure,
                              view, index)
         obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_batch * nbatch)
         finalizer(cudssMatrixDestroy, obj)
@@ -199,7 +199,7 @@ mutable struct CudssBatchedMatrix{T,INT,M} <: AbstractCudssMatrix{T,INT}
         nnzA = INT[nnz(Aᵢ) for Aᵢ in A]
         rowPtrs, colVals, nzVals = unsafe_cudss_batch(A)
         cudssMatrixCreateBatchCsr(matrix_ref, nbatch, nrows, ncols, nnzA, rowPtrs,
-                                  CUPTR_C_NULL, colVals, nzVals, INT, T, structure,
+                                  CUPTR_C_NULL, colVals, nzVals, INT, INT, T, structure,
                                   view, index)
         Mptrs = (rowPtrs, colVals, nzVals)
         M = typeof(Mptrs)

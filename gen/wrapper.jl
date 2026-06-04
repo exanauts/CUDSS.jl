@@ -168,8 +168,12 @@ function main()
     options = load_options(joinpath(@__DIR__, "cudss.toml"))
 
     # create context
+    #
+    # Since cuDSS 0.8, the enums and opaque-type typedefs live in `cudss_data_types.h`,
+    # which is included by `cudss.h`. We parse `cudss.h` (which pulls in the data-types
+    # header) and keep the declarations coming from both files.
     headers = ["$cudss/cudss.h"]
-    targets = ["$cudss/cudss.h"]  # ["$cudss/cudss_distributed_interface.h", "$cudss/cudss_threading_interface.h"]
+    targets = ["$cudss/cudss.h", "$cudss/cudss_data_types.h"]  # ["$cudss/cudss_distributed_interface.h", "$cudss/cudss_threading_interface.h"]
     ctx = create_context(headers, args, options)
 
     # run generator

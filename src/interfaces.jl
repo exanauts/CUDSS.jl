@@ -41,7 +41,7 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
   ref_float64::Base.RefValue{Float64}
   ref_inertia::Base.RefValue{Tuple{INT,INT}}
   ref_schur::Base.RefValue{Tuple{Int64,Int64,Int64}}
-  ref_algo::Base.RefValue{cudssAlgType_t}
+  ref_algo::Base.RefValue{Cint}
   ref_pivot::Base.RefValue{cudssPivotType_t}
   ref_matrix::Base.RefValue{cudssMatrix_t}
   nbytes_provided::Csize_t
@@ -55,7 +55,7 @@ mutable struct CudssSolver{T,INT} <: AbstractCudssSolver{T,INT}
     ref_float64 = Ref{Float64}()
     ref_inertia = Ref{Tuple{INT,INT}}()
     ref_schur = Ref{Tuple{Int64,Int64,Int64}}()
-    ref_algo = Ref{cudssAlgType_t}()
+    ref_algo = Ref{Cint}()
     ref_pivot = Ref{cudssPivotType_t}()
     ref_matrix = Ref{cudssMatrix_t}()
     nbytes_provided = Csize_t(0)
@@ -124,7 +124,7 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
   ref_float64::Base.RefValue{Float64}
   ref_inertia::Base.RefValue{Tuple{INT,INT}}
   ref_schur::Base.RefValue{Tuple{Int64,Int64,Int64}}
-  ref_algo::Base.RefValue{cudssAlgType_t}
+  ref_algo::Base.RefValue{Cint}
   ref_pivot::Base.RefValue{cudssPivotType_t}
   ref_matrix::Base.RefValue{cudssMatrix_t}
   nbytes_provided::Csize_t
@@ -138,7 +138,7 @@ mutable struct CudssBatchedSolver{T,INT,M} <: AbstractCudssSolver{T,INT}
     ref_float64 = Ref{Float64}()
     ref_inertia = Ref{Tuple{INT,INT}}()
     ref_schur = Ref{Tuple{Int64,Int64,Int64}}()
-    ref_algo = Ref{cudssAlgType_t}()
+    ref_algo = Ref{Cint}()
     ref_pivot = Ref{cudssPivotType_t}()
     ref_matrix = Ref{cudssMatrix_t}()
     nbytes_provided = Csize_t(0)
@@ -251,12 +251,11 @@ The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
 - `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
 - `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
-- `"use_matching"`: A flag to enable (`1`) or disable (`0`) the matching;
-- `"matching_alg"`: Algorithm for the matching;
+- `"matching_alg"`: Matching algorithm (`"default"` disables matching, `"algo1"`–`"algo6"` enable it);
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
-- `"pivot_type"`: Type of pivoting (`'C'`, `'R'` or `'N'`);
+- `"pivot_type"`: Type of pivoting (`'A'` for automatic [default], `'N'` to disable, or `'C'` / `'R'` for global column / row pivoting; `'C'` and `'R'` require a COLAMD-family reordering, e.g. `"reordering_alg"` set to `"algo1"` or `"algo2"`);
 - `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
 - `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
@@ -273,13 +272,14 @@ The available configuration parameters are:
 - `"device_count"`: Device count in case of multiple device;
 - `"device_indices"`: A list of device indices as an integer array;
 - `"schur_mode"`: Schur complement mode -- `0` (default = disabled) or `1` (enabled);
-- `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled).
+- `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled);
+- `"nd_ubfactor"`: Unbalance factor (in percent) for the nested dissection reordering.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
 - `"user_perm"`: User permutation to be used instead of running the reordering algorithms;
-- `"comm"`: Communicator for Multi-GPU multi-node mode;
-- `"user_elimination_tree"`: User provided elimination tree information, which is used instead of running the reordering algorithm;
+- `"comm_device"` / `"comm_host"`: Communicator for Multi-GPU multi-node mode (device- and host-side buffers);
+- `"user_nd_partition_tree"`: User-provided nested dissection partition tree information, which is used instead of running the reordering algorithm;
 - `"user_schur_indices"`: User-provided Schur complement indices. The provided buffer should be an integer array of size `n`, where `n` is the dimension of the matrix. The values should be equal to `1` for the rows / columns which are part of the Schur complement and `0` for the rest;
 - `"user_host_interrupt"`: User-provided host interrupt pointer;
 - `"schur_matrix"`: Schur complement matrix passed as a `cudssMatrix_t` object.
@@ -317,10 +317,10 @@ function cudss_set_data(solver::AbstractCudssSolver{T,INT}, parameter::String, v
          parameter == "perm_matching" || parameter == "diag" || parameter == "memory_estimates"
     solver.pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, value)
     solver.nbytes_provided = sizeof(value)
-  elseif parameter == "comm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt"
+  elseif parameter == "comm_device" || parameter == "comm_host" || parameter == "user_nd_partition_tree" || parameter == "user_host_interrupt"
     throw(ArgumentError("The data parameter \"$parameter\" is not yet supported by CUDSS.jl."))
   elseif parameter == "lu_nnz" || parameter == "npivots" || parameter == "inertia" || parameter == "hybrid_device_memory_min" ||
-         parameter == "nsuperpanels" || parameter == "schur_shape" || parameter == "elimination_tree"
+         parameter == "nsuperpanels" || parameter == "schur_shape" || parameter == "nd_partition_tree"
     throw(ArgumentError("The data parameter \"$parameter\" can't be set."))
   else
     throw(ArgumentError("Unknown data parameter \"$parameter\"."))
@@ -331,7 +331,7 @@ end
 function cudss_set_config(solver::AbstractCudssSolver, parameter::String, value)
   if parameter == "reordering_alg" || parameter == "factorization_alg" || parameter == "solve_alg" ||
      parameter == "matching_alg" || parameter == "pivot_epsilon_alg"
-    solver.ref_algo[] = value
+    solver.ref_algo[] = cudss_algorithm(value)
     cudssConfigSet(solver.config, parameter, solver.ref_algo, 4)
   elseif parameter == "pivot_type"
     solver.ref_pivot[] = value
@@ -344,8 +344,8 @@ function cudss_set_config(solver::AbstractCudssSolver, parameter::String, value)
     cudssConfigSet(solver.config, parameter, solver.ref_int64, 8)
   elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" || parameter == "solve_mode" ||
          parameter == "deterministic_mode" || parameter == "schur_mode" || parameter == "use_cuda_register_memory" ||
-         parameter == "use_matching" || parameter == "use_superpanels" || parameter == "ir_n_steps" ||
-         parameter == "host_nthreads" || parameter == "device_count" || parameter == "nd_nlevels" ||
+         parameter == "use_superpanels" || parameter == "ir_n_steps" || parameter == "host_nthreads" ||
+         parameter == "device_count" || parameter == "nd_nlevels" || parameter == "nd_ubfactor" ||
          parameter == "ubatch_size" || parameter == "ubatch_index"
     solver.ref_cint[] = value
     cudssConfigSet(solver.config, parameter, solver.ref_cint, 4)
@@ -366,8 +366,7 @@ The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase;
 - `"factorization_alg"`: Algorithm for the factorization phase;
 - `"solve_alg"`: Algorithm for the solving phase;
-- `"use_matching"`: A flag to enable (`1`) or disable (`0`) the matching;
-- `"matching_alg"`: Algorithm for the matching;
+- `"matching_alg"`: Matching algorithm (`"default"` disables matching, `"algo1"`–`"algo6"` enable it);
 - `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
@@ -388,7 +387,8 @@ The available configuration parameters are:
 - `"device_count"`: Device count in case of multiple device;
 - `"device_indices"`: A list of device indices as an integer array;
 - `"schur_mode"`: Schur complement mode -- `0` (default = disabled) or `1` (enabled);
-- `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled).
+- `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled);
+- `"nd_ubfactor"`: Unbalance factor (in percent) for the nested dissection reordering.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -408,11 +408,11 @@ The available data parameters are:
 - `"nsuperpanels"`: Number of superpanels in the matrix;
 - `"schur_shape"`: Shape of the Schur complement matrix as a triplet (nrows, ncols, nnz);
 - `"schur_matrix"`: Retrieve the Schur complement matrix;
-- `"elimination_tree"`: User provided elimination tree information, which is used instead of running the reordering algorithm. It must be used in combination with `"user_perm"` to have an effect.
+- `"nd_partition_tree"`: Nested dissection partition tree information. It must be used in combination with `"user_perm"` to have an effect.
 
 The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_matching"`, `"scale_row"`, `"scale_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
-The data parameters `"perm_matching"`, `"scale_row"`, and `"scale_col"` require matching to be enabled (the configuration parameter `"use_matching"` must be set to `1`).
+The data parameters `"perm_matching"`, `"scale_row"`, and `"scale_col"` require matching to be enabled (the configuration parameter `"matching_alg"` must be set to a non-default value).
 
 Note that for the data parameters `"perm_reorder_row"`, `"perm_row"`, `"scale_row"`, `"perm_reorder_col"`, `"perm_col"`, `"scale_col"`,
 `"perm_matching"`, `"diag"`, and `"memory_estimates"`, a call to [`cudss_set`](@ref) is required beforehand to specify which vector to update.
@@ -454,8 +454,8 @@ function cudss_get_data(solver::AbstractCudssSolver{T,INT}, parameter::String) w
          parameter == "perm_matching" || parameter == "diag" || parameter == "memory_estimates"
     cudssDataGet(solver.data.handle, solver.data, parameter, solver.pointer, solver.nbytes_provided, solver.nbytes_written)
     return nothing
-  elseif parameter == "user_perm" || parameter == "user_elimination_tree" || parameter == "user_host_interrupt" ||
-         parameter == "user_schur_indices" || parameter == "comm" || parameter == "elimination_tree"
+  elseif parameter == "user_perm" || parameter == "user_nd_partition_tree" || parameter == "user_host_interrupt" ||
+         parameter == "user_schur_indices" || parameter == "comm_device" || parameter == "comm_host" || parameter == "nd_partition_tree"
     throw(ArgumentError("The data parameter \"$parameter\" can't be retrieved."))
   else
     throw(ArgumentError("Unknown data parameter \"$parameter\"."))
@@ -478,8 +478,8 @@ function cudss_get_config(solver::AbstractCudssSolver, parameter::String)
     return solver.ref_int64[]
   elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" || parameter == "solve_mode" ||
          parameter == "deterministic_mode" || parameter == "schur_mode" || parameter == "use_cuda_register_memory" ||
-         parameter == "use_matching" || parameter == "use_superpanels" || parameter == "ir_n_steps" ||
-         parameter == "host_nthreads" || parameter == "device_count" || parameter == "nd_nlevels" ||
+         parameter == "use_superpanels" || parameter == "ir_n_steps" || parameter == "host_nthreads" ||
+         parameter == "device_count" || parameter == "nd_nlevels" || parameter == "nd_ubfactor" ||
          parameter == "ubatch_size" || parameter == "ubatch_index"
     cudssConfigGet(solver.config, parameter, solver.ref_cint, 4, solver.nbytes_written)
     return solver.ref_cint[]

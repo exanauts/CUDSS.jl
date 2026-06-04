@@ -1,7 +1,7 @@
 name = "CUDSS"
 uuid = "45b445bb-4962-46a0-9369-b4df9d0f772e"
 authors = ["Alexis Montoison <amontoison@anl.gov>"]
-version = "0.7.0"
+version = "0.8.0"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
@@ -17,7 +17,7 @@ cuSPARSE = "b26da814-b3bc-49ef-b0ee-c816305aa060"
 CEnum = "0.5"
 CUDACore = "6.0.0"
 CUDA_Runtime_Discovery = "1.0.0, 2.0.0"
-CUDSS_jll = "0.7.1"
+CUDSS_jll = "0.8.0"
 GPUToolbox = "0.3, 1"
 LinearAlgebra = "1.10"
 SparseArrays = "1.10"
