@@ -16,6 +16,9 @@ This is supported provided that the batch index is the last dimension, and apply
 !!! warning
     When calling `show`, CUDA.jl converts a `CuSparseMatrixCSR` to a `SparseMatrixCSC`. This conversion is not well defined when the `nzVal` array is longer than `colVal`, which can occur in the batched setting. For this reason, a trailing semicolon is used in the following examples of the generic interface. The matrix construction works correctly, but displaying it results in an error.
 
+!!! warning
+    The uniform batch path in cuDSS has known bugs and limitations that affect solves with multiple right-hand sides per system, as well as the `deterministic_mode` option. See [Known issues](known_issues.md) before relying on these features.
+
 ## Batch LU -- cuDSS API
 
 ```julia
@@ -199,6 +202,11 @@ rλ_gpu
 ```
 
 ## Batch LDLᵀ and LDLᴴ -- cuDSS API
+
+The following example uses several right-hand sides per system (`nrhs = 2`) with a small batch (`nbatch = 2`).
+
+!!! warning
+    Solving a uniform batch with more than one right-hand side per system (`nrhs > 1`) returns incorrect results once the batch size is large enough. See [Known issues](known_issues.md) for details and workarounds.
 
 ```julia
 using CUDA, CUDA.CUSPARSE

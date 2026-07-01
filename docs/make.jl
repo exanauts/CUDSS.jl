@@ -18,7 +18,8 @@ makedocs(
            "Schur complement" => "schur_complement.md",
            "Uniform batch" => "uniform_batch.md",
            "Non-uniform batch" => "nonuniform_batch.md",
-           "Options" => "options.md"]
+           "Options" => "options.md",
+           "Known issues" => "known_issues.md"]
 )
 
 deploydocs(
