@@ -10,6 +10,9 @@ on:
   schedule:
     - cron: '0 0 * * 0'
 
+permissions:
+  contents: read
+
 jobs:
   test-gpu:
     runs-on: [self-hosted, Linux, X64, gpu, cuda]
@@ -21,6 +24,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          token: ${{ github.token }}
+          ssh-strict: false
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
