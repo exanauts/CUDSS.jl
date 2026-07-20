@@ -153,6 +153,39 @@ function cudss_solver()
   end
 end
 
+function cudss_inertia_matching()
+  # cuDSS (through at least 0.8) stops reporting a meaningful inertia once matching
+  # is enabled: it returns (0, 0) even though the factorization is correct. We assert
+  # the correct inertia in a `@test_broken` so the suite raises an *unexpected pass*
+  # the day cuDSS fixes it -- our nudge to drop the matching guard/warning added in
+  # `src/interfaces.jl` (`cudss_get(solver, "inertia")`).
+  n = 16
+  @testset "precision = $T" for T in (Float64, Float32)
+    INT = Cint
+    # Diagonally dominant with a positive diagonal => SPD => inertia (n, 0).
+    A_cpu = sprand(T, n, n, 0.4)
+    A_cpu = A_cpu + A_cpu' + 2n*I
+    A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+    x_gpu = CuVector(zeros(T, n))
+    b_gpu = CuVector(rand(T, n))
+    expected = (INT(n), INT(0))
+
+    # Baseline: without matching, cuDSS reports the correct inertia (real `@test`).
+    solver = CudssSolver(A_gpu, "S", 'F')
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    @test cudss_get(solver, "inertia") == expected
+
+    # With matching, the inertia is misreported. Marked broken -- when cuDSS starts
+    # returning `expected` here, this flips to an unexpected pass and fails the suite.
+    solver_m = CudssSolver(A_gpu, "S", 'F')
+    cudss_set(solver_m, "matching_alg", "algo1")
+    cudss("analysis", solver_m, x_gpu, b_gpu)
+    cudss("factorization", solver_m, x_gpu, b_gpu)
+    @test_broken cudss_get(solver_m, "inertia") == expected
+  end
+end
+
 function cudss_execution()
   n = 100
   p = 5

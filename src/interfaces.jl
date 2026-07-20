@@ -179,19 +179,23 @@ function cudss_update end
 
 function cudss_update(matrix::CudssMatrix{T}, b::CuVector{T}) where T <: BlasFloat
   cudssMatrixSetValues(matrix, b)
+  matrix.refs = b
 end
 
 function cudss_update(matrix::CudssMatrix{T}, B::CuMatrix{T}) where T <: BlasFloat
   cudssMatrixSetValues(matrix, B)
+  matrix.refs = B
 end
 
 function cudss_update(matrix::CudssMatrix{T}, tensor::CuArray{T}) where T <: BlasFloat
   @assert matrix.nbatch > 1
   cudssMatrixSetValues(matrix, tensor)
+  matrix.refs = tensor
 end
 
 function cudss_update(matrix::CudssMatrix{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: BlasFloat, INT <: CudssInt}
   cudssMatrixSetCsrPointers(matrix, A.rowPtr, CU_NULL, A.colVal, A.nzVal)
+  matrix.refs = (A.rowPtr, A.colVal, A.nzVal)
 end
 
 function cudss_update(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: BlasFloat, INT <: CudssInt}
@@ -200,6 +204,7 @@ end
 
 function cudss_update(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}) where {T <: BlasFloat, INT <: CudssInt}
   cudssMatrixSetCsrPointers(matrix, rowPtr, CU_NULL, colVal, nzVal)
+  matrix.refs = (rowPtr, colVal, nzVal)
 end
 
 function cudss_update(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuVector{T}) where {T <: BlasFloat, INT <: CudssInt}
@@ -208,6 +213,7 @@ end
 
 function cudss_update(matrix::CudssMatrix{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuMatrix{T}) where {T <: BlasFloat, INT <: CudssInt}
   cudssMatrixSetCsrPointers(matrix, rowPtr, CU_NULL, colVal, nzVal)
+  matrix.refs = (rowPtr, colVal, nzVal)
 end
 
 function cudss_update(solver::CudssSolver{T,INT}, rowPtr::CuVector{INT}, colVal::CuVector{INT}, nzVal::CuMatrix{T}) where {T <: BlasFloat, INT <: CudssInt}
@@ -219,6 +225,7 @@ function cudss_update(matrix::CudssBatchedMatrix{T}, b::Vector{<:CuVector{T}}) w
   copyto!(matrix.Mptrs, Mptrs)
   cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
   unsafe_free!(Mptrs)
+  matrix.refs = b
 end
 
 function cudss_update(matrix::CudssBatchedMatrix{T}, B::Vector{<:CuMatrix{T}}) where T <: BlasFloat
@@ -226,6 +233,7 @@ function cudss_update(matrix::CudssBatchedMatrix{T}, B::Vector{<:CuMatrix{T}}) w
   copyto!(matrix.Mptrs, Mptrs)
   cudssMatrixSetBatchValues(matrix, matrix.Mptrs)
   unsafe_free!(Mptrs)
+  matrix.refs = B
 end
 
 function cudss_update(matrix::CudssBatchedMatrix{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}}) where {T <: BlasFloat, INT <: CudssInt}
@@ -237,6 +245,7 @@ function cudss_update(matrix::CudssBatchedMatrix{T,INT}, A::Vector{CuSparseMatri
   unsafe_free!(rowPtrs)
   unsafe_free!(colVals)
   unsafe_free!(nzVals)
+  matrix.refs = A
 end
 
 function cudss_update(solver::CudssBatchedSolver{T,INT}, A::Vector{CuSparseMatrixCSR{T,INT}}) where {T <: BlasFloat, INT <: CudssInt}
@@ -394,7 +403,7 @@ The available data parameters are:
 - `"info"`: Device-side error information;
 - `"lu_nnz"`: Number of non-zero entries in LU factors;
 - `"npivots"`: Number of pivots encountered during factorization;
-- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric / hermitian indefinite matrices;
+- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric / hermitian indefinite matrices. Note that cuDSS does not report a reliable inertia when matching is enabled (`"matching_alg"` ≠ `"default"`) -- it typically returns `(0, 0)` even though the factorization is correct, and `cudss_get` warns in that case;
 - `"perm_reorder_row"`: Reordering permutation for the rows;
 - `"perm_reorder_col"`: Reordering permutation for the columns;
 - `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
@@ -441,6 +450,18 @@ function cudss_get_data(solver::AbstractCudssSolver{T,INT}, parameter::String) w
     cudssDataGet(solver.data.handle, solver.data, parameter, solver.ref_int64, 8, solver.nbytes_written)
     return solver.ref_int64[]
   elseif parameter == "inertia"
+    # cuDSS (through at least 0.8) stops reporting a meaningful inertia once matching
+    # is enabled: it returns (0, 0) with info == 0 even though the factorization is
+    # correct. Downstream code that trusts the inertia (e.g. inertia-based
+    # regularization) is then silently misled, so warn loudly rather than hand back a
+    # bogus tuple. See https://github.com/exanauts/CUDSS.jl for the tracking issue.
+    if cudss_get_config(solver, "matching_alg") != cudss_algorithm("default")
+      @warn "cuDSS does not report a reliable inertia when matching is enabled " *
+            "(`matching_alg` ≠ \"default\"); it typically returns (0, 0) while the " *
+            "factorization itself is correct. Disable matching to query the inertia, " *
+            "or recover it from the factor diagonal via `cudss_set(solver, \"diag\", buf)` " *
+            "followed by `cudss_get(solver, \"diag\")`." maxlog=1
+    end
     cudssDataGet(solver.data.handle, solver.data, parameter, solver.ref_inertia, 2 * sizeof(INT), solver.nbytes_written)
     return solver.ref_inertia[]
   elseif parameter == "schur_shape"
