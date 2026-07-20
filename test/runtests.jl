@@ -55,6 +55,10 @@ include("test_nonuniform_batch_cudss.jl")
     cudss_solver()
   end
 
+  @testset "Inertia under matching" begin
+    cudss_inertia_matching()
+  end
+
   @testset "CudssExecution" begin
     cudss_execution()
   end

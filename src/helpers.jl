@@ -42,12 +42,18 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
     nrows::Int64
     ncols::Int64
     nz::Int64
+    # GC roots for the Julia arrays whose device pointers were handed to cuDSS.
+    # cuDSS only stores the raw pointers, so without keeping the arrays alive here
+    # they can be collected while the descriptor (and any pending async phase) still
+    # references them -- segfaults / EXECUTION_FAILED that masquerade as library bugs.
+    # `refs` is refreshed by `cudss_update` whenever the underlying pointers change.
+    refs::Any
 
     function CudssMatrix(::Type{T}, n::Integer; nbatch::Integer=1) where T <: BlasFloat
         nz = n * nbatch
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, n, 1, n, CU_NULL, T, 'C')
-        obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, n, 1, nz)
+        obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, n, 1, nz, nothing)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -57,10 +63,10 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
             cudssMatrixCreateDn(matrix_ref, n, m, m, CU_NULL, T, 'R')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, n, m, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, n, m, nz, nothing)
         else
             cudssMatrixCreateDn(matrix_ref, m, n, m, CU_NULL, T, 'C')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, m, n, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], nbatch, m, n, nz, nothing)
         end
         finalizer(cudssMatrixDestroy, obj)
         obj
@@ -70,7 +76,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         m = length(b)
         matrix_ref = Ref{cudssMatrix_t}()
         cudssMatrixCreateDn(matrix_ref, m, 1, m, b, T, 'C')
-        obj = new{T,Cint}(T, Cint, matrix_ref[], 1, m, 1, m)
+        obj = new{T,Cint}(T, Cint, matrix_ref[], 1, m, 1, m, b)
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -81,10 +87,10 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         matrix_ref = Ref{cudssMatrix_t}()
         if transposed
             cudssMatrixCreateDn(matrix_ref, n, m, m, B, T, 'R')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], 1, n, m, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], 1, n, m, nz, B)
         else
             cudssMatrixCreateDn(matrix_ref, m, n, m, B, T, 'C')
-            obj = new{T,Cint}(T, Cint, matrix_ref[], 1, m, n, nz)
+            obj = new{T,Cint}(T, Cint, matrix_ref[], 1, m, n, nz, B)
         end
         finalizer(cudssMatrixDestroy, obj)
         obj
@@ -99,7 +105,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
                              colVal, nzVal, INT, INT, T, structure,
                              view, index)
-        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_total)
+        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_total, (rowPtr, colVal, nzVal))
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -111,7 +117,7 @@ mutable struct CudssMatrix{T,INT} <: AbstractCudssMatrix{T,INT}
         cudssMatrixCreateCsr(matrix_ref, n, n, nz_batch, rowPtr, CU_NULL,
                              colVal, nzVal, INT, INT, T, structure,
                              view, index)
-        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_batch * nbatch)
+        obj = new{T,INT}(T, INT, matrix_ref[], nbatch, n, n, nz_batch * nbatch, (rowPtr, colVal, nzVal))
         finalizer(cudssMatrixDestroy, obj)
         obj
     end
@@ -158,6 +164,10 @@ mutable struct CudssBatchedMatrix{T,INT,M} <: AbstractCudssMatrix{T,INT}
     ncols::Vector{INT}
     nnzA::Vector{INT}
     Mptrs::M
+    # GC roots for the per-batch source arrays. `Mptrs` is a device array of raw
+    # pointers into them, so the batch (and its element arrays) must be kept alive
+    # here for as long as this descriptor is; see the note on `CudssMatrix.refs`.
+    refs::Any
 
     function CudssBatchedMatrix(b::Vector{<:CuVector{T}}) where T <: BlasFloat
         matrix_ref = Ref{cudssMatrix_t}()
@@ -168,7 +178,7 @@ mutable struct CudssBatchedMatrix{T,INT,M} <: AbstractCudssMatrix{T,INT}
         Mptrs = unsafe_cudss_batch(b)
         M = typeof(Mptrs)
         cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Mptrs, Cint, T, 'C')
-        obj = new{T,Cint,M}(T, Cint, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
+        obj = new{T,Cint,M}(T, Cint, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs, b)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
@@ -186,7 +196,7 @@ mutable struct CudssBatchedMatrix{T,INT,M} <: AbstractCudssMatrix{T,INT}
         else
             cudssMatrixCreateBatchDn(matrix_ref, nbatch, nrows, ncols, ld, Mptrs, Cint, T, 'C')
         end
-        obj = new{T,Cint,M}(T, Cint, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs)
+        obj = new{T,Cint,M}(T, Cint, matrix_ref[], nbatch, nrows, ncols, Cint[], Mptrs, B)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
@@ -203,7 +213,7 @@ mutable struct CudssBatchedMatrix{T,INT,M} <: AbstractCudssMatrix{T,INT}
                                   view, index)
         Mptrs = (rowPtrs, colVals, nzVals)
         M = typeof(Mptrs)
-        obj = new{T,INT,M}(T, INT, matrix_ref[], nbatch, nrows, ncols, nnzA, Mptrs)
+        obj = new{T,INT,M}(T, INT, matrix_ref[], nbatch, nrows, ncols, nnzA, Mptrs, A)
         finalizer(cudssBatchedMatrixDestroy, obj)
         obj
     end
