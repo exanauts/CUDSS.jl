@@ -8,6 +8,9 @@ on:
     types: [opened, synchronize, reopened]
 jobs:
   build:
+    # Dependabot PRs run with a read-only GITHUB_TOKEN and no secrets, so the
+    # gh-pages preview push always 403s. Skip the docs deploy for those PRs.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
