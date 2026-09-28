@@ -83,71 +83,80 @@ function cudss_solver()
           buffer_R = Vector{R}(undef, n)
           buffer_T = Vector{T}(undef, n)
 
-          @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-            parameter ∈ ("comm_device", "comm_host", "user_schur_indices", "schur_shape", "schur_matrix", "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt") && continue
-            @testset "cudss_set" begin
-              (parameter == "nsuperpanels") && continue
-              if parameter == "user_perm"
-                perm_cpu = INT[i for i=n:-1:1]
-                cudss_set(solver, parameter, perm_cpu)
-                perm_gpu = CuVector{INT}(perm_cpu)
-                cudss_set(solver, parameter, perm_gpu)
-              end
-              if parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "perm_matching")
-                cudss_set(solver, parameter, buffer_int)
-              end
-              if parameter ∈ ("scale_row", "scale_col")
-                cudss_set(solver, parameter, buffer_R)
-              end
-              (parameter == "diag") && cudss_set(solver, parameter, buffer_T)
-              (parameter == "memory_estimates") && cudss_set(solver, parameter, memory_estimates)
-              (parameter == "info") && cudss_set(solver, parameter, 1)
-            end
-            @testset "cudss_get" begin
-              parameter ∈ ("comm_device", "comm_host", "user_perm", "perm_row", "perm_col") && continue
-              (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
-              val = cudss_get(solver, parameter)
-            end
-          end
-
-          @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
-            parameter ∈ ("device_indices", "nd_nlevels", "ubatch_size", "ubatch_index") && continue
-            @testset "cudss_get" begin
-              if parameter != "host_nthreads"
-                val = cudss_get(solver, parameter)
-              end
-            end
-            @testset "cudss_set" begin
-              (parameter == "device_count") && cudss_set(solver, parameter, 1)
-              (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
-              (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
-              (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
-              (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
-              (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
-              (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
-              (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
-              (parameter == "host_nthreads") && cudss_set(solver, parameter, 0)
-              for algo in ("default", "algo1", "algo2", "algo3", "algo4", "algo5")
-                (parameter == "matching_alg") && cudss_set(solver, parameter, algo)
-                (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
-                (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
-                (parameter == "solve_alg") && cudss_set(solver, parameter, algo)
-                (parameter == "pivot_epsilon_alg") && cudss_set(solver, parameter, algo)
-              end
-              for flag in (0, 1)
-                (parameter == "schur_mode") && cudss_set(solver, parameter, flag)
-                (parameter == "deterministic_mode") && cudss_set(solver, parameter, flag)
-                (parameter == "hybrid_memory_mode") && cudss_set(solver, parameter, flag)
-                (parameter == "hybrid_execute_mode") && cudss_set(solver, parameter, flag)
-                (parameter == "use_superpanels") && cudss_set(solver, parameter, flag)
-                (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
-              end
-              for pivoting in ('C', 'R', 'N')
-                (parameter == "pivot_type") && cudss_set(solver, parameter, pivoting)
-              end
-            end
-          end
+          cudss_solver_data_parameters(solver, structure, n, memory_estimates, buffer_int, buffer_R, buffer_T)
+          cudss_solver_config_parameters(solver)
         end
+      end
+    end
+  end
+end
+
+# Split out of cudss_solver: one large function with deeply nested @testset loops
+# takes tens of minutes to compile on Julia 1.13 (LLVM LICM/MemorySSA).
+function cudss_solver_data_parameters(solver, structure, n, memory_estimates, buffer_int::Vector{INT}, buffer_R, buffer_T) where INT
+  @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
+    parameter ∈ ("comm_device", "comm_host", "user_schur_indices", "schur_shape", "schur_matrix", "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt") && continue
+    @testset "cudss_set" begin
+      (parameter == "nsuperpanels") && continue
+      if parameter == "user_perm"
+        perm_cpu = INT[i for i=n:-1:1]
+        cudss_set(solver, parameter, perm_cpu)
+        perm_gpu = CuVector{INT}(perm_cpu)
+        cudss_set(solver, parameter, perm_gpu)
+      end
+      if parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "perm_matching")
+        cudss_set(solver, parameter, buffer_int)
+      end
+      if parameter ∈ ("scale_row", "scale_col")
+        cudss_set(solver, parameter, buffer_R)
+      end
+      (parameter == "diag") && cudss_set(solver, parameter, buffer_T)
+      (parameter == "memory_estimates") && cudss_set(solver, parameter, memory_estimates)
+      (parameter == "info") && cudss_set(solver, parameter, 1)
+    end
+    @testset "cudss_get" begin
+      parameter ∈ ("comm_device", "comm_host", "user_perm", "perm_row", "perm_col") && continue
+      (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
+      val = cudss_get(solver, parameter)
+    end
+  end
+end
+
+function cudss_solver_config_parameters(solver)
+  @testset "config parameter = $parameter" for parameter in CUDSS_CONFIG_PARAMETERS
+    parameter ∈ ("device_indices", "nd_nlevels", "ubatch_size", "ubatch_index") && continue
+    @testset "cudss_get" begin
+      if parameter != "host_nthreads"
+        val = cudss_get(solver, parameter)
+      end
+    end
+    @testset "cudss_set" begin
+      (parameter == "device_count") && cudss_set(solver, parameter, 1)
+      (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
+      (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
+      (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
+      (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
+      (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
+      (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
+      (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
+      (parameter == "host_nthreads") && cudss_set(solver, parameter, 0)
+      for algo in ("default", "algo1", "algo2", "algo3", "algo4", "algo5")
+        (parameter == "matching_alg") && cudss_set(solver, parameter, algo)
+        (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
+        (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
+        (parameter == "solve_alg") && cudss_set(solver, parameter, algo)
+        (parameter == "pivot_epsilon_alg") && cudss_set(solver, parameter, algo)
+      end
+      for flag in (0, 1)
+        (parameter == "schur_mode") && cudss_set(solver, parameter, flag)
+        (parameter == "deterministic_mode") && cudss_set(solver, parameter, flag)
+        (parameter == "hybrid_memory_mode") && cudss_set(solver, parameter, flag)
+        (parameter == "hybrid_execute_mode") && cudss_set(solver, parameter, flag)
+        (parameter == "use_superpanels") && cudss_set(solver, parameter, flag)
+        (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
+      end
+      for pivoting in ('C', 'R', 'N')
+        (parameter == "pivot_type") && cudss_set(solver, parameter, pivoting)
       end
     end
   end
