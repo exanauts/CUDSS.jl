@@ -14,7 +14,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 cuSPARSE = "b26da814-b3bc-49ef-b0ee-c816305aa060"
 
 [compat]
-CEnum = "0.5"
+CEnum = "0.5, 1"
 CUDACore = "6.0.0"
 CUDA_Runtime_Discovery = "1.0.0, 2.0.0"
 CUDSS_jll = "0.8.0"
