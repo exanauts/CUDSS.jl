@@ -1,8 +1,20 @@
 # CUDSS.jl: Julia interface for NVIDIA cuDSS
 
-[![docs-dev][docs-dev-img]][docs-dev-url]
+[![][ci-img]][ci-url] [![][aqua-img]][aqua-url] [![][codecov-img]][codecov-url] [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url]
 
-[docs-dev-img]: https://img.shields.io/badge/docs-dev-purple.svg
+[ci-img]: https://github.com/exanauts/CUDSS.jl/actions/workflows/ci.yml/badge.svg?branch=main
+[ci-url]: https://github.com/exanauts/CUDSS.jl/actions/workflows/ci.yml
+
+[aqua-img]: https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg
+[aqua-url]: https://github.com/JuliaTesting/Aqua.jl
+
+[codecov-img]: https://codecov.io/gh/exanauts/CUDSS.jl/branch/main/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/exanauts/CUDSS.jl
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://exanauts.github.io/CUDSS.jl/stable
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://exanauts.github.io/CUDSS.jl/dev
 
 ## Overview
