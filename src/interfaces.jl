@@ -260,11 +260,12 @@ The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
 - `"factorization_alg"`: Algorithm for the factorization phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
 - `"solve_alg"`: Algorithm for the solving phase (`"default"`, `"algo1"`, `"algo2"`, `"algo3"`, `"algo4"`, or `"algo5"`);
-- `"matching_alg"`: Matching algorithm (`"default"` disables matching, `"algo1"`–`"algo6"` enable it);
-- `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
+- `"matching_alg"`: Matching algorithm. The cuDSS 1.0 default is `"algo6"` (automatic: matching and scaling for general, symmetric and Hermitian matrices, no matching for SPD / HPD matrices). `"none"` (or `"default"`) disables matching, `"algo1"`–`"algo5"` select a specific matching algorithm;
+- `"force_nonsymmetric_matching"`: Use the non-symmetric matching for symmetric / Hermitian matrices -- `0` (default = symmetry-preserving matching) or `1`;
+- `"solve_mode"`: Operator applied to the system matrix during the solve -- `'N'` (default, `A x = b`), `'T'` (transpose, `Aᵀ x = b`) or `'C'` (conjugate transpose, `Aᴴ x = b`, complex general matrices only). Transpose solves are not supported for Hermitian / HPD matrices, the Schur complement mode, COLAMD-family reorderings and non-uniform batches;
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
-- `"pivot_type"`: Type of pivoting (`'A'` for automatic [default], `'N'` to disable, or `'C'` / `'R'` for global column / row pivoting; `'C'` and `'R'` require a COLAMD-family reordering, e.g. `"reordering_alg"` set to `"algo1"` or `"algo2"`);
+- `"pivot_type"`: Type of pivoting -- `'A'` for automatic [default], `'N'` to disable, `'C'` / `'R'` for global column / row pivoting (require a COLAMD-family reordering, e.g. `"reordering_alg"` set to `"algo1"` or `"algo2"`), `'D'` for diagonal pivoting (symmetric indefinite matrices), `'L'` for local block pivoting (general matrices), or `'B'` for Bunch-Kaufman pivoting (symmetric / Hermitian indefinite matrices). `'D'`, `'L'` and `'B'` require the AMD (`"algo3"`) or nested dissection (`"default"`) reordering;
 - `"pivot_threshold"`: Pivoting threshold which is used to determine if digonal element is subject to pivoting;
 - `"pivot_epsilon"`: Pivoting epsilon, absolute value to replace singular diagonal elements;
 - `"max_lu_nnz"`: Upper limit on the number of nonzero entries in LU factors for non-symmetric matrices;
@@ -282,7 +283,10 @@ The available configuration parameters are:
 - `"device_indices"`: A list of device indices as an integer array;
 - `"schur_mode"`: Schur complement mode -- `0` (default = disabled) or `1` (enabled);
 - `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled);
-- `"nd_ubfactor"`: Unbalance factor (in percent) for the nested dissection reordering.
+- `"nd_ubfactor"`: Unbalance factor (in percent) for the nested dissection reordering;
+- `"emulation_mantissa_bit_count"`: Mantissa bit count for the floating-point emulation of double precision factorizations -- `0` (default = disabled);
+- `"downcast_factors"`: Store double precision factors in single precision -- `"disabled"` (default), `"keep_block_diagonal"` or `"keep_strict_diagonal"` (keep the supernode diagonal blocks or the diagonal in double precision). It must be set before the factorization and not changed afterwards;
+- `"memory_optimization_setting"`: Memory optimization flags -- `0` (default) or `1` (solve-only: frees memory that is only needed to recompute the factors; a later factorization requires a new analysis). It applies to the (re)factorization during which it is set.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
@@ -291,7 +295,8 @@ The available data parameters are:
 - `"user_nd_partition_tree"`: User-provided nested dissection partition tree information, which is used instead of running the reordering algorithm;
 - `"user_schur_indices"`: User-provided Schur complement indices. The provided buffer should be an integer array of size `n`, where `n` is the dimension of the matrix. The values should be equal to `1` for the rows / columns which are part of the Schur complement and `0` for the rest;
 - `"user_host_interrupt"`: User-provided host interrupt pointer;
-- `"schur_matrix"`: Schur complement matrix passed as a `cudssMatrix_t` object.
+- `"schur_matrix"`: Schur complement matrix passed as a `cudssMatrix_t` object;
+- `"ubatch_mask"`: A host `Vector{Cint}` of length `"ubatch_size"` with `1` for the systems of a uniform batch to process and `0` for the systems to skip (their solution is left unchanged). It must be set before the analysis or the first factorization.
 
 The data parameter `"info"` must be restored to `0` if a Cholesky factorization fails
 due to indefiniteness and refactorization is performed on an updated matrix.
@@ -326,10 +331,14 @@ function cudss_set_data(solver::AbstractCudssSolver{T,INT}, parameter::String, v
          parameter == "perm_matching" || parameter == "diag" || parameter == "memory_estimates"
     solver.pointer = Base.unsafe_convert(PtrOrCuPtr{Cvoid}, value)
     solver.nbytes_provided = sizeof(value)
+  elseif parameter == "ubatch_mask"
+    value isa Vector{Cint} || throw(ArgumentError("The data parameter \"$parameter\" provided is not a Vector{Cint}."))
+    cudssDataSet(solver.data.handle, solver.data, parameter, value, sizeof(value))
   elseif parameter == "comm_device" || parameter == "comm_host" || parameter == "user_nd_partition_tree" || parameter == "user_host_interrupt"
     throw(ArgumentError("The data parameter \"$parameter\" is not yet supported by CUDSS.jl."))
   elseif parameter == "lu_nnz" || parameter == "npivots" || parameter == "inertia" || parameter == "hybrid_device_memory_min" ||
-         parameter == "nsuperpanels" || parameter == "schur_shape" || parameter == "nd_partition_tree"
+         parameter == "nsuperpanels" || parameter == "schur_shape" || parameter == "nd_partition_tree" ||
+         parameter == "ir_n_steps_performed" || parameter == "flops"
     throw(ArgumentError("The data parameter \"$parameter\" can't be set."))
   else
     throw(ArgumentError("Unknown data parameter \"$parameter\"."))
@@ -351,16 +360,23 @@ function cudss_set_config(solver::AbstractCudssSolver, parameter::String, value)
   elseif parameter == "max_lu_nnz" || parameter == "hybrid_device_memory_limit"
     solver.ref_int64[] = value
     cudssConfigSet(solver.config, parameter, solver.ref_int64, 8)
-  elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" || parameter == "solve_mode" ||
+  elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" ||
          parameter == "deterministic_mode" || parameter == "schur_mode" || parameter == "use_cuda_register_memory" ||
          parameter == "use_superpanels" || parameter == "ir_n_steps" || parameter == "host_nthreads" ||
          parameter == "device_count" || parameter == "nd_nlevels" || parameter == "nd_ubfactor" ||
-         parameter == "ubatch_size" || parameter == "ubatch_index"
+         parameter == "ubatch_size" || parameter == "ubatch_index" || parameter == "emulation_mantissa_bit_count" ||
+         parameter == "force_nonsymmetric_matching" || parameter == "memory_optimization_setting"
     solver.ref_cint[] = value
+    cudssConfigSet(solver.config, parameter, solver.ref_cint, 4)
+  elseif parameter == "solve_mode"
+    solver.ref_cint[] = Cint(convert(cudssSolveMode_t, value))
+    cudssConfigSet(solver.config, parameter, solver.ref_cint, 4)
+  elseif parameter == "downcast_factors"
+    solver.ref_cint[] = Cint(convert(cudssDowncastFactorsMode_t, value))
     cudssConfigSet(solver.config, parameter, solver.ref_cint, 4)
   elseif parameter == "device_indices"
     value isa Vector{Cint} || throw(ArgumentError("The config parameter \"$parameter\" provided is not a Vector{Cint}."))
-    cudssDataSet(solver.config, parameter, value, sizeof(value))
+    cudssConfigSet(solver.config, parameter, value, sizeof(value))
   else
     throw(ArgumentError("Unknown config parameter \"$parameter\"."))
   end
@@ -375,8 +391,9 @@ The available configuration parameters are:
 - `"reordering_alg"`: Algorithm for the reordering phase;
 - `"factorization_alg"`: Algorithm for the factorization phase;
 - `"solve_alg"`: Algorithm for the solving phase;
-- `"matching_alg"`: Matching algorithm (`"default"` disables matching, `"algo1"`–`"algo6"` enable it);
-- `"solve_mode"`: Potential modificator on the system matrix (transpose or adjoint);
+- `"matching_alg"`: Matching algorithm. The cuDSS 1.0 default is `"algo6"` (automatic: matching and scaling for general, symmetric and Hermitian matrices, no matching for SPD / HPD matrices). `"none"` (or `"default"`) disables matching, `"algo1"`–`"algo5"` select a specific matching algorithm;
+- `"force_nonsymmetric_matching"`: Use the non-symmetric matching for symmetric / Hermitian matrices -- `0` (default = symmetry-preserving matching) or `1`;
+- `"solve_mode"`: Operator applied to the system matrix during the solve -- `'N'` (default, `A x = b`), `'T'` (transpose, `Aᵀ x = b`) or `'C'` (conjugate transpose, `Aᴴ x = b`, complex general matrices only). Transpose solves are not supported for Hermitian / HPD matrices, the Schur complement mode, COLAMD-family reorderings and non-uniform batches;
 - `"ir_n_steps"`: Number of steps during the iterative refinement;
 - `"ir_tol"`: Iterative refinement tolerance;
 - `"pivot_type"`: Type of pivoting;
@@ -397,13 +414,16 @@ The available configuration parameters are:
 - `"device_indices"`: A list of device indices as an integer array;
 - `"schur_mode"`: Schur complement mode -- `0` (default = disabled) or `1` (enabled);
 - `"deterministic_mode"`: Enable deterministic mode -- `0` (default = disabled) or `1` (enabled);
-- `"nd_ubfactor"`: Unbalance factor (in percent) for the nested dissection reordering.
+- `"nd_ubfactor"`: Unbalance factor (in percent) for the nested dissection reordering;
+- `"emulation_mantissa_bit_count"`: Mantissa bit count for the floating-point emulation of double precision factorizations -- `0` (default = disabled);
+- `"downcast_factors"`: Store double precision factors in single precision -- `"disabled"` (default), `"keep_block_diagonal"` or `"keep_strict_diagonal"` (keep the supernode diagonal blocks or the diagonal in double precision). It must be set before the factorization and not changed afterwards;
+- `"memory_optimization_setting"`: Memory optimization flags -- `0` (default) or `1` (solve-only: frees memory that is only needed to recompute the factors; a later factorization requires a new analysis). It applies to the (re)factorization during which it is set.
 
 The available data parameters are:
 - `"info"`: Device-side error information;
 - `"lu_nnz"`: Number of non-zero entries in LU factors;
 - `"npivots"`: Number of pivots encountered during factorization;
-- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric / hermitian indefinite matrices. Note that cuDSS does not report a reliable inertia when matching is enabled (`"matching_alg"` ≠ `"default"`) -- it typically returns `(0, 0)` even though the factorization is correct, and `cudss_get` warns in that case;
+- `"inertia"`: Tuple of positive and negative indices of inertia for symmetric / hermitian indefinite matrices;
 - `"perm_reorder_row"`: Reordering permutation for the rows;
 - `"perm_reorder_col"`: Reordering permutation for the columns;
 - `"perm_row"`: Final row permutation (which includes effects of both reordering and pivoting);
@@ -411,17 +431,20 @@ The available data parameters are:
 - `"perm_matching"`: Matching (column) permutation Q such that A[:,Q] is reordered and then factorized;
 - `"scale_row"`: A vector of scaling factors applied to the rows of the factorized matrix;
 - `"scale_col"`: A vector of scaling factors applied to the columns of the factorized matrix;
-- `"diag"`: Diagonal of the factorized matrix;
+- `"diag"`: Diagonal of the factorized matrix. When matching with scaling is enabled (the default for general, symmetric and Hermitian matrices since cuDSS 1.0), the diagonal of the scaled matrix is returned;
 - `"hybrid_device_memory_min"`: Minimal amount of device memory (number of bytes) required in the hybrid memory mode;
-- `"memory_estimates"`: Memory estimates (in bytes) for host and device memory required for the chosen memory mode;
+- `"memory_estimates"`: Memory estimates (in bytes) for host and device memory required for the chosen memory mode. Since cuDSS 1.0, entry 7 (1-based) holds the completeness of the estimates (`CUDSS_MEMORY_ESTIMATE_STATE_NONE`, `_FILL_KNOWN` or `_FINAL`) instead of a number of bytes;
 - `"nsuperpanels"`: Number of superpanels in the matrix;
 - `"schur_shape"`: Shape of the Schur complement matrix as a triplet (nrows, ncols, nnz);
 - `"schur_matrix"`: Retrieve the Schur complement matrix;
-- `"nd_partition_tree"`: Nested dissection partition tree information. It must be used in combination with `"user_perm"` to have an effect.
+- `"nd_partition_tree"`: Nested dissection partition tree information. It must be used in combination with `"user_perm"` to have an effect;
+- `"flops"`: Number of floating-point operations of the factorization (`Int64`);
+- `"ir_n_steps_performed"`: Number of iterative refinement steps performed during the last solve (the configuration parameter `"ir_n_steps"` sets the requested number);
+- `"ubatch_mask"`: The mask of the uniform batch, returned as a `Vector{Cint}` of length `"ubatch_size"`.
 
-The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_matching"`, `"scale_row"`, `"scale_col"`, `"hybrid_device_memory_min"` and `"memory_estimates"` require the phase `"analyse"` performed by [`cudss`](@ref).
+The data parameters `"info"`, `"lu_nnz"`, `"perm_reorder_row"`, `"perm_reorder_col"`, `"perm_matching"`, `"scale_row"`, `"scale_col"`, `"hybrid_device_memory_min"`, `"memory_estimates"` and `"flops"` require the phase `"analyse"` performed by [`cudss`](@ref).
 The data parameters `"npivots"`, `"inertia"` and `"diag"` require the phases `"analyse"` and `"factorization"` performed by [`cudss`](@ref).
-The data parameters `"perm_matching"`, `"scale_row"`, and `"scale_col"` require matching to be enabled (the configuration parameter `"matching_alg"` must be set to a non-default value).
+The data parameters `"perm_matching"`, `"scale_row"`, and `"scale_col"` require matching to be enabled (the configuration parameter `"matching_alg"` must not be `"none"`).
 
 Note that for the data parameters `"perm_reorder_row"`, `"perm_row"`, `"scale_row"`, `"perm_reorder_col"`, `"perm_col"`, `"scale_col"`,
 `"perm_matching"`, `"diag"`, and `"memory_estimates"`, a call to [`cudss_set`](@ref) is required beforehand to specify which vector to update.
@@ -446,22 +469,19 @@ function cudss_get_data(solver::AbstractCudssSolver{T,INT}, parameter::String) w
     ref_INT = (INT == Cint) ? solver.ref_cint : solver.ref_int64
     cudssDataGet(solver.data.handle, solver.data, parameter, ref_INT, sizeof(INT), solver.nbytes_written)
     return ref_INT[]
-  elseif parameter == "lu_nnz" || parameter == "hybrid_device_memory_min"
+  elseif parameter == "lu_nnz" || parameter == "hybrid_device_memory_min" || parameter == "flops"
     cudssDataGet(solver.data.handle, solver.data, parameter, solver.ref_int64, 8, solver.nbytes_written)
     return solver.ref_int64[]
+  elseif parameter == "ir_n_steps_performed"
+    cudssDataGet(solver.data.handle, solver.data, parameter, solver.ref_cint, 4, solver.nbytes_written)
+    return solver.ref_cint[]
+  elseif parameter == "ubatch_mask"
+    # `ubatch_mask` is an input of the solver, so it can't use the "register a buffer
+    # with cudss_set, then fill it with cudss_get" protocol of the permutations.
+    mask = Vector{Cint}(undef, cudss_get_config(solver, "ubatch_size"))
+    cudssDataGet(solver.data.handle, solver.data, parameter, mask, sizeof(mask), solver.nbytes_written)
+    return mask
   elseif parameter == "inertia"
-    # cuDSS (through at least 0.8) stops reporting a meaningful inertia once matching
-    # is enabled: it returns (0, 0) with info == 0 even though the factorization is
-    # correct. Downstream code that trusts the inertia (e.g. inertia-based
-    # regularization) is then silently misled, so warn loudly rather than hand back a
-    # bogus tuple. See https://github.com/exanauts/CUDSS.jl for the tracking issue.
-    if cudss_get_config(solver, "matching_alg") != cudss_algorithm("default")
-      @warn "cuDSS does not report a reliable inertia when matching is enabled " *
-            "(`matching_alg` ≠ \"default\"); it typically returns (0, 0) while the " *
-            "factorization itself is correct. Disable matching to query the inertia, " *
-            "or recover it from the factor diagonal via `cudss_set(solver, \"diag\", buf)` " *
-            "followed by `cudss_get(solver, \"diag\")`." maxlog=1
-    end
     cudssDataGet(solver.data.handle, solver.data, parameter, solver.ref_inertia, 2 * sizeof(INT), solver.nbytes_written)
     return solver.ref_inertia[]
   elseif parameter == "schur_shape"
@@ -497,13 +517,20 @@ function cudss_get_config(solver::AbstractCudssSolver, parameter::String)
   elseif parameter == "max_lu_nnz" || parameter == "hybrid_device_memory_limit"
     cudssConfigGet(solver.config, parameter, solver.ref_int64, 8, solver.nbytes_written)
     return solver.ref_int64[]
-  elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" || parameter == "solve_mode" ||
+  elseif parameter == "hybrid_memory_mode" || parameter == "hybrid_execute_mode" ||
          parameter == "deterministic_mode" || parameter == "schur_mode" || parameter == "use_cuda_register_memory" ||
          parameter == "use_superpanels" || parameter == "ir_n_steps" || parameter == "host_nthreads" ||
          parameter == "device_count" || parameter == "nd_nlevels" || parameter == "nd_ubfactor" ||
-         parameter == "ubatch_size" || parameter == "ubatch_index"
+         parameter == "ubatch_size" || parameter == "ubatch_index" || parameter == "emulation_mantissa_bit_count" ||
+         parameter == "force_nonsymmetric_matching" || parameter == "memory_optimization_setting"
     cudssConfigGet(solver.config, parameter, solver.ref_cint, 4, solver.nbytes_written)
     return solver.ref_cint[]
+  elseif parameter == "solve_mode"
+    cudssConfigGet(solver.config, parameter, solver.ref_cint, 4, solver.nbytes_written)
+    return cudssSolveMode_t(solver.ref_cint[])
+  elseif parameter == "downcast_factors"
+    cudssConfigGet(solver.config, parameter, solver.ref_cint, 4, solver.nbytes_written)
+    return cudssDowncastFactorsMode_t(solver.ref_cint[])
   elseif parameter == "device_indices"
     throw(ArgumentError("The config parameter \"device_indices\" is not supported by CUDSS.jl."))
   else

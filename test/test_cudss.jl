@@ -1,5 +1,5 @@
 function cudss_version()
-  @test CUDSS.version() >= v"0.7.0"
+  @test CUDSS.version() >= v"1.0.0"
 end
 
 function cudss_dense()
@@ -69,7 +69,7 @@ function cudss_solver()
       @testset "structure = $structure" for structure in ("G", "S", "H", "SPD", "HPD")
         @testset "view = $view" for view in ('L', 'U', 'F')
           solver = CudssSolver(A_gpu, structure, view)
-          cudss_set(solver, "matching_alg", "algo6")  # enable matching (AUTO) for "perm_matching" / "scale_row" / "scale_col"
+          cudss_set(solver, "matching_alg", "algo6")  # matching (AUTO, the default) for "perm_matching" / "scale_row" / "scale_col"
 
           x_cpu = zeros(T, n)
           x_gpu = CuVector(x_cpu)
@@ -115,9 +115,13 @@ function cudss_solver_data_parameters(solver, structure, n, memory_estimates, bu
       (parameter == "info") && cudss_set(solver, parameter, 1)
     end
     @testset "cudss_get" begin
-      parameter ∈ ("comm_device", "comm_host", "user_perm", "perm_row", "perm_col") && continue
+      parameter ∈ ("comm_device", "comm_host", "user_perm", "perm_row", "perm_col", "ubatch_mask") && continue
       (parameter == "inertia") && !(structure ∈ ("S", "H")) && continue
+      # The automatic matching ("algo6") disables matching for SPD / HPD matrices since cuDSS 1.0.
+      (parameter ∈ ("perm_matching", "scale_row", "scale_col")) && (structure ∈ ("SPD", "HPD")) && continue
       val = cudss_get(solver, parameter)
+      (parameter == "flops") && @test val isa Int64 && val > 0
+      (parameter == "ir_n_steps_performed") && @test val == 0
     end
   end
 end
@@ -132,7 +136,6 @@ function cudss_solver_config_parameters(solver)
     end
     @testset "cudss_set" begin
       (parameter == "device_count") && cudss_set(solver, parameter, 1)
-      (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
       (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
       (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
       (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
@@ -140,7 +143,7 @@ function cudss_solver_config_parameters(solver)
       (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
       (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
       (parameter == "host_nthreads") && cudss_set(solver, parameter, 0)
-      for algo in ("default", "algo1", "algo2", "algo3", "algo4", "algo5")
+      for algo in ("default", "none", "algo1", "algo2", "algo3", "algo4", "algo5")
         (parameter == "matching_alg") && cudss_set(solver, parameter, algo)
         (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
         (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)
@@ -155,43 +158,49 @@ function cudss_solver_config_parameters(solver)
         (parameter == "use_superpanels") && cudss_set(solver, parameter, flag)
         (parameter == "use_cuda_register_memory") && cudss_set(solver, parameter, flag)
       end
-      for pivoting in ('C', 'R', 'N')
+      for pivoting in ('C', 'R', 'N', 'A', 'D', 'L', 'B')
         (parameter == "pivot_type") && cudss_set(solver, parameter, pivoting)
+        (parameter == "pivot_type") && @test cudss_get(solver, parameter) == convert(CUDSS.cudssPivotType_t, pivoting)
       end
+      for mode in ('N', 'T', 'C', 0)
+        (parameter == "solve_mode") && cudss_set(solver, parameter, mode)
+        (parameter == "solve_mode") && @test cudss_get(solver, parameter) == convert(CUDSS.cudssSolveMode_t, mode)
+      end
+      for mode in ("keep_block_diagonal", "keep_strict_diagonal", "disabled", 0)
+        (parameter == "downcast_factors") && cudss_set(solver, parameter, mode)
+        (parameter == "downcast_factors") && @test cudss_get(solver, parameter) == convert(CUDSS.cudssDowncastFactorsMode_t, mode)
+      end
+      for flag in (1, 0)
+        (parameter == "memory_optimization_setting") && cudss_set(solver, parameter, flag)
+        (parameter == "force_nonsymmetric_matching") && cudss_set(solver, parameter, flag)
+        (parameter ∈ ("memory_optimization_setting", "force_nonsymmetric_matching")) && @test cudss_get(solver, parameter) == flag
+      end
+      (parameter == "emulation_mantissa_bit_count") && cudss_set(solver, parameter, cudss_get(solver, parameter))
     end
   end
 end
 
 function cudss_inertia_matching()
-  # cuDSS (through at least 0.8) stops reporting a meaningful inertia once matching
-  # is enabled: it returns (0, 0) even though the factorization is correct. We assert
-  # the correct inertia in a `@test_broken` so the suite raises an *unexpected pass*
-  # the day cuDSS fixes it -- our nudge to drop the matching guard/warning added in
-  # `src/interfaces.jl` (`cudss_get(solver, "inertia")`).
-  n = 16
-  @testset "precision = $T" for T in (Float64, Float32)
+  # cuDSS 0.8 reported (0, 0) as inertia once matching was enabled. cuDSS 1.0 reports the
+  # correct inertia with every matching algorithm, including the new default (AUTO).
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     INT = Cint
-    # Diagonally dominant with a positive diagonal => SPD => inertia (n, 0).
-    A_cpu = sprand(T, n, n, 0.4)
-    A_cpu = A_cpu + A_cpu' + 2n*I
+    n = 60
+    A_cpu = sprand(T, n, n, 0.05)
+    A_cpu = A_cpu + A_cpu' + Diagonal(2 * randn(real(T), n))
+    λ = eigvals(Hermitian(Matrix(A_cpu)))
+    expected = (INT(count(>(0), λ)), INT(count(<(0), λ)))
     A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
     x_gpu = CuVector(zeros(T, n))
     b_gpu = CuVector(rand(T, n))
-    expected = (INT(n), INT(0))
-
-    # Baseline: without matching, cuDSS reports the correct inertia (real `@test`).
-    solver = CudssSolver(A_gpu, "S", 'F')
-    cudss("analysis", solver, x_gpu, b_gpu)
-    cudss("factorization", solver, x_gpu, b_gpu)
-    @test cudss_get(solver, "inertia") == expected
-
-    # With matching, the inertia is misreported. Marked broken -- when cuDSS starts
-    # returning `expected` here, this flips to an unexpected pass and fails the suite.
-    solver_m = CudssSolver(A_gpu, "S", 'F')
-    cudss_set(solver_m, "matching_alg", "algo1")
-    cudss("analysis", solver_m, x_gpu, b_gpu)
-    cudss("factorization", solver_m, x_gpu, b_gpu)
-    @test_broken cudss_get(solver_m, "inertia") == expected
+    structure = T <: Real ? "S" : "H"
+    @testset "matching_alg = $algo" for algo in ("auto", "none", "algo1", "algo2", "algo3", "algo4", "algo5")
+      solver = CudssSolver(A_gpu, structure, 'F')
+      (algo != "auto") && cudss_set(solver, "matching_alg", algo)
+      cudss("analysis", solver, x_gpu, b_gpu)
+      cudss("factorization", solver, x_gpu, b_gpu)
+      @test cudss_get(solver, "inertia") == expected
+    end
   end
 end
 
@@ -202,7 +211,7 @@ function cudss_execution()
     @testset "integer = $INT" for INT in (Cint,) # Int64)
       R = real(T)
       @testset "Unsymmetric -- Non-Hermitian" begin
-        @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
+        @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N', 'L')
           A_cpu = sprand(T, n, n, 0.02) + I
           x_cpu = zeros(T, n)
           b_cpu = rand(T, n)
@@ -216,8 +225,10 @@ function cudss_execution()
           data = CudssData()
           solver = CudssSolver(matrix, config, data)
           cudss_set(solver, "pivot_type", pivot)
-          # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering in cuDSS 0.8
+          # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering
           (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
+          # LOCAL_BLOCK pivoting requires the AMD or nested dissection reordering
+          (pivot == 'L') && cudss_set(solver, "reordering_alg", "algo3")
 
           cudss("analysis", solver, x_gpu, b_gpu)
           cudss("factorization", solver, x_gpu, b_gpu)
@@ -244,7 +255,7 @@ function cudss_execution()
 
       @testset "Symmetric -- Hermitian" begin
         @testset "view = $view" for view in ('F', 'L', 'U')
-          @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N')
+          @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N', 'D', 'B')
             A_cpu = sprand(T, n, n, 0.01) + I
             A_cpu = A_cpu + A_cpu'
             X_cpu = zeros(T, n, p)
@@ -262,8 +273,10 @@ function cudss_execution()
             data = CudssData()
             solver = CudssSolver(matrix, config, data)
             cudss_set(solver, "pivot_type", pivot)
-            # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering in cuDSS 0.8
+            # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering
             (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
+            # DIAGONAL / BUNCH_KAUFMAN pivoting requires the AMD or nested dissection reordering
+            (pivot in ('D', 'B')) && cudss_set(solver, "reordering_alg", "algo3")
 
             cudss("analysis", solver, X_gpu, B_gpu)
             cudss("factorization", solver, X_gpu, B_gpu)
@@ -309,7 +322,7 @@ function cudss_execution()
             data = CudssData()
             solver = CudssSolver(matrix, config, data)
             cudss_set(solver, "pivot_type", pivot)
-            # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering in cuDSS 0.8
+            # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering
             (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
 
             cudss("analysis", solver, X_gpu, B_gpu)
@@ -336,6 +349,79 @@ function cudss_execution()
         end
       end
     end
+  end
+end
+
+function cudss_solve_mode()
+  n = 100
+  p = 3
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
+    INT = Cint
+    @testset "structure = $structure" for structure in ("G", "S")
+      A_cpu = sprand(T, n, n, 0.02) + I
+      (structure == "S") && (A_cpu = A_cpu + transpose(A_cpu))
+      A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+      X_gpu = CuMatrix(zeros(T, n, p))
+      B_cpu = rand(T, n, p)
+      B_gpu = CuMatrix(B_cpu)
+
+      solver = CudssSolver(A_gpu, structure, 'F')
+      cudss("analysis", solver, X_gpu, B_gpu)
+      cudss("factorization", solver, X_gpu, B_gpu)
+      # Conjugate-transpose solves are only supported for complex general matrices.
+      modes = (T <: Complex && structure == "G") ? ('N', 'T', 'C') : ('N', 'T')
+      @testset "solve_mode = $mode" for mode in modes
+        op = mode == 'N' ? identity : mode == 'T' ? transpose : adjoint
+        cudss_set(solver, "solve_mode", mode)
+        cudss("solve", solver, X_gpu, B_gpu)
+        @test norm(B_cpu - op(A_cpu) * Array(X_gpu)) ≤ √eps(R) * norm(B_cpu)
+      end
+    end
+
+    @testset "generic API" begin
+      A_cpu = sprand(T, n, n, 0.02) + I
+      b_cpu = rand(T, n)
+      solver = lu(CuSparseMatrixCSR{T,INT}(A_cpu))
+      cudss_set(solver, "solve_mode", 'T')
+      x_gpu = solver \ CuVector(b_cpu)
+      @test norm(b_cpu - transpose(A_cpu) * Array(x_gpu)) ≤ √eps(R) * norm(b_cpu)
+    end
+  end
+end
+
+function cudss_bunch_kaufman()
+  n = 80
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    R = real(T)
+    INT = Cint
+    # Symmetric / Hermitian indefinite matrix
+    A_cpu = sprand(T, n, n, 0.05)
+    A_cpu = A_cpu + A_cpu' + Diagonal(2 * randn(R, n))
+    λ = eigvals(Hermitian(Matrix(A_cpu)))
+    A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+    x_gpu = CuVector(zeros(T, n))
+    b_cpu = rand(T, n)
+    b_gpu = CuVector(b_cpu)
+
+    structure = T <: Real ? "S" : "H"
+    solver = CudssSolver(A_gpu, structure, 'F')
+    cudss_set(solver, "pivot_type", 'B')
+    cudss_set(solver, "reordering_alg", "algo3")
+    cudss("analysis", solver, x_gpu, b_gpu)
+    cudss("factorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+    @test norm(b_cpu - A_cpu * Array(x_gpu)) ≤ √eps(R) * norm(b_cpu)
+    @test cudss_get(solver, "pivot_type") == CUDSS.CUDSS_PIVOT_BUNCH_KAUFMAN
+    @test cudss_get(solver, "inertia") == (INT(count(>(0), λ)), INT(count(<(0), λ)))
+
+    # Refactorization with a shifted diagonal
+    d_cpu = 2 * randn(R, n)
+    B_cpu = A_cpu + Diagonal(d_cpu)
+    cudss_update(solver, CuSparseMatrixCSR{T,INT}(B_cpu))
+    cudss("refactorization", solver, x_gpu, b_gpu)
+    cudss("solve", solver, x_gpu, b_gpu)
+    @test norm(b_cpu - B_cpu * Array(x_gpu)) ≤ √eps(R) * norm(b_cpu)
   end
 end
 
@@ -695,6 +781,7 @@ function iterative_refinement()
     cudss("analysis", solver, x_gpu, b_gpu)
     cudss("factorization", solver, x_gpu, b_gpu)
     cudss("solve", solver, x_gpu, b_gpu)
+    @test cudss_get(solver, "ir_n_steps_performed") == ir
 
     r_gpu = b_gpu - A_gpu * x_gpu
     return norm(r_gpu)

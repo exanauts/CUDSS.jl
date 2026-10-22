@@ -12,7 +12,7 @@ NVIDIA cuDSS provides three factorizations (LDU, LDLᵀ, LLᵀ) for solving spar
 
 ### Why CUDSS.jl?
 
-Unlike other CUDA libraries that are commonly bundled together, cuDSS is currently in preview. For this reason, it is not included in [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).
+Unlike other CUDA libraries that are commonly bundled together, cuDSS is distributed separately from the CUDA toolkit. For this reason, it is not included in [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).
 To maintain consistency with the naming conventions used for other CUDA libraries (such as CUBLAS, CUSOLVER, CUSPARSE, etc.), we have named this interface CUDSS.jl.
 
 ## Installation
