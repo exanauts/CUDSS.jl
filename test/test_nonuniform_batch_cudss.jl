@@ -95,7 +95,7 @@ end
 # takes tens of minutes to compile on Julia 1.13 (LLVM LICM/MemorySSA).
 function cudss_batched_solver_data_parameters(solver, structure, n, ::Type{INT}) where INT
   @testset "data parameter = $parameter" for parameter in CUDSS_DATA_PARAMETERS
-    parameter ∈ ("nsuperpanels", "user_schur_indices", "schur_shape", "schur_matrix", "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt") && continue
+    parameter ∈ ("nsuperpanels", "user_schur_indices", "schur_shape", "schur_matrix", "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt", "ubatch_mask") && continue
     parameter ∈ ("perm_row", "perm_col", "perm_reorder_row", "perm_reorder_col", "diag", "comm_device", "comm_host", "perm_matching", "scale_row", "scale_col") && continue
     @testset "cudss_get" begin
       (parameter == "user_perm") && continue
@@ -124,14 +124,20 @@ function cudss_batched_solver_config_parameters(solver)
     end
     @testset "cudss_set" begin
       (parameter == "device_count") && cudss_set(solver, parameter, 1)
-      (parameter == "solve_mode") && cudss_set(solver, parameter, 0)
+      (parameter == "solve_mode") && cudss_set(solver, parameter, 'N')
       (parameter == "ir_n_steps") && cudss_set(solver, parameter, 1)
       (parameter == "ir_tol") && cudss_set(solver, parameter, 1e-8)
       (parameter == "pivot_threshold") && cudss_set(solver, parameter, 2.0)
       (parameter == "pivot_epsilon") && cudss_set(solver, parameter, 1e-12)
       (parameter == "max_lu_nnz") && cudss_set(solver, parameter, 10)
       (parameter == "hybrid_device_memory_limit") && cudss_set(solver, parameter, 2048)
-      for algo in ("default", "algo1", "algo2", "algo3", "algo4", "algo5")
+      (parameter == "downcast_factors") && cudss_set(solver, parameter, "disabled")
+      (parameter == "emulation_mantissa_bit_count") && cudss_set(solver, parameter, cudss_get(solver, parameter))
+      for flag in (1, 0)
+        (parameter == "memory_optimization_setting") && cudss_set(solver, parameter, flag)
+        (parameter == "force_nonsymmetric_matching") && cudss_set(solver, parameter, flag)
+      end
+      for algo in ("default", "none", "algo1", "algo2", "algo3", "algo4", "algo5")
         (parameter == "matching_alg") && cudss_set(solver, parameter, algo)
         (parameter == "reordering_alg") && cudss_set(solver, parameter, algo)
         (parameter == "factorization_alg") && cudss_set(solver, parameter, algo)

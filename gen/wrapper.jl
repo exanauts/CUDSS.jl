@@ -156,8 +156,14 @@ function main()
     cuda = joinpath(CUDA_SDK_jll.artifact_dir, "cuda", "include")
     @assert CUDA_SDK_jll.is_available()
 
-    cudss = joinpath(CUDSS_jll.artifact_dir, "include")
-    @assert CUDSS_jll.is_available()
+    # cuDSS headers: `CUDSS_INCLUDE_DIR` overrides the CUDSS_jll artifact, which is
+    # needed when CUDSS_jll lags behind an upstream cuDSS release.
+    cudss = get(ENV, "CUDSS_INCLUDE_DIR") do
+        @assert CUDSS_jll.is_available()
+        joinpath(CUDSS_jll.artifact_dir, "include")
+    end
+    isfile(joinpath(cudss, "cudss.h")) || error("cudss.h not found in $cudss (set CUDSS_INCLUDE_DIR)")
+    @info "Wrapping cuDSS headers from $cudss"
 
     args = get_default_args()
     push!(args, "-I$cudss", "-I$cuda")

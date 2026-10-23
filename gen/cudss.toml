@@ -8,7 +8,22 @@ output_ignorelist = [
     "CUDSS_VERSION",
     "CUDSS_VERSION_MAJOR",
     "CUDSS_VERSION_MINOR",
-    "CUDSS_VERSION_PATCH"
+    "CUDSS_VERSION_PATCH",
+    # cuDSS 1.0: cudssDataType_t became a deprecated alias of cudaDataType_t, and these
+    # are #defines onto CUDA_* enumerators or casts of out-of-range values (62, 63).
+    # CUDACore's Base.@enum cudaDataType has neither the CUDA_-prefixed names nor those
+    # values, so emitting them would fail at load time.
+    "CUDSS_DATA_TYPE_UNSET",
+    "CUDSS_R_32F",
+    "CUDSS_R_64F",
+    "CUDSS_C_32F",
+    "CUDSS_C_64F",
+    "CUDSS_R_64F_MP2",
+    "CUDSS_R_64F_64F",
+    "CUDSS_R_32I",
+    "CUDSS_R_64I",
+    "CUDSS_DATA_TYPE_DEPRECATED_PREFIX",
+    "CUDSS_DATA_TYPE_DEPRECATED_SUFFIX"
 ]
 
 [codegen]

@@ -6,6 +6,8 @@ on:
     tags: '*'
   pull_request:
     types: [opened, synchronize, reopened]
+  # Rebuild the docs of an existing tag by hand (select the tag as the ref).
+  workflow_dispatch:
 jobs:
   build:
     # Dependabot PRs run with a read-only GITHUB_TOKEN and no secrets, so the

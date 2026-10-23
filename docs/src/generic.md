@@ -55,16 +55,23 @@ norm(R_gpu)
 ## LDLᵀ and LDLᴴ
 
 ```@docs
-LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F') where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
+LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F', structure::String) where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
 LinearAlgebra.ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT}) where {T <: LinearAlgebra.BlasFloat, INT <: CUDSS.CudssInt}
 ```
 
 !!! note
-    If we only store one triangle of `A_gpu`, we can also use the wrappers `Symmetric` and `Hermitian` instead of using the keyword argument `view` in `ldlt`. For real matrices, both wrappers are allowed but only `Hermitian` can be used for complex matrices.
+    If we only store one triangle of `A_gpu`, we can also use the wrappers `Symmetric` and `Hermitian` instead of using the keyword argument `view` in `ldlt`. For real matrices, both wrappers compute the same LDLᵀ factorization. For complex matrices, `Hermitian` computes an LDLᴴ factorization (the default of `ldlt`, structure `"H"`) while `Symmetric` treats the matrix as complex symmetric (`Aᵀ = A`) and computes an LDLᵀ factorization (structure `"S"`).
 
 ```julia
 S = Symmetric(A, :L)
 F = ldlt(S)
+```
+
+!!! note
+    The keyword argument `structure` of `ldlt` accepts `"S"` or `"H"` only. Its default is `"S"` for real matrices and `"H"` for complex matrices, so it is only needed to factorize a complex symmetric matrix without the `Symmetric` wrapper.
+
+```julia
+F = ldlt(A_gpu, view='L', structure="S")
 ```
 
 ```julia
