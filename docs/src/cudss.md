@@ -92,6 +92,37 @@ R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
 norm(R_gpu)
 ```
 
+### Complex symmetric systems
+
+For a complex matrix, `"H"` reads the matrix as Hermitian (`Aᴴ = A`) and computes an LDLᴴ factorization.
+A complex symmetric matrix (`Aᵀ = A`, not Hermitian) must be passed with the structure `"S"`, which computes an LDLᵀ factorization.
+With a triangular view, the two structures complete the missing triangle differently, so using `"H"` for a complex symmetric matrix gives wrong results.
+In the generic API, the keyword `structure="S"` or the `Symmetric` wrapper selects the LDLᵀ; `ldlt(A_gpu)` and `Hermitian` compute the LDLᴴ.
+
+```julia
+T = ComplexF64
+A_cpu = sprand(T, n, n, 0.05) + I
+A_cpu = A_cpu + transpose(A_cpu)
+B_cpu = rand(T, n, p)
+
+A_gpu = CuSparseMatrixCSR(A_cpu |> tril)
+X_gpu = CuMatrix(zeros(T, n, p))
+B_gpu = CuMatrix(B_cpu)
+
+# Low-level API
+solver = CudssSolver(A_gpu, "S", 'L')
+cudss("analysis", solver, X_gpu, B_gpu)
+cudss("factorization", solver, X_gpu, B_gpu; asynchronous=false)
+cudss("solve", solver, X_gpu, B_gpu; asynchronous=false)
+norm(B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu)
+
+# Generic API
+solver = ldlt(A_gpu; view='L', structure="S")
+solver = ldlt(Symmetric(A_gpu, :L))
+ldiv!(X_gpu, solver, B_gpu)
+norm(B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu)
+```
+
 ## LLᵀ and LLᴴ
 
 ```julia
