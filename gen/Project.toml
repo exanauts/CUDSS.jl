@@ -6,5 +6,5 @@ JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 
 [compat]
 CUDA_SDK_jll = "13.3.0"
-CUDSS_jll = "0.8.0"
+CUDSS_jll = "1.0.0"
 julia = "1.10"
