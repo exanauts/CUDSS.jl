@@ -73,7 +73,27 @@ cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu; asynchronous=false)
 cudss(&quot;solve&quot;, solver, X_gpu, C_gpu; asynchronous=false)
 
 R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
-norm(R_gpu)</code></pre><h2 id="LLᵀ-and-LLᴴ"><a class="docs-heading-anchor" href="#LLᵀ-and-LLᴴ">LLᵀ and LLᴴ</a><a id="LLᵀ-and-LLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#LLᵀ-and-LLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
+norm(R_gpu)</code></pre><h3 id="Complex-symmetric-systems"><a class="docs-heading-anchor" href="#Complex-symmetric-systems">Complex symmetric systems</a><a id="Complex-symmetric-systems-1"></a><a class="docs-heading-anchor-permalink" href="#Complex-symmetric-systems" title="Permalink"></a></h3><p>For a complex matrix, <code>&quot;H&quot;</code> reads the matrix as Hermitian (<code>Aᴴ = A</code>) and computes an LDLᴴ factorization. A complex symmetric matrix (<code>Aᵀ = A</code>, not Hermitian) must be passed with the structure <code>&quot;S&quot;</code>, which computes an LDLᵀ factorization. With a triangular view, the two structures complete the missing triangle differently, so using <code>&quot;H&quot;</code> for a complex symmetric matrix gives wrong results. In the generic API, the keyword <code>structure=&quot;S&quot;</code> or the <code>Symmetric</code> wrapper selects the LDLᵀ; <code>ldlt(A_gpu)</code> and <code>Hermitian</code> compute the LDLᴴ.</p><pre><code class="language-julia hljs">T = ComplexF64
+A_cpu = sprand(T, n, n, 0.05) + I
+A_cpu = A_cpu + transpose(A_cpu)
+B_cpu = rand(T, n, p)
+
+A_gpu = CuSparseMatrixCSR(A_cpu |&gt; tril)
+X_gpu = CuMatrix(zeros(T, n, p))
+B_gpu = CuMatrix(B_cpu)
+
+# Low-level API
+solver = CudssSolver(A_gpu, &quot;S&quot;, &#39;L&#39;)
+cudss(&quot;analysis&quot;, solver, X_gpu, B_gpu)
+cudss(&quot;factorization&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+cudss(&quot;solve&quot;, solver, X_gpu, B_gpu; asynchronous=false)
+norm(B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu)
+
+# Generic API
+solver = ldlt(A_gpu; view=&#39;L&#39;, structure=&quot;S&quot;)
+solver = ldlt(Symmetric(A_gpu, :L))
+ldiv!(X_gpu, solver, B_gpu)
+norm(B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu)</code></pre><h2 id="LLᵀ-and-LLᴴ"><a class="docs-heading-anchor" href="#LLᵀ-and-LLᴴ">LLᵀ and LLᴴ</a><a id="LLᵀ-and-LLᴴ-1"></a><a class="docs-heading-anchor-permalink" href="#LLᵀ-and-LLᴴ" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CUDA, CUDA.CUSPARSE
 using CUDSS
 using SparseArrays, LinearAlgebra
 
@@ -112,4 +132,4 @@ cudss(&quot;refactorization&quot;, solver, X_gpu, C_gpu; asynchronous=false)
 cudss(&quot;solve&quot;, solver, X_gpu, C_gpu; asynchronous=false)
 
 R_gpu = C_gpu - ( CuSparseMatrixCSR(A_cpu) + Diagonal(d_gpu) ) * X_gpu
-norm(R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../functions/">« Functions</a><a class="docs-footer-nextpage" href="../generic/">Generic interface »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 23 October 2026 15:57">Friday 23 October 2026</span>. Using Julia version 1.13.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+norm(R_gpu)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../functions/">« Functions</a><a class="docs-footer-nextpage" href="../generic/">Generic interface »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 23 October 2026 16:00">Friday 23 October 2026</span>. Using Julia version 1.13.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
