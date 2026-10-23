@@ -47,9 +47,15 @@ end
 
 """
     solver = ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F')
+    solver = ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}})
+    solver = ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}})
 
-Compute the LDLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU.
+Compute the LDLᵀ or LDLᴴ factorization of a sparse matrix `A` on an NVIDIA GPU.
 The parameter type `T` is restricted to `Float32`, `Float64`, `ComplexF32`, or `ComplexF64`, while `INT` is restricted to `Int32` or `Int64`.
+
+A real matrix is factorized as LDLᵀ. A complex matrix is factorized as LDLᴴ (structure `"H"`), unless it is
+wrapped in `Symmetric`, in which case it is treated as complex symmetric (`Aᵀ = A`) and factorized as LDLᵀ (structure `"S"`).
+The triangle read from a `Symmetric` or `Hermitian` wrapper is the one given by its `uplo` field.
 
 `A` can also represent a batch of sparse matrices with a uniform sparsity pattern.
 The vectors `A.rowPtr` and `A.colVal` are identical to those of a single matrix, but the vector `A.nzVal` is a strided representation of the nonzeros of all matrices.
@@ -57,7 +63,7 @@ We automatically detect whether we have a uniform batch or a single matrix by co
 
 #### Input argument
 
-* `A`: a sparse Hermitian matrix stored in the `CuSparseMatrixCSR` format.
+* `A`: a sparse symmetric or Hermitian matrix stored in the `CuSparseMatrixCSR` format.
 
 #### Keyword argument
 
@@ -65,11 +71,15 @@ We automatically detect whether we have a uniform batch or a single matrix by co
 
 #### Output argument
 
-* `solver`: Opaque structure [`CudssSolver`](@ref) that stores the factors of the LDLᴴ decomposition.
+* `solver`: Opaque structure [`CudssSolver`](@ref) that stores the factors of the LDLᵀ / LDLᴴ decomposition.
 """
 function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check = false) where {T <: BlasFloat, INT <: CudssInt}
-  n = checksquare(A)
   structure = T <: Real ? "S" : "H"
+  return _ldlt(A, structure, view)
+end
+
+function _ldlt(A::CuSparseMatrixCSR{T,INT}, structure::String, view::Char) where {T <: BlasFloat, INT <: CudssInt}
+  n = checksquare(A)
   nbatch = length(A.nzVal) ÷ length(A.colVal)
   solver = CudssSolver(A, structure, view)
   (nbatch > 1) && cudss_set(solver, "ubatch_size", nbatch)
@@ -80,8 +90,9 @@ function LinearAlgebra.ldlt(A::CuSparseMatrixCSR{T,INT}; view::Char='F', check =
   return solver
 end
 
-LinearAlgebra.ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasReal, INT <: CudssInt} = LinearAlgebra.ldlt(A.data, view=A.uplo)
-LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasFloat, INT <: CudssInt} = LinearAlgebra.ldlt(A.data, view=A.uplo)
+# `Symmetric` selects the complex symmetric LDLᵀ ("S") for complex matrices, `Hermitian` the LDLᴴ ("H").
+LinearAlgebra.ldlt(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasFloat, INT <: CudssInt} = _ldlt(A.data, "S", A.uplo)
+LinearAlgebra.ldlt(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}; check = false) where {T <: BlasFloat, INT <: CudssInt} = _ldlt(A.data, T <: Real ? "S" : "H", A.uplo)
 
 """
     solver = ldlt!(solver::CudssSolver{T,INT}, A::CuSparseMatrixCSR{T,INT})
@@ -135,6 +146,7 @@ function LinearAlgebra.cholesky(A::CuSparseMatrixCSR{T,INT}, p::NoPivot=NoPivot(
   return solver
 end
 
+# No `cholesky` for a complex `Symmetric` wrapper: cuDSS returns wrong results for the LLᵀ factorization of complex symmetric matrices ("SPD" with a complex type).
 LinearAlgebra.cholesky(A::Symmetric{T,<:CuSparseMatrixCSR{T,INT}}, p::NoPivot=NoPivot(); check = false) where {T <: BlasReal, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, p; view=A.uplo)
 LinearAlgebra.cholesky(A::Hermitian{T,<:CuSparseMatrixCSR{T,INT}}, p::NoPivot=NoPivot(); check = false) where {T <: BlasFloat, INT <: CudssInt} = LinearAlgebra.cholesky(A.data, p; view=A.uplo)
 

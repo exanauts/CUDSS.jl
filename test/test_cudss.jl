@@ -253,51 +253,55 @@ function cudss_execution()
         end
       end
 
+      # Real symmetric matrices use "S" (LDLᵀ). Complex matrices are tested both as complex
+      # symmetric ("S", Aᵀ = A, LDLᵀ) and as Hermitian ("H", Aᴴ = A, LDLᴴ): the two structures
+      # complete a triangular view differently.
       @testset "Symmetric -- Hermitian" begin
-        @testset "view = $view" for view in ('F', 'L', 'U')
-          @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N', 'D', 'B')
-            A_cpu = sprand(T, n, n, 0.01) + I
-            A_cpu = A_cpu + A_cpu'
-            X_cpu = zeros(T, n, p)
-            B_cpu = rand(T, n, p)
+        @testset "structure = $structure" for structure in (T <: Real ? ("S",) : ("S", "H"))
+          @testset "view = $view" for view in ('F', 'L', 'U')
+            @testset "Pivoting = $pivot" for pivot in ('C', 'R', 'N', 'D', 'B')
+              A_cpu = sprand(T, n, n, 0.01) + I
+              A_cpu = (structure == "S") ? A_cpu + transpose(A_cpu) : A_cpu + A_cpu'
+              X_cpu = zeros(T, n, p)
+              B_cpu = rand(T, n, p)
 
-            (view == 'L') && (A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu |> tril))
-            (view == 'U') && (A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu |> triu))
-            (view == 'F') && (A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu))
-            X_gpu = CuMatrix(X_cpu)
-            B_gpu = CuMatrix(B_cpu)
+              (view == 'L') && (A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu |> tril))
+              (view == 'U') && (A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu |> triu))
+              (view == 'F') && (A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu))
+              X_gpu = CuMatrix(X_cpu)
+              B_gpu = CuMatrix(B_cpu)
 
-            structure = T <: Real ? "S" : "H"
-            matrix = CudssMatrix(A_gpu, structure, view)
-            config = CudssConfig()
-            data = CudssData()
-            solver = CudssSolver(matrix, config, data)
-            cudss_set(solver, "pivot_type", pivot)
-            # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering
-            (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
-            # DIAGONAL / BUNCH_KAUFMAN pivoting requires the AMD or nested dissection reordering
-            (pivot in ('D', 'B')) && cudss_set(solver, "reordering_alg", "algo3")
+              matrix = CudssMatrix(A_gpu, structure, view)
+              config = CudssConfig()
+              data = CudssData()
+              solver = CudssSolver(matrix, config, data)
+              cudss_set(solver, "pivot_type", pivot)
+              # GLOBAL_COL / GLOBAL_ROW pivoting requires a COLAMD-family reordering
+              (pivot in ('C', 'R')) && cudss_set(solver, "reordering_alg", "algo2")
+              # DIAGONAL / BUNCH_KAUFMAN pivoting requires the AMD or nested dissection reordering
+              (pivot in ('D', 'B')) && cudss_set(solver, "reordering_alg", "algo3")
 
-            cudss("analysis", solver, X_gpu, B_gpu)
-            cudss("factorization", solver, X_gpu, B_gpu)
-            cudss("solve", solver, X_gpu, B_gpu)
+              cudss("analysis", solver, X_gpu, B_gpu)
+              cudss("factorization", solver, X_gpu, B_gpu)
+              cudss("solve", solver, X_gpu, B_gpu)
 
-            R_gpu = B_gpu - CuSparseMatrixCSR{T,INT}(A_cpu) * X_gpu
-            @test norm(R_gpu) ≤ √eps(R)
+              R_gpu = B_gpu - CuSparseMatrixCSR{T,INT}(A_cpu) * X_gpu
+              @test norm(R_gpu) ≤ √eps(R)
 
-            # In-place LDLᵀ / LDLᴴ
-            d_gpu = rand(R, n) |> CuVector
-            A_gpu = A_gpu + Diagonal(d_gpu)
-            cudss_update(solver, A_gpu)
+              # In-place LDLᵀ / LDLᴴ
+              d_gpu = rand(R, n) |> CuVector
+              A_gpu = A_gpu + Diagonal(d_gpu)
+              cudss_update(solver, A_gpu)
 
-            C_cpu = rand(T, n, p)
-            C_gpu = CuMatrix(C_cpu)
+              C_cpu = rand(T, n, p)
+              C_gpu = CuMatrix(C_cpu)
 
-            cudss("refactorization", solver, X_gpu, C_gpu)
-            cudss("solve", solver, X_gpu, C_gpu)
+              cudss("refactorization", solver, X_gpu, C_gpu)
+              cudss("solve", solver, X_gpu, C_gpu)
 
-            R_gpu = C_gpu - ( CuSparseMatrixCSR{T,INT}(A_cpu) + Diagonal(d_gpu) ) * X_gpu
-            @test norm(R_gpu) ≤ √eps(R)
+              R_gpu = C_gpu - ( CuSparseMatrixCSR{T,INT}(A_cpu) + Diagonal(d_gpu) ) * X_gpu
+              @test norm(R_gpu) ≤ √eps(R)
+            end
           end
         end
       end
@@ -346,6 +350,35 @@ function cudss_execution()
             R_gpu = C_gpu - ( CuSparseMatrixCSR{T,INT}(A_cpu) + Diagonal(d_gpu) ) * X_gpu
             @test norm(R_gpu) ≤ √eps(R)
           end
+        end
+      end
+
+      # cuDSS (0.8 and 1.0) returns wrong results, with "info" == 0, for the LLᵀ factorization
+      # of a complex symmetric matrix ("SPD" with a complex type): the error grows with the
+      # imaginary part of the matrix. Use "S" (LDLᵀ) for complex symmetric matrices and "HPD"
+      # for Hermitian positive-definite ones. The test is marked broken so that a cuDSS
+      # release fixing it is noticed.
+      if T <: Complex
+        @testset "Complex symmetric -- LLᵀ" begin
+          M_cpu = sprand(R, n, n, 0.02)
+          N_cpu = sprand(R, n, n, 0.02)
+          # Diagonally dominant complex symmetric matrix: the LLᵀ pivots have a positive real part
+          A_cpu = T.((M_cpu + transpose(M_cpu) + 20I) + 0.5im * (N_cpu + transpose(N_cpu)))
+          X_cpu = zeros(T, n, p)
+          B_cpu = rand(T, n, p)
+
+          A_gpu = CuSparseMatrixCSR{T,INT}(A_cpu)
+          X_gpu = CuMatrix(X_cpu)
+          B_gpu = CuMatrix(B_cpu)
+
+          solver = CudssSolver(A_gpu, "SPD", 'F')
+          cudss("analysis", solver, X_gpu, B_gpu)
+          cudss("factorization", solver, X_gpu, B_gpu)
+          cudss("solve", solver, X_gpu, B_gpu)
+
+          @test cudss_get(solver, "info") == 0
+          R_gpu = B_gpu - A_gpu * X_gpu
+          @test_broken norm(R_gpu) ≤ √eps(R)
         end
       end
     end
@@ -565,6 +598,29 @@ function cudss_generic()
             R_gpu2 = B_gpu - CuSparseMatrixCSR{T,INT}(A_cpu2) * X_gpu
             @test norm(R_gpu2) ≤ √eps(R)
           end
+        end
+      end
+
+      # `Symmetric` dispatches to the (complex) symmetric LDLᵀ, `Hermitian` to the LDLᴴ. They only
+      # differ for complex matrices, where the two wrappers complete the triangle differently.
+      @testset "Symmetric / Hermitian wrappers" begin
+        @testset "uplo = $uplo" for uplo in (:L, :U)
+          B_cpu = rand(T, n, p)
+          X_gpu = CuMatrix(zeros(T, n, p))
+          B_gpu = CuMatrix(B_cpu)
+          A_cpu = sprand(T, n, n, 0.01) + I
+          tri = uplo == :L ? tril : triu
+
+          S_cpu = A_cpu + transpose(A_cpu)
+          solver = ldlt(Symmetric(CuSparseMatrixCSR{T,INT}(tri(S_cpu)), uplo))
+          @test cudss_get(solver, "inertia") isa Tuple
+          ldiv!(X_gpu, solver, B_gpu)
+          @test norm(B_gpu - CuSparseMatrixCSR{T,INT}(S_cpu) * X_gpu) ≤ √eps(R)
+
+          H_cpu = A_cpu + A_cpu'
+          solver = ldlt(Hermitian(CuSparseMatrixCSR{T,INT}(tri(H_cpu)), uplo))
+          ldiv!(X_gpu, solver, B_gpu)
+          @test norm(B_gpu - CuSparseMatrixCSR{T,INT}(H_cpu) * X_gpu) ≤ √eps(R)
         end
       end
 
