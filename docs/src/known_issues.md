@@ -2,30 +2,28 @@
 
 This page lists known bugs and limitations that affect CUDSS.jl in practice.
 
-Unless stated otherwise, the issues below originate in the underlying NVIDIA **cuDSS** library, not in CUDSS.jl: CUDSS.jl forwards the documented arguments to `libcudss` unchanged, and each issue has been reproduced by a standalone C program that calls `libcudss` directly with the same API sequence. They were observed with `CUDSS_jll` **v0.8.0** on an NVIDIA RTX 4080. Exact thresholds may depend on the GPU and the cuDSS version, and a given issue may be fixed in a later cuDSS release — see the [cuDSS release notes](https://docs.nvidia.com/cuda/cudss/release_notes.html).
+Unless stated otherwise, the issues below originate in the underlying NVIDIA **cuDSS** library, not in CUDSS.jl: CUDSS.jl forwards the documented arguments to `libcudss` unchanged, and each issue has been reproduced by a standalone C program that calls `libcudss` directly with the same API sequence. Exact thresholds may depend on the GPU and the cuDSS version — see the [cuDSS release notes](https://docs.nvidia.com/cuda/cudss/release_notes.html).
 
-All three issues below are confined to the **uniform batch** code path (`ubatch_size > 1`).
+## Matching changes the reported diagonal
 
-## Multiple right-hand sides in a uniform batch return incorrect results
-
-When a uniform batch is solved with more than one right-hand side per system (`nrhs > 1`) and the batch size is large enough, the **solve** phase returns incorrect values for all but the first few right-hand-side columns. On the tested setup the results are correct for `nbatch ≤ 15` and become wrong for `nbatch ≥ 16` (only the first four columns of each system remain correct). The batch factorization itself is correct; only the multi-RHS solve is affected.
-
-- A single right-hand side (`nrhs = 1`) is **always** correct, at any batch size.
-- This affects the `cudss("solve", …)` interface as well as `ldiv!` and `\` when the right-hand side is a 3-D `CuArray` of shape `(n, nrhs, nbatch)`.
-
-!!! warning
-    Until this is fixed in cuDSS, either solve the right-hand sides one column at a time — each as a separate single-RHS uniform-batch solve reusing the same factorization — or use the [non-uniform batch](nonuniform_batch.md) interface (`CudssBatchedSolver`), which solves multiple right-hand sides correctly.
-
-## `deterministic_mode` is not compatible with uniform batches
-
-Enabling `cudss_set(solver, "deterministic_mode", 1)` on a uniform batch (`ubatch_size > 1`) triggers an illegal memory access inside cuDSS during the **solve** phase, crashing the process, instead of returning a clean status. cuDSS documents deterministic mode as supported only for a single GPU, a single right-hand side, without iterative refinement, and with the hybrid memory/execute modes disabled; a uniform batch falls outside this supported set.
-
-!!! warning
-    Do not enable `deterministic_mode` together with `ubatch_size > 1`. Note that if iterative refinement is also enabled (`ir_n_steps > 0`), cuDSS instead rejects the configuration cleanly with `CUDSS_STATUS_NOT_SUPPORTED` during the analysis phase, so the crash is only observed when iterative refinement is off.
+Since cuDSS 1.0, matching with scaling is enabled by default for general, symmetric and Hermitian matrices. In that case `cudss_get(solver, "diag")` returns the diagonal of the scaled matrix rather than of the input matrix. Set `cudss_set(solver, "matching_alg", "none")` before the analysis to obtain the unscaled diagonal.
 
 ## Rare nondeterministic `NaN` in large uniform-batch solves
 
-For large uniform batches (batch sizes in the hundreds) of ill-conditioned systems, the solve occasionally produces `NaN` for a small number of systems even though the input is finite. The failure is **nondeterministic** — the same input may succeed on one run and fail on another — and every affected system solves correctly on its own (`nbatch = 1`). This behavior is consistent with a race or an uninitialized-memory read inside the cuDSS batch factorization/solve, and it is much more likely to surface inside a long-running application than in an isolated reproducer.
+With cuDSS **0.8.0**, for large uniform batches (batch sizes in the hundreds) the solve occasionally produced `NaN` for a small number of systems even though the input was finite. The failure was **nondeterministic** and **silent**: `cudss_get(solver, "info")` stayed `0`, the inertia was correct, and every affected system solved correctly on its own (`nbatch = 1`). Two independent triggers were identified:
+
+- **Device-memory pressure with concurrent GPU work on another stream.** Reproduced on an NVIDIA RTX 4080 and a Quadro GV100, but not on an H200.
+- **A second cuDSS solver that is live and refactorized between the solves of the batched solver**, for example an `nbatch = 1` solver for a Schur complement next to the uniform batch of its blocks. Reproduced on an H200, also with a separate cuDSS handle per solver. Iterative refinement did not affect this trigger.
+
+With cuDSS **1.0.0**, none of the reproducers produced a `NaN`: neither the dumped application case nor the memory-pressure reproducer on an RTX 4080, and the second-solver reproducer stayed clean over about 2,000 refactorize-and-solve cycles on an H200, with and without matching, while cuDSS 0.8.0 still failed on the same machine. Because the failure is nondeterministic and rare, this is not yet a confirmation that the issue is fixed.
 
 !!! note
-    Enabling iterative refinement (`cudss_set(solver, "ir_n_steps", k)` with `k ≥ 1`) reduces the frequency of this issue but does not eliminate it.
+    With cuDSS 0.8, iterative refinement (`cudss_set(solver, "ir_n_steps", k)` with `k ≥ 1`) reduced the frequency of the memory-pressure trigger, and `deterministic_mode` avoided the second-solver trigger. cuDSS 1.0 no longer supports `deterministic_mode` with uniform batches, so if you observe this issue with cuDSS 1.0, check the solution for non-finite entries.
+
+## Resolved in cuDSS 1.0
+
+The following issues were observed with `CUDSS_jll` v0.8.0 on an NVIDIA RTX 4080 and no longer reproduce with cuDSS 1.0.0:
+
+- **Multiple right-hand sides in a uniform batch returned incorrect results.** With `nrhs > 1` and `ubatch_size ≥ 16`, only the first four right-hand-side columns of each system were correct. With cuDSS 1.0 all columns are correct.
+- **`deterministic_mode` crashed with uniform batches.** Enabling `deterministic_mode` with `ubatch_size > 1` caused an illegal memory access during the solve. cuDSS 1.0 rejects this configuration during the analysis with `CUDSS_STATUS_NOT_SUPPORTED`; deterministic mode remains unsupported for uniform batches.
+- **Inertia was misreported with matching.** cuDSS 0.8 returned `(0, 0)` as inertia when matching was enabled. cuDSS 1.0 returns the correct inertia with every matching algorithm.

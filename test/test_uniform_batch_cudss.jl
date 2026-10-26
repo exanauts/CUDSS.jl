@@ -692,3 +692,60 @@ function uniform_batch_cholesky()
     end
   end
 end
+
+function uniform_batch_mask()
+  @testset "precision = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    INT = Cint
+    R = real(T)
+    #        [1+λ  0   3  ]
+    # A(λ) = [ 4  5+λ  0  ]
+    #        [ 2   6  2+λ ]
+    n = 3
+    nbatch = 3
+    nnzA = 7
+    rowPtr = CuVector{INT}([1, 3, 5, 8])
+    colVal = CuVector{INT}([1, 3, 1, 2, 1, 2, 3])
+    nzval(Λ) = T[1+Λ[1], 3, 4, 5+Λ[1], 2, 6, 2+Λ[1],
+                 1+Λ[2], 3, 4, 5+Λ[2], 2, 6, 2+Λ[2],
+                 1+Λ[3], 3, 4, 5+Λ[3], 2, 6, 2+Λ[3]]
+    nzVal = CuVector{T}(nzval([1.0, 10.0, -20.0]))
+
+    solver = CudssSolver(rowPtr, colVal, nzVal, "G", 'F')
+    cudss_set(solver, "ubatch_size", nbatch)
+    # The mask must be set before the analysis.
+    cudss_set(solver, "ubatch_mask", Cint[1, 0, 1])
+
+    sentinel = T(-7)
+    bλ_gpu = CuVector{T}(1:n*nbatch)
+    xλ_gpu = CuVector{T}(fill(sentinel, n * nbatch))
+    cudss_bλ_gpu = CudssMatrix(T, n; nbatch)
+    cudss_update(cudss_bλ_gpu, bλ_gpu)
+    cudss_xλ_gpu = CudssMatrix(T, n; nbatch)
+    cudss_update(cudss_xλ_gpu, xλ_gpu)
+
+    cudss("analysis", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+    cudss("factorization", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+    cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu; asynchronous=false)
+    @test cudss_get(solver, "ubatch_mask") == Cint[1, 0, 1]
+
+    function residual(i)
+      A_gpu = CuSparseMatrixCSR{T,INT}(rowPtr, colVal, nzVal[1 + (i-1) * nnzA : i * nnzA], (n,n))
+      x_gpu = xλ_gpu[1 + (i-1) * n : i * n]
+      b_gpu = bλ_gpu[1 + (i-1) * n : i * n]
+      return norm(b_gpu - A_gpu * x_gpu)
+    end
+    @test residual(1) ≤ √eps(R)
+    @test residual(3) ≤ √eps(R)
+    # The solution of the masked system is left unchanged.
+    @test all(==(sentinel), Array(xλ_gpu[n+1:2n]))
+
+    # Process only the second system.
+    cudss_set(solver, "ubatch_mask", Cint[0, 1, 0])
+    cudss("refactorization", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+    cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu; asynchronous=false)
+    @test cudss_get(solver, "ubatch_mask") == Cint[0, 1, 0]
+    @test residual(1) ≤ √eps(R)
+    @test residual(2) ≤ √eps(R)
+    @test residual(3) ≤ √eps(R)
+  end
+end

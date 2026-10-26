@@ -5,7 +5,8 @@ const CUDSS_DATA_PARAMETERS = ("info", "lu_nnz", "npivots", "inertia", "perm_reo
                                "hybrid_device_memory_min", "comm_device", "comm_host", "memory_estimates",
                                "perm_matching", "scale_row", "scale_col", "nsuperpanels",
                                "user_schur_indices", "schur_shape", "schur_matrix",
-                               "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt")
+                               "user_nd_partition_tree", "nd_partition_tree", "user_host_interrupt",
+                               "ir_n_steps_performed", "ubatch_mask", "flops")
 
 const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_alg",
                                  "matching_alg", "solve_mode", "ir_n_steps", "ir_tol", "pivot_type",
@@ -13,7 +14,9 @@ const CUDSS_CONFIG_PARAMETERS = ("reordering_alg", "factorization_alg", "solve_a
                                  "hybrid_device_memory_limit", "use_cuda_register_memory", "host_nthreads",
                                  "hybrid_execute_mode", "pivot_epsilon_alg", "nd_nlevels", "ubatch_size",
                                  "ubatch_index", "use_superpanels", "device_count", "device_indices",
-                                 "schur_mode", "deterministic_mode", "nd_ubfactor")
+                                 "schur_mode", "deterministic_mode", "nd_ubfactor",
+                                 "emulation_mantissa_bit_count", "force_nonsymmetric_matching",
+                                 "downcast_factors", "memory_optimization_setting")
 
 ## config type
 
@@ -70,6 +73,14 @@ function Base.convert(::Type{cudssConfigParam_t}, config::String)
         return CUDSS_CONFIG_DETERMINISTIC_MODE
     elseif config == "nd_ubfactor"
         return CUDSS_CONFIG_ND_UBFACTOR
+    elseif config == "emulation_mantissa_bit_count"
+        return CUDSS_CONFIG_EMULATION_MANTISSA_BIT_COUNT
+    elseif config == "force_nonsymmetric_matching"
+        return CUDSS_CONFIG_FORCE_NONSYMMETRIC_MATCHING
+    elseif config == "downcast_factors"
+        return CUDSS_CONFIG_DOWNCAST_FACTORS
+    elseif config == "memory_optimization_setting"
+        return CUDSS_CONFIG_MEMORY_OPTIMIZATION_SETTING
     else
         throw(ArgumentError("Unknown config parameter $config"))
     end
@@ -126,6 +137,14 @@ function Base.convert(::Type{cudssDataParam_t}, data::String)
         return CUDSS_DATA_ND_PARTITION_TREE
     elseif data == "user_host_interrupt"
         return CUDSS_DATA_USER_HOST_INTERRUPT
+    elseif data == "ir_n_steps_performed"
+        # Named differently from the config parameter "ir_n_steps" (the requested number
+        # of steps), which `cudss_set` / `cudss_get` would otherwise match first.
+        return CUDSS_DATA_IR_N_STEPS
+    elseif data == "ubatch_mask"
+        return CUDSS_DATA_UBATCH_MASK
+    elseif data == "flops"
+        return CUDSS_DATA_FLOPS
     else
         throw(ArgumentError("Unknown data parameter $data"))
     end
@@ -226,13 +245,10 @@ function Base.convert(::Type{cudssLayout_t}, layout::Char)
 end
 
 ## value / index type
-
-Base.convert(::Type{cudssDataType_t}, ::Type{Float32})    = CUDSS_R_32F
-Base.convert(::Type{cudssDataType_t}, ::Type{Float64})    = CUDSS_R_64F
-Base.convert(::Type{cudssDataType_t}, ::Type{ComplexF32}) = CUDSS_C_32F
-Base.convert(::Type{cudssDataType_t}, ::Type{ComplexF64}) = CUDSS_C_64F
-Base.convert(::Type{cudssDataType_t}, ::Type{Int32})      = CUDSS_R_32I
-Base.convert(::Type{cudssDataType_t}, ::Type{Int64})      = CUDSS_R_64I
+#
+# Since cuDSS 1.0, `cudssDataType_t` is an alias of `cudaDataType_t` again, so the
+# value / index types passed to the matrix constructors are converted by CUDACore's
+# `Base.convert(::Type{cudaDataType}, ::DataType)`.
 
 ## algorithm type
 #
@@ -246,7 +262,9 @@ Base.convert(::Type{cudssDataType_t}, ::Type{Int64})      = CUDSS_R_64I
 cudss_algorithm(algorithm::Integer) = Cint(algorithm)
 
 function cudss_algorithm(algorithm::String)
-    algorithm == "default" && return Cint(0)
+    # "none" is the clearer spelling for `matching_alg`, where 0 is CUDSS_MATCHING_ALG_NONE
+    # while the cuDSS 1.0 default is CUDSS_MATCHING_ALG_AUTO ("algo6").
+    (algorithm == "default" || algorithm == "none") && return Cint(0)
     if startswith(algorithm, "algo")
         n = tryparse(Int, algorithm[5:end])
         (n !== nothing && n ≥ 1) && return Cint(n)
@@ -265,10 +283,46 @@ function Base.convert(::Type{cudssPivotType_t}, pivoting::Char)
         return CUDSS_PIVOT_NONE
     elseif pivoting == 'A'
         return CUDSS_PIVOT_AUTO
+    elseif pivoting == 'D'
+        return CUDSS_PIVOT_DIAGONAL
+    elseif pivoting == 'L'
+        return CUDSS_PIVOT_LOCAL_BLOCK
+    elseif pivoting == 'B'
+        return CUDSS_PIVOT_BUNCH_KAUFMAN
     else
         throw(ArgumentError("Unknown pivoting $pivoting"))
     end
 end
+
+## solve mode
+
+function Base.convert(::Type{cudssSolveMode_t}, mode::Char)
+    if mode == 'N'
+        return CUDSS_SOLVE_MODE_NORMAL
+    elseif mode == 'T'
+        return CUDSS_SOLVE_MODE_TRANSPOSE
+    elseif mode == 'C'
+        return CUDSS_SOLVE_MODE_CONJUGATE_TRANSPOSE
+    else
+        throw(ArgumentError("Unknown solve mode $mode"))
+    end
+end
+Base.convert(::Type{cudssSolveMode_t}, mode::Integer) = cudssSolveMode_t(mode)
+
+## downcast factors mode
+
+function Base.convert(::Type{cudssDowncastFactorsMode_t}, mode::String)
+    if mode == "disabled"
+        return CUDSS_DOWNCAST_FACTORS_MODE_DISABLED
+    elseif mode == "keep_block_diagonal"
+        return CUDSS_DOWNCAST_FACTORS_MODE_KEEP_BLOCK_DIAGONAL
+    elseif mode == "keep_strict_diagonal"
+        return CUDSS_DOWNCAST_FACTORS_MODE_KEEP_STRICT_DIAGONAL
+    else
+        throw(ArgumentError("Unknown downcast factors mode $mode"))
+    end
+end
+Base.convert(::Type{cudssDowncastFactorsMode_t}, mode::Integer) = cudssDowncastFactorsMode_t(mode)
 
 # matrix format type
 

@@ -29,7 +29,83 @@ cudss("solve", solver, X_gpu, B_gpu; asynchronous=false)
 
 R_gpu = B_gpu - CuSparseMatrixCSR(A_cpu) * X_gpu
 norm(R_gpu)
+
+# Number of iterative refinement steps performed during the last solve
+cudss_get(solver, "ir_n_steps_performed")
 ```
+
+## Transpose and adjoint solves
+
+Since cuDSS 1.0, a factorization of `A` can also be used to solve `Aᵀ x = b` and `Aᴴ x = b`.
+The configuration parameter `"solve_mode"` selects the operator: `'N'` (default), `'T'` (transpose) or `'C'` (conjugate transpose).
+Transpose solves are not supported for Hermitian / HPD matrices, the Schur complement mode, COLAMD-family reorderings and non-uniform batches.
+Conjugate-transpose solves are only supported for complex general matrices.
+
+```julia
+using CUDA, CUDA.CUSPARSE
+using CUDSS
+using LinearAlgebra
+using SparseArrays
+
+T = ComplexF64
+n = 100
+A_cpu = sprand(T, n, n, 0.02) + I
+b_cpu = rand(T, n)
+
+A_gpu = CuSparseMatrixCSR(A_cpu)
+b_gpu = CuVector(b_cpu)
+x_gpu = similar(b_gpu)
+
+solver = CudssSolver(A_gpu, "G", 'F')
+cudss("analysis", solver, x_gpu, b_gpu)
+cudss("factorization", solver, x_gpu, b_gpu)
+
+# Solve Aᵀx = b
+cudss_set(solver, "solve_mode", 'T')
+cudss("solve", solver, x_gpu, b_gpu)
+norm(b_cpu - transpose(A_cpu) * Array(x_gpu))
+
+# Solve Aᴴx = b with the same factorization
+cudss_set(solver, "solve_mode", 'C')
+cudss("solve", solver, x_gpu, b_gpu)
+norm(b_cpu - A_cpu' * Array(x_gpu))
+```
+
+## Matching
+
+Since cuDSS 1.0, matching with scaling is enabled by default (`"matching_alg"` = `"algo6"`, i.e. automatic) for general, symmetric and Hermitian matrices, and disabled for SPD / HPD matrices.
+It improves the robustness of the factorization of indefinite and unsymmetric matrices.
+Use `cudss_set(solver, "matching_alg", "none")` before the analysis to recover the behavior of cuDSS 0.8.
+With matching and scaling, `cudss_get(solver, "diag")` returns the diagonal of the scaled matrix.
+
+## Bunch-Kaufman pivoting
+
+cuDSS 1.0 supports Bunch-Kaufman pivoting for symmetric and Hermitian indefinite matrices with the AMD (`"algo3"`) or nested dissection (`"default"`) reordering.
+The automatic pivoting (`'A'`, the default) already selects it in these cases.
+Note that solves with Bunch-Kaufman pivoting cannot be captured in a CUDA graph.
+
+```julia
+solver = CudssSolver(A_gpu, "S", 'F')
+cudss_set(solver, "pivot_type", 'B')
+cudss_set(solver, "reordering_alg", "algo3")
+cudss("analysis", solver, x_gpu, b_gpu)
+cudss("factorization", solver, x_gpu, b_gpu)
+cudss("solve", solver, x_gpu, b_gpu)
+cudss_get(solver, "inertia")
+```
+
+## Reducing the memory footprint
+
+Two options of cuDSS 1.0 reduce the memory used by the factors of double precision matrices:
+
+- `cudss_set(solver, "downcast_factors", mode)` stores the factors in single precision. `mode` is `"keep_block_diagonal"` or `"keep_strict_diagonal"` to keep the supernode diagonal blocks or the diagonal in double precision, and `"disabled"` (default). It must be set before the factorization and not changed afterwards.
+- `cudss_set(solver, "memory_optimization_setting", 1)` releases the memory that is only needed to recompute the factors. Use it when only solves follow the factorization: a later factorization requires a new analysis.
+
+## JIT compilation of kernels
+
+cuDSS 1.0 compiles some kernels at runtime with NVRTC and caches them on disk.
+The environment variable `CUDSS_JIT_CACHE_DIR` sets the cache directory, and `CUDSS_JIT_DISABLE` disables runtime compilation.
+Set them before loading CUDSS.jl.
 
 ## User permutation
 
@@ -194,4 +270,23 @@ rλ_gpu
 
 # Process again all matrices at once in the uniform batch
 cudss_set(solver, "ubatch_index", -1)
+```
+
+The data parameter `"ubatch_mask"` selects several matrices of a uniform batch at once.
+It is a `Vector{Cint}` of length `"ubatch_size"` with `1` for the systems to process and `0` for the systems to skip, whose solutions are left unchanged.
+The mask must be set before the analysis, and can be updated before a refactorization.
+
+```julia
+solver = CudssSolver(rowPtr, colVal, nzVal, "G", 'F')
+cudss_set(solver, "ubatch_size", nbatch)
+cudss_set(solver, "ubatch_mask", Cint[1, 0, 1])
+
+cudss("analysis", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+cudss("factorization", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+
+# Process only the second system
+cudss_set(solver, "ubatch_mask", Cint[0, 1, 0])
+cudss("refactorization", solver, cudss_xλ_gpu, cudss_bλ_gpu)
+cudss("solve", solver, cudss_xλ_gpu, cudss_bλ_gpu)
 ```

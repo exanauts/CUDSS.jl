@@ -1,8 +1,20 @@
 # CUDSS.jl: Julia interface for NVIDIA cuDSS
 
-[![docs-dev][docs-dev-img]][docs-dev-url]
+[![][ci-img]][ci-url] [![][aqua-img]][aqua-url] [![][codecov-img]][codecov-url] [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url]
 
-[docs-dev-img]: https://img.shields.io/badge/docs-dev-purple.svg
+[ci-img]: https://github.com/exanauts/CUDSS.jl/actions/workflows/ci.yml/badge.svg?branch=main
+[ci-url]: https://github.com/exanauts/CUDSS.jl/actions/workflows/ci.yml
+
+[aqua-img]: https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg
+[aqua-url]: https://github.com/JuliaTesting/Aqua.jl
+
+[codecov-img]: https://codecov.io/gh/exanauts/CUDSS.jl/branch/main/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/exanauts/CUDSS.jl
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://exanauts.github.io/CUDSS.jl/stable
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://exanauts.github.io/CUDSS.jl/dev
 
 ## Overview
@@ -12,7 +24,7 @@ NVIDIA cuDSS provides three factorizations (LDU, LDLᵀ, LLᵀ) for solving spar
 
 ### Why CUDSS.jl?
 
-Unlike other CUDA libraries that are commonly bundled together, cuDSS is currently in preview. For this reason, it is not included in [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).
+Unlike other CUDA libraries that are commonly bundled together, cuDSS is distributed separately from the CUDA toolkit. For this reason, it is not included in [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).
 To maintain consistency with the naming conventions used for other CUDA libraries (such as CUBLAS, CUSOLVER, CUSPARSE, etc.), we have named this interface CUDSS.jl.
 
 ## Installation

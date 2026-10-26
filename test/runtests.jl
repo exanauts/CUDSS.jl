@@ -63,6 +63,14 @@ include("test_nonuniform_batch_cudss.jl")
     cudss_execution()
   end
 
+  @testset "Transpose and adjoint solves" begin
+    cudss_solve_mode()
+  end
+
+  @testset "Bunch-Kaufman pivoting" begin
+    cudss_bunch_kaufman()
+  end
+
   @testset "Generic API" begin
     cudss_generic()
   end
@@ -99,6 +107,10 @@ end
 
   @testset "Uniform batch Cholesky" begin
     uniform_batch_cholesky()
+  end
+
+  @testset "Uniform batch mask" begin
+    uniform_batch_mask()
   end
 end
 
